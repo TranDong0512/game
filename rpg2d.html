@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <title>RPG 2D - Cuộc Phiêu Lưu</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      cursor: crosshair
+    }
+
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 14px;
+      pointer-events: none;
+      text-shadow: 1px 1px 2px #000
+    }
+
+    #ui div {
+      margin: 4px 0
+    }
+
+    .bar {
+      width: 200px;
+      height: 16px;
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative
+    }
+
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s;
+      border-radius: 2px
+    }
+
+    .bar-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      line-height: 16px
+    }
+
+    .hp-fill {
+      background: linear-gradient(#e55, #a00)
+    }
+
+    .mp-fill {
+      background: linear-gradient(#58f, #00a)
+    }
+
+    .exp-fill {
+      background: linear-gradient(#fd0, #a80)
+    }
+
+    #log {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      width: 300px;
+      max-height: 120px;
+      overflow-y: auto;
+      color: #aaa;
+      font-size: 12px;
+      pointer-events: none;
+      text-shadow: 1px 1px 1px #000
+    }
+
+    #log div {
+      margin: 2px 0;
+      animation: fadeIn 0.3s
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    #skills {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px
+    }
+
+    .skill {
+      width: 48px;
+      height: 48px;
+      background: rgba(30, 30, 50, 0.9);
+      border: 2px solid #555;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 10px;
+      position: relative;
+      pointer-events: auto;
+      cursor: pointer
+    }
+
+    .skill:hover {
+      border-color: #ff0
+    }
+
+    .skill.active {
+      border-color: #0f0
+    }
+
+    .skill .cd {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      border-radius: 4px
+    }
+
+    .skill .key {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 9px;
+      color: #888
+    }
+
+    #death {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(100, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: #fff;
+      z-index: 100
+    }
+
+    #death h1 {
+      font-size: 48px;
+      margin-bottom: 20px
+    }
+
+    #death button {
+      padding: 12px 30px;
+      font-size: 18px;
+      background: #a00;
+      border: 2px solid #f44;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    #death button:hover {
+      background: #c00
+    }
+
+    #minimap {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      border: 2px solid #555;
+      background: rgba(0, 0, 0, 0.5)
+    }
+
+    #tooltip {
+      position: fixed;
+      display: none;
+      background: rgba(20, 20, 40, 0.95);
+      border: 1px solid #888;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 50;
+      max-width: 200px
+    }
+
+    #inv-panel {
+      position: fixed;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      background: rgba(20, 20, 40, 0.9);
+      border: 2px solid #555;
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+      z-index: 30
+    }
+
+    #inv-panel h3 {
+      color: #ff0;
+      text-align: center;
+      margin-bottom: 8px
+    }
+
+    .inv-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 40px);
+      gap: 4px
+    }
+
+    .inv-slot {
+      width: 40px;
+      height: 40px;
+      background: rgba(50, 50, 80, 0.8);
+      border: 1px solid #444;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      position: relative
+    }
+
+    .inv-slot:hover {
+      border-color: #ff0
+    }
+
+    .inv-slot .qty {
+      position: absolute;
+      bottom: 1px;
+      right: 3px;
+      font-size: 9px;
+      color: #fff
+    }
+
+    #stats-panel {
+      position: fixed;
+      top: 50%;
+      right: 220px;
+      transform: translateY(-50%);
+      background: rgba(20, 20, 40, 0.9);
+      border: 2px solid #555;
+      border-radius: 8px;
+      padding: 15px;
+      display: none;
+      z-index: 30;
+      color: #ddd;
+      font-size: 13px
+    }
+
+    #stats-panel h3 {
+      color: #ff0;
+      margin-bottom: 8px
+    }
+
+    #stats-panel div {
+      margin: 3px 0
+    }
+
+    #shop-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(20, 20, 40, 0.95);
+      border: 2px solid #fa0;
+      border-radius: 10px;
+      padding: 20px;
+      display: none;
+      z-index: 40;
+      color: #ddd;
+      font-size: 13px
+    }
+
+    #shop-panel h3 {
+      color: #fa0;
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 16px
+    }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(50, 50, 80, 0.5);
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent
+    }
+
+    .shop-item:hover {
+      border-color: #fa0;
+      background: rgba(80, 80, 120, 0.5)
+    }
+
+    .shop-item .si-icon {
+      font-size: 22px
+    }
+
+    .shop-item .si-info {
+      flex: 1
+    }
+
+    .shop-item .si-name {
+      font-weight: bold;
+      color: #fff
+    }
+
+    .shop-item .si-desc {
+      color: #aaa;
+      font-size: 11px
+    }
+
+    .shop-item .si-price {
+      color: #fa0;
+      font-weight: bold
+    }
+
+    #shop-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      color: #888
+    }
+
+    #shop-close:hover {
+      color: #fff
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <div id="name-display" style="color:#ff0;font-size:16px;font-weight:bold"></div>
+    <div>HP: <div class="bar">
+        <div class="bar-fill hp-fill" id="hp-bar"></div>
+        <div class="bar-text" id="hp-text"></div>
+      </div>
+    </div>
+    <div>MP: <div class="bar">
+        <div class="bar-fill mp-fill" id="mp-bar"></div>
+        <div class="bar-text" id="mp-text"></div>
+      </div>
+    </div>
+    <div>EXP: <div class="bar">
+        <div class="bar-fill exp-fill" id="exp-bar"></div>
+        <div class="bar-text" id="exp-text"></div>
+      </div>
+    </div>
+    <div id="level-display" style="color:#fd0"></div>
+    <div id="gold-display" style="color:#fa0"></div>
+    <div id="pos-display" style="color:#888;font-size:11px"></div>
+  </div>
+
+  <div id="log"></div>
+
+  <div id="skills"></div>
+
+  <div id="death">
+    <h1>💀 Bạn Đã Chết</h1>
+    <p style="margin-bottom:20px;font-size:18px">Mất 20% EXP</p>
+    <button onclick="respawn()">Hồi Sinh</button>
+  </div>
+
+  <canvas id="minimap" width="150" height="150"></canvas>
+
+  <div id="tooltip"></div>
+
+  <div id="inv-panel">
+    <h3>Túi Đồ (I)</h3>
+    <div class="inv-grid" id="inv-grid"></div>
+  </div>
+
+  <div id="stats-panel">
+    <h3>Chỉ Số (C)</h3>
+    <div id="stats-content"></div>
+  </div>
+
+  <div id="shop-panel">
+    <span id="shop-close" onclick="toggleShop()">✕</span>
+    <h3>🏪 Cửa Hàng</h3>
+    <div id="shop-items"></div>
+  </div>
+
+  <script>
+    // ==================== CANVAS SETUP ====================
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const miniCanvas = document.getElementById('minimap');
+    const miniCtx = miniCanvas.getContext('2d');
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ==================== CONSTANTS ====================
+    const TILE = 32;
+    const MAP_W = 80, MAP_H = 60;
+    const VIEW_W = () => canvas.width, VIEW_H = () => canvas.height;
+
+    // ==================== MAP GENERATION ====================
+    const MAP = [];
+    const SPAWN_POINTS = [];
+    const CHEST_POSITIONS = [];
+
+    function generateMap() {
+      for (let y = 0; y < MAP_H; y++) {
+        MAP[y] = [];
+        for (let x = 0; x < MAP_W; x++) {
+          // Border walls
+          if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1) { MAP[y][x] = 1; continue; }
+          // River
+          if (y === 28 || y === 29) { MAP[y][x] = 3; continue; }
+          // Random walls/trees
+          if (Math.random() < 0.08) { MAP[y][x] = 1; continue; }
+          MAP[y][x] = 0;
+        }
+      }
+      // Clear spawn area + shop area
+      for (let dy = -4; dy <= 4; dy++)
+        for (let dx = -4; dx <= 4; dx++)
+          MAP[15 + dy][15 + dx] = 0;
+      // Clear shop area
+      MAP[13][17] = 0; MAP[13][18] = 0; MAP[14][17] = 0; MAP[14][18] = 0;
+
+      // Monster spawn zones
+      const zones = [
+        { x: 10, y: 8, count: 5, type: 'slime', level: 1 },
+        { x: 30, y: 10, count: 5, type: 'wolf', level: 3 },
+        { x: 50, y: 15, count: 4, type: 'goblin', level: 5 },
+        { x: 20, y: 35, count: 5, type: 'skeleton', level: 8 },
+        { x: 55, y: 35, count: 4, type: 'orc', level: 12 },
+        { x: 65, y: 50, count: 3, type: 'demon', level: 18 },
+        { x: 40, y: 50, count: 2, type: 'dragon', level: 25 },
+      ];
+      for (const z of zones) {
+        for (let i = 0; i < z.count; i++) {
+          SPAWN_POINTS.push({
+            x: z.x + Math.floor(Math.random() * 8) - 4,
+            y: z.y + Math.floor(Math.random() * 8) - 4,
+            type: z.type, level: z.level
+          });
+        }
+      }
+
+      // Chests
+      for (let i = 0; i < 15; i++) {
+        let cx, cy;
+        do {
+          cx = 2 + Math.floor(Math.random() * (MAP_W - 4));
+          cy = 2 + Math.floor(Math.random() * (MAP_H - 4));
+        } while (MAP[cy][cx] !== 0);
+        CHEST_POSITIONS.push({ x: cx, y: cy, opened: false });
+      }
+    }
+    generateMap();
+
+    // ==================== MONSTER TEMPLATES ====================
+    const MON_TEMPLATES = {
+      slime: { name: 'Slime', color: '#4a4', hp: 20, atk: 4, def: 0, exp: 12, gold: [2, 6], speed: 0.4, range: 1.2, sprite: '🟢' },
+      wolf: { name: 'Sói Hoang', color: '#a84', hp: 45, atk: 10, def: 2, exp: 28, gold: [4, 12], speed: 1.0, range: 1.3, sprite: '🐺' },
+      goblin: { name: 'Goblin', color: '#8a4', hp: 80, atk: 16, def: 4, exp: 50, gold: [6, 18], speed: 0.8, range: 1.3, sprite: '👺' },
+      skeleton: { name: 'Skeleton', color: '#aaa', hp: 150, atk: 25, def: 8, exp: 90, gold: [12, 35], speed: 0.7, range: 1.4, sprite: '💀' },
+      orc: { name: 'Orc', color: '#684', hp: 250, atk: 38, def: 14, exp: 180, gold: [20, 60], speed: 0.6, range: 1.5, sprite: '👹' },
+      demon: { name: 'Demon', color: '#a44', hp: 450, atk: 60, def: 22, exp: 350, gold: [40, 100], speed: 0.9, range: 1.8, sprite: '😈' },
+      dragon: { name: 'Rồng Lửa', color: '#f80', hp: 1500, atk: 120, def: 50, exp: 2500, gold: [150, 400], speed: 0.5, range: 2.5, sprite: '🐉' },
+    };
+
+    // ==================== ITEM TEMPLATES ====================
+    const ITEMS = {
+      potion_hp: { name: 'Bánh Mì', icon: '🍞', type: 'consumable', rarity: 'common', desc: 'Hồi 50 HP', healHp: 50, price: 10 },
+      potion_hp2: { name: 'Thuốc Lớn', icon: '🧪', type: 'consumable', rarity: 'uncommon', desc: 'Hồi 200 HP', healHp: 200, price: 50 },
+      potion_mp: { name: 'Nước Phép', icon: '💧', type: 'consumable', rarity: 'common', desc: 'Hồi 30 MP', healMp: 30, price: 15 },
+      sword1: { name: 'Kiếm Gỗ', icon: '🗡️', type: 'weapon', rarity: 'common', desc: 'ATK +5', atk: 5, price: 50 },
+      sword2: { name: 'Kiếm Sắt', icon: '⚔️', type: 'weapon', rarity: 'uncommon', desc: 'ATK +15', atk: 15, price: 200 },
+      sword3: { name: 'Kiếm Ma Thuật', icon: '🗡️', type: 'weapon', rarity: 'rare', desc: 'ATK +40', atk: 40, price: 1000 },
+      armor1: { name: 'Áo Da', icon: '👕', type: 'armor', rarity: 'common', desc: 'DEF +5', def: 5, price: 60 },
+      armor2: { name: 'Áo Giáp', icon: '🛡️', type: 'armor', rarity: 'uncommon', desc: 'DEF +15', def: 15, price: 300 },
+      ring1: { name: 'Nhẫn Máu', icon: '💍', type: 'accessory', rarity: 'rare', desc: 'HP +50', hp: 50, price: 500 },
+      gem: { name: 'Ngọc Quý', icon: '💎', type: 'material', rarity: 'epic', desc: 'Vật phẩm quý', price: 500 },
+    };
+
+    const LOOT_TABLES = {
+      slime: [{ id: 'potion_hp', chance: 0.5 }],
+      wolf: [{ id: 'potion_hp', chance: 0.4 }, { id: 'sword1', chance: 0.05 }],
+      goblin: [{ id: 'potion_hp2', chance: 0.3 }, { id: 'armor1', chance: 0.05 }],
+      skeleton: [{ id: 'potion_hp2', chance: 0.3 }, { id: 'sword2', chance: 0.03 }],
+      orc: [{ id: 'armor2', chance: 0.03 }, { id: 'potion_hp2', chance: 0.4 }],
+      demon: [{ id: 'sword3', chance: 0.02 }, { id: 'ring1', chance: 0.03 }],
+      dragon: [{ id: 'sword3', chance: 0.1 }, { id: 'ring1', chance: 0.1 }, { id: 'gem', chance: 0.5 }],
+    };
+
+    const CHEST_LOOT = ['potion_hp', 'potion_hp2', 'potion_mp', 'sword1', 'armor1', 'gem'];
+
+    // ==================== PLAYER ====================
+    const player = {
+      x: 15, y: 15, // tile coords
+      hp: 120, maxHp: 120,
+      mp: 80, maxMp: 80,
+      exp: 0, nextExp: 40,
+      level: 1, gold: 30,
+      atk: 15, def: 3, speed: 4.5,
+      weapon: null, armor: null, accessory: null,
+      inventory: [{ id: 'potion_hp', qty: 3 }, { id: 'potion_mp', qty: 2 }], // starter items
+      direction: 'down',
+      attackCooldown: 0,
+      skills: [
+        { name: 'Chém Mạnh', icon: '⚔️', key: '1', cd: 0, maxCd: 1.5, manaCost: 5, dmgMult: 2.0, range: 1.5 },
+        { name: 'Lốc Xoay', icon: '🌀', key: '2', cd: 0, maxCd: 4, manaCost: 12, dmgMult: 1.5, range: 2.5, aoe: true },
+        { name: 'Hồi Máu', icon: '💚', key: '3', cd: 0, maxCd: 6, manaCost: 10, heal: true, healAmt: 60 },
+        { name: 'Cầu Lửa', icon: '🔥', key: '4', cd: 0, maxCd: 4, manaCost: 15, dmgMult: 3.0, range: 4 },
+        { name: 'Bão Kiếm', icon: '⚡', key: '5', cd: 0, maxCd: 8, manaCost: 25, dmgMult: 4.0, range: 2, aoe: true },
+      ],
+      invincible: 0,
+      flashTimer: 0,
+    };
+
+    // ==================== MONSTERS ====================
+    let monsters = [];
+    let damageNumbers = [];
+    let particles = [];
+    let drops = []; // items on ground
+    let projectiles = [];
+
+    function spawnMonsters() {
+      monsters = [];
+      for (const sp of SPAWN_POINTS) {
+        const tmpl = MON_TEMPLATES[sp.type];
+        monsters.push({
+          x: sp.x, y: sp.y,
+          spawnX: sp.x, spawnY: sp.y,
+          hp: tmpl.hp, maxHp: tmpl.hp,
+          atk: tmpl.atk, def: tmpl.def,
+          exp: tmpl.exp, gold: tmpl.gold,
+          type: sp.type, level: sp.level,
+          state: 'idle', target: null,
+          attackCd: 0, stateTimer: 0,
+          ...tmpl
+        });
+      }
+    }
+    spawnMonsters();
+
+    // ==================== INPUT ====================
+    const keys = {};
+    window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; handleKeyPress(e.key); });
+    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+    let showInv = false, showStats = false, showShop = false;
+
+    function handleKeyPress(key) {
+      if (player.hp <= 0) return;
+      // Skills
+      const skillIdx = parseInt(key) - 1;
+      if (skillIdx >= 0 && skillIdx < player.skills.length) {
+        useSkill(skillIdx);
+        return;
+      }
+      // Inventory
+      if (key.toLowerCase() === 'i') {
+        showInv = !showInv;
+        document.getElementById('inv-panel').style.display = showInv ? 'block' : 'none';
+        if (showInv) renderInventory();
+      }
+      // Stats
+      if (key.toLowerCase() === 'c') {
+        showStats = !showStats;
+        document.getElementById('stats-panel').style.display = showStats ? 'block' : 'none';
+        if (showStats) renderStats();
+      }
+      // Shop
+      if (key.toLowerCase() === 'b') {
+        toggleShop();
+      }
+      // Use HP potion with Q
+      if (key.toLowerCase() === 'q') {
+        usePotion('hp');
+      }
+      // Use MP potion with E
+      if (key.toLowerCase() === 'e') {
+        usePotion('mp');
+      }
+    }
+
+    // Mouse
+    let mouseX = 0, mouseY = 0;
+    canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+    canvas.addEventListener('click', e => {
+      if (player.hp <= 0) return;
+      // Click to attack nearest monster to click position
+      const worldX = e.clientX + camera.x;
+      const worldY = e.clientY + camera.y;
+      let nearest = null, nearDist = 50;
+      for (const m of monsters) {
+        if (m.hp <= 0) continue;
+        const dx = m.x * TILE + TILE / 2 - worldX;
+        const dy = m.y * TILE + TILE / 2 - worldY;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < nearDist) { nearest = m; nearDist = d; }
+      }
+      if (nearest) {
+        attackMonster(nearest);
+      }
+    });
+
+    // ==================== CAMERA ====================
+    const camera = { x: 0, y: 0 };
+
+    function updateCamera() {
+      const tx = player.x * TILE + TILE / 2 - VIEW_W() / 2;
+      const ty = player.y * TILE + TILE / 2 - VIEW_H() / 2;
+      camera.x += (tx - camera.x) * 0.1;
+      camera.y += (ty - camera.y) * 0.1;
+      camera.x = Math.max(0, Math.min(MAP_W * TILE - VIEW_W(), camera.x));
+      camera.y = Math.max(0, Math.min(MAP_H * TILE - VIEW_H(), camera.y));
+    }
+
+    // ==================== UPDATE ====================
+    let lastTime = 0;
+    let gameTime = 0;
+
+    function update(dt) {
+      if (player.hp <= 0) return;
+      gameTime += dt;
+
+      // Movement
+      let dx = 0, dy = 0;
+      if (keys['w'] || keys['arrowup']) dy = -1;
+      if (keys['s'] || keys['arrowdown']) dy = 1;
+      if (keys['a'] || keys['arrowleft']) dx = -1;
+      if (keys['d'] || keys['arrowright']) dx = 1;
+
+      if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+      if (dx < 0) player.direction = 'left';
+      else if (dx > 0) player.direction = 'right';
+      else if (dy < 0) player.direction = 'up';
+      else if (dy > 0) player.direction = 'down';
+
+      const newX = player.x + dx * player.speed * dt;
+      const newY = player.y + dy * player.speed * dt;
+
+      // Collision
+      const canMoveX = !isWall(newX, player.y);
+      const canMoveY = !isWall(player.x, newY);
+
+      if (canMoveX) player.x = newX;
+      if (canMoveY) player.y = newY;
+
+      // Cooldowns
+      player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+      player.invincible = Math.max(0, player.invincible - dt);
+      player.flashTimer += dt;
+      for (const s of player.skills) s.cd = Math.max(0, s.cd - dt);
+
+      // Auto pickup drops
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const d = drops[i];
+        const dist = Math.sqrt((player.x - d.x) ** 2 + (player.y - d.y) ** 2);
+        if (dist < 1.5) {
+          addItem(d.itemId, 1);
+          addLog(`Nhặt được ${ITEMS[d.itemId].icon} ${ITEMS[d.itemId].name}`, '#ff0');
+          drops.splice(i, 1);
+        }
+      }
+
+      // Chest pickup
+      for (const ch of CHEST_POSITIONS) {
+        if (ch.opened) continue;
+        const dist = Math.sqrt((player.x - ch.x) ** 2 + (player.y - ch.y) ** 2);
+        if (dist < 1.2) {
+          ch.opened = true;
+          const loot = CHEST_LOOT[Math.floor(Math.random() * CHEST_LOOT.length)];
+          addItem(loot, 1);
+          addLog(`🎁 Mở rương: ${ITEMS[loot].icon} ${ITEMS[loot].name}`, '#ff0');
+          spawnParticles(ch.x * TILE + TILE / 2, ch.y * TILE + TILE / 2, '#fd0', 10);
+        }
+      }
+
+      // Update monsters
+      updateMonsters(dt);
+
+      // Update projectiles
+      updateProjectiles(dt);
+
+      // Update damage numbers
+      for (let i = damageNumbers.length - 1; i >= 0; i--) {
+        const d = damageNumbers[i];
+        d.y -= 40 * dt;
+        d.life -= dt;
+        if (d.life <= 0) damageNumbers.splice(i, 1);
+      }
+
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // Mana regen (every 0.5s)
+      if (gameTime % 0.5 < dt) {
+        player.mp = Math.min(player.maxMp, player.mp + 2 + Math.floor(player.level * 0.5));
+      }
+      // HP regen (every 2s)
+      if (gameTime % 2 < dt) {
+        player.hp = Math.min(getTotalMaxHp(), player.hp + 1 + Math.floor(player.level * 0.3));
+      }
+
+      updateCamera();
+      updateUI();
+    }
+
+    function isWall(x, y) {
+      const tx = Math.floor(x), ty = Math.floor(y);
+      if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return true;
+      return MAP[ty][tx] === 1;
+    }
+
+    // ==================== MONSTER AI ====================
+    function updateMonsters(dt) {
+      for (const m of monsters) {
+        if (m.hp <= 0) continue;
+        m.attackCd = Math.max(0, m.attackCd - dt);
+
+        const dist = Math.sqrt((player.x - m.x) ** 2 + (player.y - m.y) ** 2);
+
+        switch (m.state) {
+          case 'idle':
+            if (dist < 6) { m.state = 'chase'; m.target = player; }
+            break;
+          case 'chase':
+            if (dist > 12) { m.state = 'idle'; break; }
+            if (dist <= m.range) { m.state = 'attack'; break; }
+            // Move toward player
+            const dx = player.x - m.x;
+            const dy = player.y - m.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len > 0) {
+              const nx = m.x + (dx / len) * m.speed * dt;
+              const ny = m.y + (dy / len) * m.speed * dt;
+              if (!isWall(nx, m.y)) m.x = nx;
+              if (!isWall(m.x, ny)) m.y = ny;
+            }
+            break;
+          case 'attack':
+            if (dist > m.range * 1.5) { m.state = 'chase'; break; }
+            if (m.attackCd <= 0) {
+              m.attackCd = 1.0;
+              // Attack player
+              const dmg = Math.max(1, m.atk - getTotalDef());
+              if (player.invincible <= 0) {
+                player.hp -= dmg;
+                player.invincible = 0.3;
+                addDamageNumber(player.x * TILE + TILE / 2, player.y * TILE, dmg, '#f44');
+                spawnParticles(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2, '#f44', 5);
+                if (player.hp <= 0) {
+                  player.hp = 0;
+                  document.getElementById('death').style.display = 'flex';
+                  addLog('💀 Bạn đã chết!', '#f44');
+                }
+              }
+            }
+            break;
+        }
+
+        // Return to spawn if too far
+        if (m.state === 'idle') {
+          const spawnDist = Math.sqrt((m.spawnX - m.x) ** 2 + (m.spawnY - m.y) ** 2);
+          if (spawnDist > 3) {
+            const dx = m.spawnX - m.x;
+            const dy = m.spawnY - m.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            m.x += (dx / len) * m.speed * 0.5 * dt;
+            m.y += (dy / len) * m.speed * 0.5 * dt;
+          }
+          // Heal when idle
+          m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.05 * dt);
+        }
+      }
+    }
+
+    // ==================== COMBAT ====================
+    function attackMonster(m) {
+      if (player.attackCooldown > 0) return;
+      const dist = Math.sqrt((player.x - m.x) ** 2 + (player.y - m.y) ** 2);
+      if (dist > 2.5) { addLog('Kẻ địch quá xa!', '#f88'); return; }
+
+      player.attackCooldown = 0.35;
+      const dmg = Math.max(1, getTotalAtk() - m.def + Math.floor(Math.random() * 5));
+      m.hp -= dmg;
+      addDamageNumber(m.x * TILE + TILE / 2, m.y * TILE, dmg, '#ff4');
+      spawnParticles(m.x * TILE + TILE / 2, m.y * TILE + TILE / 2, '#ff4', 3);
+
+      if (m.hp <= 0) {
+        killMonster(m);
+      }
+    }
+
+    function useSkill(idx) {
+      const skill = player.skills[idx];
+      if (skill.cd > 0) { addLog(`${skill.name} đang hồi!`, '#888'); return; }
+      if (player.mp < skill.manaCost) { addLog('Không đủ MP!', '#f88'); return; }
+
+      player.mp -= skill.manaCost;
+      skill.cd = skill.maxCd;
+
+      if (skill.heal) {
+        const amt = skill.healAmt + player.level * 5;
+        player.hp = Math.min(player.maxHp, player.hp + amt);
+        addDamageNumber(player.x * TILE + TILE / 2, player.y * TILE, amt, '#4f4');
+        addLog(`${skill.icon} ${skill.name}: Hồi ${amt} HP`, '#4f4');
+        return;
+      }
+
+      // Damage skill
+      const targets = [];
+      for (const m of monsters) {
+        if (m.hp <= 0) continue;
+        const dist = Math.sqrt((player.x - m.x) ** 2 + (player.y - m.y) ** 2);
+        if (dist <= skill.range) targets.push(m);
+      }
+
+      if (targets.length === 0) { addLog('Không có mục tiêu!', '#888'); player.mp += skill.manaCost; skill.cd = 0; return; }
+
+      const hitTargets = skill.aoe ? targets : [targets[0]];
+      for (const m of hitTargets) {
+        const dmg = Math.max(1, Math.floor(getTotalAtk() * skill.dmgMult) - m.def);
+        m.hp -= dmg;
+        addDamageNumber(m.x * TILE + TILE / 2, m.y * TILE, dmg, '#f80');
+        spawnParticles(m.x * TILE + TILE / 2, m.y * TILE + TILE / 2, '#f80', 5);
+        if (m.hp <= 0) killMonster(m);
+      }
+
+      addLog(`${skill.icon} ${skill.name}: ${hitTargets.length} mục tiêu`, '#f80');
+    }
+
+    function killMonster(m) {
+      m.hp = 0;
+      m.state = 'dead';
+
+      // EXP
+      player.exp += m.exp;
+      addLog(`+${m.exp} EXP từ ${m.name}`, '#fd0');
+
+      // Gold
+      const gold = m.gold[0] + Math.floor(Math.random() * (m.gold[1] - m.gold[0] + 1));
+      player.gold += gold;
+      addLog(`+${gold} Gold`, '#fa0');
+
+      // Level up
+      while (player.exp >= player.nextExp) {
+        player.exp -= player.nextExp;
+        player.level++;
+        player.nextExp = Math.floor(50 * Math.pow(1.3, player.level - 1));
+        player.maxHp += 18;
+        player.maxMp += 12;
+        player.atk += 4;
+        player.def += 2;
+        player.hp = player.maxHp;
+        player.mp = player.maxMp;
+        addLog(`🎉 LEVEL UP! Lv.${player.level}`, '#ff0');
+        spawnParticles(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2, '#ff0', 20);
+      }
+
+      // Loot
+      const lootTable = LOOT_TABLES[m.type] || [];
+      for (const loot of lootTable) {
+        if (Math.random() < loot.chance) {
+          drops.push({ x: m.x, y: m.y, itemId: loot.id, life: 30 });
+          addLog(`💰 ${ITEMS[loot.id].icon} ${ITEMS[loot.id].name} rơi ra!`, '#ff0');
+        }
+      }
+
+      // Respawn after delay
+      setTimeout(() => {
+        const tmpl = MON_TEMPLATES[m.type];
+        m.hp = tmpl.hp;
+        m.x = m.spawnX + (Math.random() - 0.5) * 2;
+        m.y = m.spawnY + (Math.random() - 0.5) * 2;
+        m.state = 'idle';
+      }, 10000);
+    }
+
+    // ==================== INVENTORY ====================
+    function addItem(itemId, qty) {
+      const existing = player.inventory.find(i => i.id === itemId);
+      if (existing) existing.qty += qty;
+      else player.inventory.push({ id: itemId, qty });
+      if (showInv) renderInventory();
+    }
+
+    function usePotion(type) {
+      if (type === 'hp') {
+        const hpPot = player.inventory.find(i => (i.id === 'potion_hp' || i.id === 'potion_hp2') && i.qty > 0);
+        if (hpPot) {
+          const item = ITEMS[hpPot.id];
+          const amt = item.healHp || 50;
+          player.hp = Math.min(getTotalMaxHp(), player.hp + amt);
+          hpPot.qty--;
+          if (hpPot.qty <= 0) player.inventory = player.inventory.filter(i => i.qty > 0);
+          addDamageNumber(player.x * TILE + TILE / 2, player.y * TILE, amt, '#4f4');
+          addLog(`${item.icon} Hồi ${amt} HP`, '#4f4');
+        } else {
+          addLog('Không có thuốc HP! (Mua ở Shop)', '#f88');
+        }
+      } else if (type === 'mp') {
+        const mpPot = player.inventory.find(i => i.id === 'potion_mp' && i.qty > 0);
+        if (mpPot) {
+          const item = ITEMS[mpPot.id];
+          const amt = item.healMp || 30;
+          player.mp = Math.min(player.maxMp, player.mp + amt);
+          mpPot.qty--;
+          if (mpPot.qty <= 0) player.inventory = player.inventory.filter(i => i.qty > 0);
+          addDamageNumber(player.x * TILE + TILE / 2, player.y * TILE, amt, '#48f');
+          addLog(`${item.icon} Hồi ${amt} MP`, '#48f');
+        } else {
+          addLog('Không có thuốc MP! (Mua ở Shop)', '#f88');
+        }
+      }
+    }
+
+    function renderInventory() {
+      const grid = document.getElementById('inv-grid');
+      grid.innerHTML = '';
+      for (let i = 0; i < 20; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'inv-slot';
+        if (i < player.inventory.length) {
+          const item = player.inventory[i];
+          const tmpl = ITEMS[item.id];
+          slot.innerHTML = `${tmpl.icon}<span class="qty">${item.qty > 1 ? item.qty : ''}</span>`;
+          slot.title = `${tmpl.name}\n${tmpl.desc}`;
+          slot.onclick = () => useItem(i);
+        }
+        grid.appendChild(slot);
+      }
+    }
+
+    function useItem(idx) {
+      const inv = player.inventory[idx];
+      if (!inv) return;
+      const item = ITEMS[inv.id];
+
+      if (item.type === 'consumable') {
+        if (item.healHp) player.hp = Math.min(player.maxHp, player.hp + item.healHp);
+        if (item.healMp) player.mp = Math.min(player.maxMp, player.mp + item.healMp);
+        addLog(`${item.icon} Đã sử dụng ${item.name}`, '#4f4');
+      } else if (item.type === 'weapon') {
+        player.weapon = inv.id;
+        addLog(`${item.icon} Trang bị ${item.name}`, '#4af');
+      } else if (item.type === 'armor') {
+        player.armor = inv.id;
+        addLog(`${item.icon} Trang bị ${item.name}`, '#4af');
+      } else if (item.type === 'accessory') {
+        player.accessory = inv.id;
+        addLog(`${item.icon} Trang bị ${item.name}`, '#4af');
+      } else {
+        return; // Can't use materials
+      }
+
+      inv.qty--;
+      if (inv.qty <= 0) player.inventory.splice(idx, 1);
+      renderInventory();
+    }
+
+    function getTotalAtk() {
+      let atk = player.atk;
+      if (player.weapon && ITEMS[player.weapon]) atk += ITEMS[player.weapon].atk || 0;
+      if (player.accessory && ITEMS[player.accessory]) atk += ITEMS[player.accessory].atk || 0;
+      return atk;
+    }
+
+    function getTotalDef() {
+      let def = player.def;
+      if (player.armor && ITEMS[player.armor]) def += ITEMS[player.armor].def || 0;
+      return def;
+    }
+
+    function getTotalMaxHp() {
+      let hp = player.maxHp;
+      if (player.accessory && ITEMS[player.accessory]) hp += ITEMS[player.accessory].hp || 0;
+      return hp;
+    }
+
+    // ==================== RENDER ====================
+    function render() {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-camera.x, -camera.y);
+
+      // Draw map
+      const startX = Math.max(0, Math.floor(camera.x / TILE));
+      const startY = Math.max(0, Math.floor(camera.y / TILE));
+      const endX = Math.min(MAP_W, startX + Math.ceil(canvas.width / TILE) + 2);
+      const endY = Math.min(MAP_H, startY + Math.ceil(canvas.height / TILE) + 2);
+
+      for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+          const tile = MAP[y][x];
+          const px = x * TILE, py = y * TILE;
+
+          switch (tile) {
+            case 0: // Ground
+              ctx.fillStyle = (x + y) % 2 === 0 ? '#2a5a24' : '#2d5d27';
+              ctx.fillRect(px, py, TILE, TILE);
+              break;
+            case 1: // Wall
+              ctx.fillStyle = '#555';
+              ctx.fillRect(px, py, TILE, TILE);
+              ctx.fillStyle = '#444';
+              ctx.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+              break;
+            case 3: // Water
+              ctx.fillStyle = '#224488';
+              ctx.fillRect(px, py, TILE, TILE);
+              ctx.fillStyle = `rgba(100,150,255,${0.2 + 0.1 * Math.sin(gameTime * 2 + x)})`;
+              ctx.fillRect(px, py, TILE, TILE);
+              break;
+          }
+        }
+      }
+
+      // Draw shop NPC
+      const shopX = 17, shopY = 13;
+      const spx = shopX * TILE, spy = shopY * TILE;
+      ctx.fillStyle = '#a80';
+      ctx.fillRect(spx + 4, spy + 6, TILE - 8, TILE - 10);
+      ctx.font = '20px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🧙', spx + TILE / 2, spy + TILE / 2);
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#fa0';
+      ctx.fillText('SHOP (B)', spx + TILE / 2, spy - 6);
+
+      // Draw chests
+      for (const ch of CHEST_POSITIONS) {
+        if (ch.opened) continue;
+        const px = ch.x * TILE, py = ch.y * TILE;
+        if (px < camera.x - TILE || py < camera.y - TILE || px > camera.x + canvas.width + TILE || py > camera.y + canvas.height + TILE) continue;
+        ctx.fillStyle = '#a80';
+        ctx.fillRect(px + 6, py + 8, TILE - 12, TILE - 12);
+        ctx.fillStyle = '#fc0';
+        ctx.fillRect(px + 12, py + 14, 8, 8);
+      }
+
+      // Draw drops
+      for (const d of drops) {
+        const px = d.x * TILE + TILE / 2;
+        const py = d.y * TILE + TILE / 2 + Math.sin(gameTime * 3) * 3;
+        ctx.font = '16px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ITEMS[d.itemId].icon, px, py);
+      }
+
+      // Draw monsters
+      for (const m of monsters) {
+        if (m.hp <= 0) continue;
+        const px = m.x * TILE, py = m.y * TILE;
+        if (px < camera.x - TILE * 2 || py < camera.y - TILE * 2 || px > camera.x + canvas.width + TILE * 2 || py > camera.y + canvas.height + TILE * 2) continue;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(px + TILE / 2, py + TILE - 2, TILE / 3, TILE / 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sprite
+        ctx.font = '24px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(m.sprite, px + TILE / 2, py + TILE / 2);
+
+        // HP bar
+        if (m.hp < m.maxHp) {
+          const barW = TILE;
+          const barH = 4;
+          const bx = px, by = py - 8;
+          ctx.fillStyle = '#333';
+          ctx.fillRect(bx, by, barW, barH);
+          ctx.fillStyle = '#f44';
+          ctx.fillRect(bx, by, barW * (m.hp / m.maxHp), barH);
+        }
+
+        // Name
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${m.name} Lv${m.level}`, px + TILE / 2, py - 12);
+
+        // State indicator
+        if (m.state === 'chase' || m.state === 'attack') {
+          ctx.strokeStyle = m.state === 'attack' ? '#f44' : '#fa0';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(px + TILE / 2, py + TILE / 2, TILE / 2 + 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // Draw player
+      const ppx = player.x * TILE, ppy = player.y * TILE;
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(ppx + TILE / 2, ppy + TILE - 2, TILE / 3, TILE / 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Player body (flash when hit)
+      const flash = player.invincible > 0 && Math.sin(player.flashTimer * 20) > 0;
+      ctx.fillStyle = flash ? '#fff' : '#4488ff';
+      ctx.fillRect(ppx + 6, ppy + 4, TILE - 12, TILE - 8);
+
+      // Player head
+      ctx.fillStyle = flash ? '#fff' : '#ffcc88';
+      ctx.beginPath();
+      ctx.arc(ppx + TILE / 2, ppy + 8, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Direction indicator
+      ctx.fillStyle = '#fff';
+      const dirOffsets = { up: [0, -6], down: [0, 6], left: [-6, 0], right: [6, 0] };
+      const [dox, doy] = dirOffsets[player.direction] || [0, 6];
+      ctx.beginPath();
+      ctx.arc(ppx + TILE / 2 + dox, ppy + TILE / 2 + doy, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Player name
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#4f4';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Lv${player.level}`, ppx + TILE / 2, ppy - 8);
+
+      // Projectiles
+      for (const p of projectiles) {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Damage numbers
+      for (const d of damageNumbers) {
+        ctx.font = `bold ${d.size}px sans-serif`;
+        ctx.fillStyle = d.color;
+        ctx.globalAlpha = d.life;
+        ctx.textAlign = 'center';
+        ctx.fillText(d.text, d.x, d.y);
+        ctx.globalAlpha = 1;
+      }
+
+      // Particles
+      for (const p of particles) {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.restore();
+
+      // Draw minimap
+      drawMinimap();
+    }
+
+    function drawMinimap() {
+      const scale = 150 / (MAP_W * TILE);
+      miniCtx.fillStyle = 'rgba(0,0,0,0.8)';
+      miniCtx.fillRect(0, 0, 150, 150);
+
+      // Map tiles (simplified)
+      miniCtx.fillStyle = '#2a5a24';
+      miniCtx.fillRect(0, 0, 150, 150);
+
+      // Water
+      miniCtx.fillStyle = '#224488';
+      const riverY = 28 * scale * TILE;
+      miniCtx.fillRect(0, riverY, 150, 2 * scale * TILE);
+
+      // Monsters
+      for (const m of monsters) {
+        if (m.hp <= 0) continue;
+        miniCtx.fillStyle = '#f44';
+        miniCtx.fillRect(m.x * TILE * scale, m.y * TILE * scale, 3, 3);
+      }
+
+      // Player
+      miniCtx.fillStyle = '#4f4';
+      miniCtx.fillRect(player.x * TILE * scale - 2, player.y * TILE * scale - 2, 5, 5);
+
+      // Camera view
+      miniCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+      miniCtx.lineWidth = 1;
+      miniCtx.strokeRect(camera.x * scale, camera.y * scale, canvas.width * scale, canvas.height * scale);
+    }
+
+    // ==================== PROJECTILES ====================
+    function updateProjectiles(dt) {
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) { projectiles.splice(i, 1); continue; }
+
+        // Check collision with monsters
+        for (const m of monsters) {
+          if (m.hp <= 0) continue;
+          const dx = p.x - (m.x * TILE + TILE / 2);
+          const dy = p.y - (m.y * TILE + TILE / 2);
+          if (Math.sqrt(dx * dx + dy * dy) < TILE / 2) {
+            m.hp -= p.damage;
+            addDamageNumber(m.x * TILE + TILE / 2, m.y * TILE, p.damage, '#f80');
+            if (m.hp <= 0) killMonster(m);
+            projectiles.splice(i, 1);
+            break;
+          }
+        }
+      }
+    }
+
+    // ==================== HELPERS ====================
+    function addDamageNumber(x, y, value, color) {
+      damageNumbers.push({ x, y, text: `-${value}`, color, life: 1, size: 14 + Math.min(value / 10, 10) });
+    }
+
+    function spawnParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 50 + Math.random() * 100;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color, life: 0.5 + Math.random() * 0.5,
+          size: 2 + Math.random() * 3
+        });
+      }
+    }
+
+    function addLog(text, color) {
+      const log = document.getElementById('log');
+      const div = document.createElement('div');
+      div.style.color = color || '#aaa';
+      div.textContent = text;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      if (log.children.length > 30) log.removeChild(log.firstChild);
+    }
+
+    function updateUI() {
+      const totalHp = getTotalMaxHp();
+      document.getElementById('name-display').textContent = `⚔️ Nhà Thám Hiểm`;
+      document.getElementById('hp-bar').style.width = `${(player.hp / totalHp) * 100}%`;
+      document.getElementById('hp-text').textContent = `${Math.floor(player.hp)} / ${totalHp}`;
+      document.getElementById('mp-bar').style.width = `${(player.mp / player.maxMp) * 100}%`;
+      document.getElementById('mp-text').textContent = `${Math.floor(player.mp)} / ${player.maxMp}`;
+      document.getElementById('exp-bar').style.width = `${(player.exp / player.nextExp) * 100}%`;
+      document.getElementById('exp-text').textContent = `${player.exp} / ${player.nextExp}`;
+      document.getElementById('level-display').textContent = `Lv.${player.level} | ATK:${getTotalAtk()} DEF:${getTotalDef()}`;
+      document.getElementById('gold-display').textContent = `💰 ${player.gold} Gold`;
+      document.getElementById('pos-display').textContent = `(${Math.floor(player.x)}, ${Math.floor(player.y)})`;
+    }
+
+    // ==================== SKILL UI ====================
+    function createSkillUI() {
+      const container = document.getElementById('skills');
+      container.innerHTML = '';
+      for (let i = 0; i < player.skills.length; i++) {
+        const s = player.skills[i];
+        const div = document.createElement('div');
+        div.className = 'skill';
+        div.innerHTML = `
+      <span style="font-size:18px">${s.icon}</span>
+      <span style="font-size:9px">${s.name}</span>
+      <span class="key">${s.key}</span>
+      <div class="cd" id="skill-cd-${i}"></div>
+    `;
+        div.onclick = () => useSkill(i);
+        container.appendChild(div);
+      }
+    }
+    createSkillUI();
+
+    // ==================== STATS ====================
+    function renderStats() {
+      const content = document.getElementById('stats-content');
+      content.innerHTML = `
+    <div>⚔️ ATK: <span style="color:#f88">${getTotalAtk()}</span></div>
+    <div>🛡️ DEF: <span style="color:#48f">${getTotalDef()}</span></div>
+    <div>❤️ HP: ${player.hp} / ${getTotalMaxHp()}</div>
+    <div>💙 MP: ${player.mp} / ${player.maxMp}</div>
+    <div>⭐ Level: ${player.level}</div>
+    <div>📊 EXP: ${player.exp} / ${player.nextExp}</div>
+    <div>💰 Gold: ${player.gold}</div>
+    <div style="margin-top:8px;color:#888;font-size:11px">
+      <div>Vũ khí: ${player.weapon ? ITEMS[player.weapon].name : 'Không có'}</div>
+      <div>Giáp: ${player.armor ? ITEMS[player.armor].name : 'Không có'}</div>
+      <div>Phụ kiện: ${player.accessory ? ITEMS[player.accessory].name : 'Không có'}</div>
+    </div>
+  `;
+    }
+
+    // ==================== SHOP ====================
+    const SHOP_ITEMS = [
+      { id: 'potion_hp', price: 10, name: 'Bánh Mì', icon: '🍞', desc: 'Hồi 50 HP' },
+      { id: 'potion_hp2', price: 50, name: 'Thuốc Lớn', icon: '🧪', desc: 'Hồi 200 HP' },
+      { id: 'potion_mp', price: 12, name: 'Nước Phép', icon: '💧', desc: 'Hồi 30 MP' },
+      { id: 'sword1', price: 50, name: 'Kiếm Gỗ', icon: '🗡️', desc: 'ATK +5' },
+      { id: 'armor1', price: 60, name: 'Áo Da', icon: '👕', desc: 'DEF +5' },
+    ];
+
+    function toggleShop() {
+      showShop = !showShop;
+      document.getElementById('shop-panel').style.display = showShop ? 'block' : 'none';
+      if (showShop) renderShop();
+    }
+
+    function renderShop() {
+      const container = document.getElementById('shop-items');
+      container.innerHTML = '';
+      for (const item of SHOP_ITEMS) {
+        const div = document.createElement('div');
+        div.className = 'shop-item';
+        div.innerHTML = `
+      <span class="si-icon">${item.icon}</span>
+      <div class="si-info">
+        <div class="si-name">${item.name}</div>
+        <div class="si-desc">${item.desc}</div>
+      </div>
+      <span class="si-price">💰 ${item.price}</span>
+    `;
+        div.onclick = () => buyItem(item);
+        container.appendChild(div);
+      }
+    }
+
+    function buyItem(item) {
+      if (player.gold < item.price) {
+        addLog('Không đủ Gold!', '#f88');
+        return;
+      }
+      player.gold -= item.price;
+      addItem(item.id, 1);
+      addLog(`🛒 Mua ${item.icon} ${item.name} (-${item.price} Gold)`, '#fa0');
+      renderShop();
+    }
+
+    // ==================== RESPAWN ====================
+    function respawn() {
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      player.exp = Math.floor(player.exp * 0.8);
+      player.x = 15;
+      player.y = 15;
+      player.invincible = 2;
+      document.getElementById('death').style.display = 'none';
+      addLog('♻️ Hồi sinh tại làng tân thủ', '#4f4');
+    }
+
+    // ==================== GAME LOOP ====================
+    function gameLoop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+
+      update(dt);
+      render();
+
+      // Update skill cooldowns UI
+      for (let i = 0; i < player.skills.length; i++) {
+        const s = player.skills[i];
+        const cdEl = document.getElementById(`skill-cd-${i}`);
+        if (cdEl) {
+          if (s.cd > 0) {
+            cdEl.style.display = 'flex';
+            cdEl.textContent = Math.ceil(s.cd);
+          } else {
+            cdEl.style.display = 'none';
+          }
+        }
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ==================== START ====================
+    addLog('🎮 Chào mừng đến RPG 2D!', '#ff0');
+    addLog('WASD: Di chuyển | Click: Tấn công | 1-5: Kỹ năng', '#aaa');
+    addLog('Q: Thuốc HP | E: Thuốc MP | I: Túi đồ | C: Chỉ số | B: Shop', '#aaa');
+    addLog('Tip: Đánh thường (click) không tốn MP!', '#ff0');
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+
+</html>

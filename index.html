@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Game Hub - Tổng Hợp Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:#080810;color:#e0e0e0;min-height:100vh;overflow-x:hidden}
+
+        /* Animated background */
+        body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+            background:radial-gradient(ellipse at 20% 50%,rgba(120,80,255,.08) 0%,transparent 50%),
+                        radial-gradient(ellipse at 80% 20%,rgba(255,80,120,.06) 0%,transparent 50%),
+                        radial-gradient(ellipse at 50% 80%,rgba(80,200,255,.05) 0%,transparent 50%);
+            z-index:-1;animation:bgShift 20s ease-in-out infinite alternate}
+        @keyframes bgShift{0%{opacity:1}50%{opacity:.7}100%{opacity:1}}
+
+        /* Floating particles */
+        .particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}
+        .particle{position:absolute;border-radius:50%;animation:floatUp linear infinite;opacity:0}
+        @keyframes floatUp{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+
+        /* Header */
+        .header{position:relative;z-index:10;padding:40px 20px 20px;text-align:center}
+        .header-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;
+            background:rgba(120,80,255,.12);color:#a78bfa;border:1px solid rgba(120,80,255,.2);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase}
+        .header-title{font-size:clamp(32px,6vw,56px);font-weight:900;
+            background:linear-gradient(135deg,#a78bfa,#f472b6,#fbbf24,#34d399,#60a5fa);
+            background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            animation:gradient 6s ease infinite;line-height:1.1;margin-bottom:8px}
+        @keyframes gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        .header-sub{font-size:clamp(14px,2vw,18px);color:#888;max-width:600px;margin:0 auto;line-height:1.6}
+        .header-stats{display:flex;justify-content:center;gap:30px;margin-top:20px}
+        .stat{text-align:center}
+        .stat-num{font-size:28px;font-weight:800;color:#a78bfa}
+        .stat-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px}
+
+        /* Grid */
+        .grid{position:relative;z-index:10;display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;
+            max-width:1100px;margin:30px auto;padding:0 20px 40px}
+
+        /* Card */
+        .card{position:relative;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+            border-radius:20px;overflow:hidden;transition:all .4s cubic-bezier(.4,0,.2,1);cursor:pointer;text-decoration:none;color:inherit;display:block}
+        .card:hover{transform:translateY(-8px);border-color:rgba(255,255,255,.15);
+            box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 40px var(--glow);background:rgba(255,255,255,.05)}
+        .card-banner{height:160px;display:flex;align-items:center;justify-content:center;font-size:70px;
+            position:relative;overflow:hidden}
+        .card-banner::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+            background:linear-gradient(135deg,var(--c1),var(--c2));opacity:.15}
+        .card-banner::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:60%;
+            background:linear-gradient(transparent,rgba(8,8,16,.9))}
+        .card-banner-icon{position:relative;z-index:2;filter:drop-shadow(0 4px 20px rgba(0,0,0,.3));transition:transform .4s}
+        .card:hover .card-banner-icon{transform:scale(1.15) rotate(-3deg)}
+        .card-body{padding:16px 20px 20px}
+        .card-tags{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+        .tag{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:.5px}
+        .tag-game{background:rgba(120,80,255,.12);color:#a78bfa}
+        .tag-ai{background:rgba(52,211,153,.12);color:#34d399}
+        .tag-new{background:rgba(251,191,36,.12);color:#fbbf24}
+        .tag-hot{background:rgba(244,114,182,.12);color:#f472b6}
+        .card-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:4px}
+        .card-desc{font-size:12px;color:#888;line-height:1.5}
+        .card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05)}
+        .card-play{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#a78bfa}
+        .card-play-icon{width:28px;height:28px;border-radius:8px;background:rgba(120,80,255,.15);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .3s}
+        .card:hover .card-play-icon{background:rgba(120,80,255,.3);transform:translateX(3px)}
+        .card-meta{font-size:10px;color:#555}
+
+        /* Footer */
+        .footer{position:relative;z-index:10;text-align:center;padding:30px 20px 40px;border-top:1px solid rgba(255,255,255,.04)}
+        .footer-text{font-size:12px;color:#444}
+        .footer-text a{color:#a78bfa;text-decoration:none}
+        .footer-text a:hover{text-decoration:underline}
+
+        /* Responsive */
+        @media(max-width:640px){
+            .grid{grid-template-columns:1fr;padding:0 12px 30px}
+            .header{padding:24px 12px 12px}
+            .header-stats{gap:20px}
+            .stat-num{font-size:22px}
+        }
+    </style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="header">
+    <div class="header-badge">✨ Open Source • Free to Play</div>
+    <h1 class="header-title">🎮 Game Hub</h1>
+    <p class="header-sub">Tổng hợp game & công cụ AI được tạo bằng HTML5, CSS3, JavaScript. Chơi miễn phí, không cần cài đặt!</p>
+    <div class="header-stats">
+        <div class="stat"><div class="stat-num">6</div><div class="stat-label">Trò chơi</div></div>
+        <div class="stat"><div class="stat-num">7</div><div class="stat-label">Chế độ AI</div></div>
+        <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Miễn phí</div></div>
+    </div>
+</div>
+
+<div class="grid">
+    <!-- Platformer -->
+    <a class="card" href="game/index.html" style="--c1:#667eea;--c2:#764ba2;--glow:rgba(102,126,234,.2)">
+        <div class="card-banner"><div class="card-banner-icon">⚔️</div></div>
+        <div class="card-body">
+            <div class="card-tags"><span class="tag tag-game">Platformer</span><span class="tag tag-hot">10 Màn</span></div>
+            <div class="card-title">Phiêu Lưu Vượt Ải</div>
+            <div class="card-desc">Nhảy qua platforms, thu thập coins, né quái vật, vượt qua 10 màn chơi với độ khó tăng dần. Nhảy đôi, hiệu ứng đẹp.</div>
+            <div class="card-footer">
+                <div class="card-play"><div class="card-play-icon">▶</div> Chơi ngay</div>
+                <div class="card-meta">WASD + Space</div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Bombom -->
+    <a class="card" href="game/bombom.html" style="--c1:#f093fb;--c2:#f5576c;--glow:rgba(240,147,251,.2)">
+        <div class="card-banner"><div class="card-banner-icon">🎯</div></div>
+        <div class="card-body">
+            <div class="card-tags"><span class="tag tag-game">Puzzle</span><span class="tag tag-new">8 Chế độ</span></div>
+            <div class="card-title">Bombom - Bắn Bong Bóng</div>
+            <div class="card-desc">Bắn bong bóng cùng màu để phá hủy. 8 chế độ: Classic, Time Attack, Endless, Puzzle, Zen, Đảo Ngược, Bomb, Rainbow.</div>
+            <div class="card-footer">
+                <div class="card-play"><div class="card-play-icon">▶</div> Chơi ngay</div>
+                <div class="card-meta">Chuột + Scroll</div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Shooter -->
+    <a class="card" href="game/shooter.html" style="--c1:#eb3349;--c2:#f45c43;--glow:rgba(235,51,73,.2)">
+        <div class="card-banner"><div class="card-banner-icon">🔫</div></div>
+        <div class="card-body">
+            <div class="card-tags"><span class="tag tag-game">Action</span><span class="tag tag-hot">6 Chế độ</span></div>
+            <div class="card-title">Chiến Binh Bắn Súng</div>
+            <div class="card-desc">Top-down shooter với 4 loại súng, 6 loại kẻ thù, 6 chế độ chơi. Boss Rush, Survival, Hardcore, Speed, One Hit.</div>
+            <div class="card-footer">
+                <div class="card-play"><div class="card-play-icon">▶</div> Chơi ngay</div>
+                <div class="card-meta">WASD + Chuột</div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Fighting -->
+    <a class="card" href="game/fighting.html" style="--c1:#ff4444;--c2:#ff8800;--glow:rgba(255,68,68,.2)">
+        <div class="card-banner"><div class="card-banner-icon">⚔️</div></div>
+        <div class="card-body">
+            <div class="card-tags"><span class="tag tag-game">Fighting</span><span class="tag tag-new">9 Nhân vật</span></div>
+            <div class="card-title">Đại Chiến Đối Kháng</div>
+            <div class="card-desc">Game đối kháng 1v1 với 9 nhân vật, mỗi nhân vật 3 chiêu thức đặc biệt. Đấu AI hoặc 2 người, combo system, ultimate.</div>
+            <div class="card-footer">
+                <div class="card-play"><div class="card-play-icon">▶</div> Chơi ngay</div>
+                <div class="card-meta">WASD + FGH</div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Racing -->
+    <a class="card" href="game/racing.html" style="--c1:#ff8800;--c2:#ff2200;--glow:rgba(255,136,0,.2)">
+        <div class="card-banner"><div class="card-banner-icon">🏎️</div></div>
+        <div class="card-body">
+            <div class="card-tags"><span class="tag tag-game">Racing</span><span class="tag tag-hot">6 Xe • 5 Đường</span></div>
+            <div class="card-title">Đua Xe Tốc Độ</div>
+            <div class="card-desc">Đua xe top-down với drift, 5 power-up, 6 loại xe, 5 đường đua. Đua với AI hoặc 2 người trên cùng máy.</div>
+            <div class="card-footer">
+                <div class="card-play"><div class="card-play-icon">▶</div> Chơi ngay</div>
+                <div class="card-meta">WASD + Space</div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Chatbot -->
+    <a class="card" href="game/chatbot.html" style="--c1:#6a3de8;--c2:#9b6bff;--glow:rgba(106,61,232,.2)">
+        <div class="card-banner"><div class="card-banner-icon">🔮</div></div>
+        <div class="card-body">
+            <div class="card-tags"><span class="tag tag-ai">AI Chatbot</span><span class="tag tag-new">7 Chế độ</span></div>
+            <div class="card-title">AI Tử Vi & Tarot</div>
+            <div class="card-desc">Chatbot AI xem bói: Tử Vi, Cung Hoàng Đạo, Tarot, Thần Số Học, Chỉ Tay, Giải Mã Giấc Mơ, Tình Yêu. Tích hợp Gemini AI.</div>
+            <div class="card-footer">
+                <div class="card-play"><div class="card-play-icon">▶</div> Trải nghiệm</div>
+                <div class="card-meta">Chat + AI</div>
+            </div>
+        </div>
+    </a>
+</div>
+
+<div class="footer">
+    <p class="footer-text">Được tạo với ❤️ bằng HTML5, CSS3, JavaScript • <a href="https://github.com" target="_blank">GitHub Pages</a></p>
+</div>
+
+<script>
+// Floating particles
+(function(){
+    const c=document.getElementById('particles');
+    const colors=['#a78bfa','#f472b6','#fbbf24','#34d399','#60a5fa'];
+    for(let i=0;i<30;i++){
+        const p=document.createElement('div');
+        p.className='particle';
+        const size=2+Math.random()*4;
+        p.style.cssText=`width:${size}px;height:${size}px;left:${Math.random()*100}%;background:${colors[i%colors.length]};animation-duration:${10+Math.random()*20}s;animation-delay:${Math.random()*15}s`;
+        c.appendChild(p);
+    }
+})();
+</script>
+</body>
+</html>

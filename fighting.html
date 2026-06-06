@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ Đại Chiến Đối Kháng</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+        #gameWrapper { position: relative; }
+        canvas {
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 0 60px rgba(255,50,50,0.2);
+        }
+        #overlay {
+            position: absolute; top: 0; left: 0;
+            width: 900px; height: 500px;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: rgba(5,5,15,0.96);
+            border-radius: 12px; z-index: 20;
+        }
+        .overlay-title {
+            font-size: 44px; font-weight: bold;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #ff4444, #ffaa00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+        }
+        .overlay-sub { color: #777; font-size: 14px; margin-bottom: 18px; }
+        .hidden { display: none !important; }
+
+        /* Menu */
+        .menu-btns { display: flex; gap: 12px; margin-bottom: 16px; }
+        .menu-btn {
+            padding: 12px 28px; font-size: 16px; font-weight: bold;
+            border: 2px solid #ff4444; border-radius: 10px;
+            background: rgba(255,50,50,0.1); color: #ff6666;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .menu-btn:hover { background: rgba(255,50,50,0.25); transform: translateY(-2px); }
+
+        /* Character Select */
+        .select-container { display: flex; gap: 20px; width: 90%; }
+        .select-side { flex: 1; text-align: center; }
+        .select-label { color: #888; font-size: 14px; margin-bottom: 10px; font-weight: bold; }
+        .select-label.p1 { color: #4488ff; }
+        .select-label.p2 { color: #ff4444; }
+        .char-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 8px; margin-bottom: 12px;
+        }
+        .char-card {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.08);
+            border-radius: 10px; padding: 10px 6px;
+            cursor: pointer; transition: all 0.3s;
+            text-align: center;
+        }
+        .char-card:hover { border-color: #ff4444; background: rgba(255,50,50,0.08); }
+        .char-card.selected-p1 { border-color: #4488ff; background: rgba(68,136,255,0.15); box-shadow: 0 0 15px rgba(68,136,255,0.3); }
+        .char-card.selected-p2 { border-color: #ff4444; background: rgba(255,50,50,0.15); box-shadow: 0 0 15px rgba(255,50,50,0.3); }
+        .char-avatar { font-size: 36px; margin-bottom: 4px; }
+        .char-name { color: #fff; font-size: 13px; font-weight: bold; }
+        .char-preview {
+            margin-top: 8px; padding: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px; text-align: left;
+        }
+        .char-stat { display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px; }
+        .char-stat-name { color: #888; }
+        .char-stat-bar { width: 60%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .char-stat-fill { height: 100%; border-radius: 3px; }
+        .moves-list { margin-top: 6px; }
+        .move-item { color: #aaa; font-size: 11px; margin: 2px 0; }
+        .move-key { color: #ffd700; font-weight: bold; }
+
+        /* Difficulty */
+        .diff-row { display: flex; gap: 8px; margin: 10px 0; }
+        .diff-btn {
+            padding: 6px 16px; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px; background: transparent; color: #fff;
+            cursor: pointer; font-size: 12px; transition: all 0.3s;
+        }
+        .diff-btn:hover, .diff-btn.active { border-color: #ff4444; background: rgba(255,50,50,0.2); }
+
+        .fight-btn {
+            padding: 14px 50px; font-size: 20px; font-weight: bold;
+            border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #ff4444, #ff8800);
+            color: #fff; cursor: pointer; margin-top: 12px;
+            transition: all 0.3s; text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .fight-btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(255,50,50,0.5); }
+
+        .result-title { font-size: 50px; font-weight: bold; margin-bottom: 10px; }
+        .result-sub { color: #aaa; font-size: 18px; margin-bottom: 20px; }
+
+        .controls-info { color: #444; font-size: 11px; margin-top: 14px; text-align: center; line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div id="gameWrapper">
+        <canvas id="game" width="900" height="500"></canvas>
+        <div id="overlay">
+            <div id="menuScreen">
+                <div class="overlay-title">⚔️ ĐẠI CHIẾN ĐỐI KHÁNG</div>
+                <div class="overlay-sub">Chọn chiến binh và chiến đấu!</div>
+                <div class="menu-btns">
+                    <div class="menu-btn" onclick="showCharSelect('1p')">🎮 1 Người Chơi</div>
+                    <div class="menu-btn" onclick="showCharSelect('2p')">👥 2 Người Chơi</div>
+                </div>
+                <div class="controls-info">
+                    <b style="color:#4488ff">P1:</b> WASD di chuyển | F/G/H: 3 chiêu | R: Block | T: Đấm<br>
+                    <b style="color:#ff4444">P2:</b> Mũi tên di chuyển | J/K/L: 3 chiêu | P: Block | O: Đấm
+                </div>
+            </div>
+            <div id="charSelectScreen" class="hidden">
+                <div class="overlay-title" style="font-size:32px">⚔️ CHỌN NHÂN VẬT</div>
+                <div class="select-container">
+                    <div class="select-side" id="p1Select">
+                        <div class="select-label p1">🔵 PLAYER 1</div>
+                        <div class="char-grid" id="p1Grid"></div>
+                        <div class="char-preview" id="p1Preview"></div>
+                    </div>
+                    <div class="select-side" id="p2Select">
+                        <div class="select-label p2">🔴 PLAYER 2 / AI</div>
+                        <div class="char-grid" id="p2Grid"></div>
+                        <div class="char-preview" id="p2Preview"></div>
+                    </div>
+                </div>
+                <div class="diff-row" id="diffRow">
+                    <span style="color:#888;font-size:12px">Độ khó AI:</span>
+                    <div class="diff-btn active" onclick="setDiff(0,this)">Dễ</div>
+                    <div class="diff-btn" onclick="setDiff(1,this)">Thường</div>
+                    <div class="diff-btn" onclick="setDiff(2,this)">Khó</div>
+                    <div class="diff-btn" onclick="setDiff(3,this)">Thần thánh</div>
+                </div>
+                <button class="fight-btn" onclick="startFight()">⚔️ CHIẾN ĐẤU!</button>
+                <div style="margin-top:8px"><span class="menu-btn" style="padding:6px 16px;font-size:12px" onclick="showMenu()">⬅️ Quay lại</span></div>
+            </div>
+            <div id="resultScreen" class="hidden">
+                <div class="result-title" id="resultTitle">🏆</div>
+                <div class="result-sub" id="resultSub"></div>
+                <div class="menu-btns">
+                    <div class="menu-btn" onclick="startFight()">🔄 Đấu lại</div>
+                    <div class="menu-btn" onclick="showCharSelect(gameMode)">📋 Đổi nhân vật</div>
+                    <div class="menu-btn" onclick="showMenu()">🏠 Menu</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== ENGINE ====================
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const W = 900, H = 500;
+        const GROUND_Y = 420;
+        const GRAVITY = 0.6;
+
+        // ==================== CHARACTERS ====================
+        const CHARACTERS = [
+            {
+                id: 'samurai', name: 'Samurai', avatar: '⚔️',
+                color: '#4488ff', bodyColor: '#2266cc', accent: '#88bbff',
+                hp: 100, attack: 12, defense: 8, speed: 4.5,
+                moves: [
+                    { name: 'Chém Gió', key: 'F', damage: 18, range: 70, cooldown: 30, color: '#44aaff', type: 'slash', icon: '💨' },
+                    { name: 'Lốc Kiếm', key: 'G', damage: 28, range: 50, cooldown: 60, color: '#66ccff', type: 'spin', icon: '🌀' },
+                    { name: 'Trảm Không', key: 'H', damage: 45, range: 120, cooldown: 120, color: '#aaddff', type: 'ultimate', icon: '⚡' }
+                ]
+            },
+            {
+                id: 'monk', name: 'Võ Sư', avatar: '👊',
+                color: '#ff8844', bodyColor: '#cc6622', accent: '#ffbb88',
+                hp: 110, attack: 10, defense: 10, speed: 4,
+                moves: [
+                    { name: 'Quyền Phong', key: 'F', damage: 15, range: 55, cooldown: 20, color: '#ff8844', type: 'punch', icon: '👊' },
+                    { name: 'Long Trảo', key: 'G', damage: 25, range: 65, cooldown: 50, color: '#ffaa66', type: 'grab', icon: '🐉' },
+                    { name: 'Hàng Long', key: 'H', damage: 50, range: 100, cooldown: 140, color: '#ffcc88', type: 'ultimate', icon: '🐲' }
+                ]
+            },
+            {
+                id: 'mage', name: 'Phù Thủy', avatar: '🧙',
+                color: '#aa44ff', bodyColor: '#8822cc', accent: '#cc88ff',
+                hp: 85, attack: 15, defense: 5, speed: 3.5,
+                moves: [
+                    { name: 'Cầu Lửa', key: 'F', damage: 20, range: 200, cooldown: 25, color: '#ff4444', type: 'projectile', icon: '🔥' },
+                    { name: 'Bão Tuyết', key: 'G', damage: 30, range: 80, cooldown: 55, color: '#88ccff', type: 'aoe', icon: '❄️' },
+                    { name: 'Thiên Thạch', key: 'H', damage: 55, range: 150, cooldown: 150, color: '#ff8800', type: 'ultimate', icon: '☄️' }
+                ]
+            },
+            {
+                id: 'ninja', name: 'Ninja', avatar: '🥷',
+                color: '#44ffaa', bodyColor: '#22cc88', accent: '#88ffcc',
+                hp: 80, attack: 14, defense: 6, speed: 5.5,
+                moves: [
+                    { name: 'Phi Tiêu', key: 'F', damage: 14, range: 180, cooldown: 18, color: '#aaffaa', type: 'projectile', icon: '⭐' },
+                    { name: 'Phân Thân', key: 'G', damage: 22, range: 60, cooldown: 45, color: '#88ff88', type: 'dash', icon: '👤' },
+                    { name: 'Ảnh Phong', key: 'H', damage: 40, range: 90, cooldown: 130, color: '#ccffcc', type: 'ultimate', icon: '🌪️' }
+                ]
+            },
+            {
+                id: 'knight', name: 'Hiệp Sĩ', avatar: '🛡️',
+                color: '#ffdd44', bodyColor: '#ccaa22', accent: '#ffee88',
+                hp: 130, attack: 11, defense: 14, speed: 3,
+                moves: [
+                    { name: 'Chém Khiên', key: 'F', damage: 16, range: 60, cooldown: 22, color: '#ffdd44', type: 'slash', icon: '🗡️' },
+                    { name: 'Lao Khiên', key: 'G', damage: 24, range: 80, cooldown: 50, color: '#ffee66', type: 'charge', icon: '🛡️' },
+                    { name: 'Công Lý', key: 'H', damage: 48, range: 110, cooldown: 135, color: '#ffffaa', type: 'ultimate', icon: '⚖️' }
+                ]
+            },
+            {
+                id: 'demon', name: 'Ác Quỷ', avatar: '👹',
+                color: '#ff2244', bodyColor: '#cc1133', accent: '#ff6688',
+                hp: 95, attack: 16, defense: 7, speed: 4.2,
+                moves: [
+                    { name: 'Vuốt Ác', key: 'F', damage: 18, range: 65, cooldown: 20, color: '#ff4444', type: 'slash', icon: ' claws' },
+                    { name: 'Hỏa Ngục', key: 'G', damage: 32, range: 70, cooldown: 55, color: '#ff6600', type: 'aoe', icon: '🔥' },
+                    { name: 'Cuồng Nộ', key: 'H', damage: 60, range: 100, cooldown: 160, color: '#ff0044', type: 'ultimate', icon: '😈' }
+                ]
+            },
+            {
+                id: 'ice', name: 'Băng Nữ', avatar: '❄️',
+                color: '#88ddff', bodyColor: '#55aadd', accent: '#bbeeFF',
+                hp: 90, attack: 13, defense: 9, speed: 4,
+                moves: [
+                    { name: 'Băng Tiễn', key: 'F', damage: 16, range: 190, cooldown: 22, color: '#88ddff', type: 'projectile', icon: '🧊' },
+                    { name: 'Sương Giá', key: 'G', damage: 26, range: 75, cooldown: 48, color: '#aaeeff', type: 'aoe', icon: '🌨️' },
+                    { name: 'Bão Băng', key: 'H', damage: 44, range: 130, cooldown: 140, color: '#ffffff', type: 'ultimate', icon: '❄️' }
+                ]
+            },
+            {
+                id: 'thunder', name: 'Sấm Sét', avatar: '⚡',
+                color: '#ffff44', bodyColor: '#cccc22', accent: '#ffffaa',
+                hp: 85, attack: 17, defense: 5, speed: 5,
+                moves: [
+                    { name: 'Tia Sét', key: 'F', damage: 18, range: 170, cooldown: 20, color: '#ffff44', type: 'projectile', icon: '⚡' },
+                    { name: 'Sấm Động', key: 'G', damage: 28, range: 60, cooldown: 50, color: '#ffff88', type: 'spin', icon: '🌩️' },
+                    { name: 'Thần Sấm', key: 'H', damage: 52, range: 140, cooldown: 145, color: '#ffffff', type: 'ultimate', icon: '⛈️' }
+                ]
+            },
+            {
+                id: 'dragon', name: 'Rồng', avatar: '🐉',
+                color: '#ff6644', bodyColor: '#cc4422', accent: '#ffaa88',
+                hp: 120, attack: 14, defense: 11, speed: 3.5,
+                moves: [
+                    { name: 'Hơi Rồng', key: 'F', damage: 17, range: 130, cooldown: 24, color: '#ff6644', type: 'breath', icon: '🔥' },
+                    { name: 'Vẫy Đuôi', key: 'G', damage: 24, range: 70, cooldown: 45, color: '#ff8866', type: 'slash', icon: '🐉' },
+                    { name: 'Rồng Thiêng', key: 'H', damage: 55, range: 120, cooldown: 150, color: '#ffcc44', type: 'ultimate', icon: '🐲' }
+                ]
+            }
+        ];
+
+        // ==================== GAME STATE ====================
+        let gameMode = '1p';
+        let difficulty = 0;
+        let p1Char = 0, p2Char = 1;
+        let gameState = 'menu';
+        let animFrame = 0;
+        let roundTimer = 99;
+        let roundTimerFrame = 0;
+        let screenShake = 0;
+        let hitEffects = [];
+        let projectiles = [];
+
+        // Fighter class
+        function createFighter(charIdx, x, facing, isP1) {
+            const ch = CHARACTERS[charIdx];
+            return {
+                x, y: GROUND_Y,
+                vx: 0, vy: 0,
+                facing, // 1 = right, -1 = left
+                charIdx,
+                hp: ch.hp, maxHp: ch.hp,
+                attack: ch.attack, defense: ch.defense, speed: ch.speed,
+                state: 'idle', // idle, walk, jump, attack, hit, block, down
+                stateTimer: 0,
+                attackIdx: -1,
+                cooldowns: [0, 0, 0],
+                combo: 0, comboTimer: 0,
+                isP1,
+                stunTimer: 0,
+                blockTimer: 0,
+                animFrame: 0,
+                grounded: true,
+                knockback: 0,
+                specialAnim: null,
+                specialAnimTimer: 0,
+                wins: 0
+            };
+        }
+
+        let p1, p2;
+        let keys = {};
+        let roundStart = false;
+        let roundStartTimer = 0;
+        let roundResult = '';
+        let roundResultTimer = 0;
+        let matchOver = false;
+
+        // ==================== AUDIO ====================
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+        function playSound(freq, dur, type='square', vol=0.04) {
+            if (!audioCtx) return;
+            try {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = type; o.frequency.value = freq;
+                g.gain.setValueAtTime(vol, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + dur);
+            } catch(e) {}
+        }
+        function sfxHit() { playSound(150, 0.1, 'sawtooth', 0.06); playSound(80, 0.08, 'square', 0.04); }
+        function sfxBlock() { playSound(300, 0.08, 'triangle', 0.04); }
+        function sfxSpecial(i) {
+            if (i === 0) playSound(400, 0.15, 'sine', 0.05);
+            else if (i === 1) { playSound(300, 0.12, 'sine', 0.05); setTimeout(() => playSound(500, 0.12, 'sine', 0.05), 80); }
+            else { playSound(200, 0.3, 'sawtooth', 0.06); playSound(600, 0.2, 'sine', 0.05); }
+        }
+        function sfxKO() { [300,250,200,150].forEach((f,i) => setTimeout(() => playSound(f, 0.2, 'sawtooth', 0.06), i*120)); }
+        function sfxRound() { [500,600,800].forEach((f,i) => setTimeout(() => playSound(f, 0.15, 'sine', 0.05), i*100)); }
+
+        // ==================== CHARACTER SELECT ====================
+        function showMenu() {
+            gameState = 'menu';
+            hideAllScreens();
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function hideAllScreens() {
+            ['menuScreen', 'charSelectScreen', 'resultScreen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+
+        function showCharSelect(mode) {
+            gameMode = mode;
+            hideAllScreens();
+            document.getElementById('charSelectScreen').classList.remove('hidden');
+            document.getElementById('overlay').classList.remove('hidden');
+            document.getElementById('diffRow').style.display = mode === '1p' ? 'flex' : 'none';
+
+            buildCharGrid('p1Grid', 'p1');
+            buildCharGrid('p2Grid', 'p2');
+            updatePreview('p1', p1Char);
+            updatePreview('p2', p2Char);
+        }
+
+        function buildCharGrid(gridId, player) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+            CHARACTERS.forEach((ch, i) => {
+                const card = document.createElement('div');
+                card.className = 'char-card';
+                const sel = player === 'p1' ? p1Char : p2Char;
+                if (i === sel) card.classList.add(player === 'p1' ? 'selected-p1' : 'selected-p2');
+                card.innerHTML = `<div class="char-avatar">${ch.avatar}</div><div class="char-name">${ch.name}</div>`;
+                card.onclick = () => {
+                    if (player === 'p1') p1Char = i; else p2Char = i;
+                    buildCharGrid(gridId, player);
+                    updatePreview(player, i);
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function updatePreview(player, idx) {
+            const ch = CHARACTERS[idx];
+            const el = document.getElementById(`${player}Preview`);
+            const barColor = player === 'p1' ? '#4488ff' : '#ff4444';
+            el.innerHTML = `
+                <div style="color:#fff;font-weight:bold;margin-bottom:6px">${ch.avatar} ${ch.name}</div>
+                <div class="char-stat"><span class="char-stat-name">HP</span><div class="char-stat-bar"><div class="char-stat-fill" style="width:${ch.hp/1.3*100}%;background:${barColor}"></div></div></div>
+                <div class="char-stat"><span class="char-stat-name">Tấn công</span><div class="char-stat-bar"><div class="char-stat-fill" style="width:${ch.attack/17*100}%;background:#ff4444"></div></div></div>
+                <div class="char-stat"><span class="char-stat-name">Phòng thủ</span><div class="char-stat-bar"><div class="char-stat-fill" style="width:${ch.defense/14*100}%;background:#44aaff"></div></div></div>
+                <div class="char-stat"><span class="char-stat-name">Tốc độ</span><div class="char-stat-bar"><div class="char-stat-fill" style="width:${ch.speed/5.5*100}%;background:#44ff44"></div></div></div>
+                <div class="moves-list">
+                    ${ch.moves.map(m => `<div class="move-item">${m.icon} <b>${m.name}</b> — <span class="move-key">${m.key}</span> — DMG: ${m.damage}</div>`).join('')}
+                </div>
+            `;
+        }
+
+        function setDiff(d, el) {
+            difficulty = d;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // ==================== START FIGHT ====================
+        function startFight() {
+            initAudio();
+            hideAllScreens();
+            document.getElementById('overlay').classList.add('hidden');
+
+            p1 = createFighter(p1Char, 250, 1, true);
+            p2 = createFighter(p2Char, 650, -1, false);
+            projectiles = [];
+            hitEffects = [];
+            roundTimer = 99;
+            roundTimerFrame = 0;
+            roundStart = false;
+            roundStartTimer = 120;
+            roundResult = '';
+            roundResultTimer = 0;
+            matchOver = false;
+            screenShake = 0;
+            gameState = 'playing';
+        }
+
+        // ==================== FIGHTER UPDATE ====================
+        function updateFighter(f, opponent, controls) {
+            f.animFrame++;
+            if (f.cooldowns[0] > 0) f.cooldowns[0]--;
+            if (f.cooldowns[1] > 0) f.cooldowns[1]--;
+            if (f.cooldowns[2] > 0) f.cooldowns[2]--;
+            if (f.comboTimer > 0) { f.comboTimer--; } else { f.combo = 0; }
+            if (f.stunTimer > 0) { f.stunTimer--; return; }
+
+            // Face opponent
+            if (f.state !== 'attack' && f.state !== 'hit') {
+                f.facing = opponent.x > f.x ? 1 : -1;
+            }
+
+            // Movement
+            if (f.state === 'idle' || f.state === 'walk') {
+                let moving = false;
+                if (controls.left) { f.vx = -f.speed; moving = true; }
+                else if (controls.right) { f.vx = f.speed; moving = true; }
+                else { f.vx *= 0.7; }
+                f.state = moving ? 'walk' : 'idle';
+            }
+
+            // Jump
+            if (controls.up && f.grounded && f.state !== 'attack') {
+                f.vy = -13;
+                f.grounded = false;
+                f.state = 'jump';
+            }
+
+            // Block
+            if (controls.block && f.state !== 'attack') {
+                f.state = 'block';
+                f.blockTimer = 10;
+            } else if (f.state === 'block') {
+                f.blockTimer--;
+                if (f.blockTimer <= 0) f.state = 'idle';
+            }
+
+            // Attack (punch)
+            if (controls.punch && f.state !== 'attack' && f.state !== 'block') {
+                performAttack(f, opponent, -1); // -1 = basic punch
+            }
+
+            // Special moves
+            for (let i = 0; i < 3; i++) {
+                if (controls.specials[i] && f.cooldowns[i] <= 0 && f.state !== 'attack' && f.state !== 'block') {
+                    performAttack(f, opponent, i);
+                }
+            }
+
+            // Apply physics
+            f.x += f.vx;
+            f.vy += GRAVITY;
+            f.y += f.vy;
+
+            if (f.y >= GROUND_Y) {
+                f.y = GROUND_Y;
+                f.vy = 0;
+                f.grounded = true;
+                if (f.state === 'jump') f.state = 'idle';
+            }
+
+            // Bounds
+            f.x = Math.max(40, Math.min(W - 40, f.x));
+
+            // Attack state timer
+            if (f.state === 'attack') {
+                f.stateTimer--;
+                if (f.stateTimer <= 0) {
+                    f.state = 'idle';
+                    f.attackIdx = -1;
+                }
+            }
+
+            // Hit state
+            if (f.state === 'hit') {
+                f.stateTimer--;
+                if (f.stateTimer <= 0) f.state = 'idle';
+            }
+
+            // Knockback decay
+            if (f.knockback !== 0) {
+                f.x += f.knockback;
+                f.knockback *= 0.85;
+                if (Math.abs(f.knockback) < 0.5) f.knockback = 0;
+            }
+
+            // Special animation
+            if (f.specialAnim) {
+                f.specialAnimTimer--;
+                if (f.specialAnimTimer <= 0) f.specialAnim = null;
+            }
+        }
+
+        function performAttack(f, opponent, idx) {
+            const ch = CHARACTERS[f.charIdx];
+            let damage, range, cooldownTime, moveColor, moveType;
+
+            if (idx === -1) {
+                // Basic punch
+                damage = f.attack * 0.6;
+                range = 45;
+                cooldownTime = 12;
+                moveColor = ch.color;
+                moveType = 'punch';
+            } else {
+                const move = ch.moves[idx];
+                damage = move.damage;
+                range = move.range;
+                cooldownTime = move.cooldown;
+                moveColor = move.color;
+                moveType = move.type;
+                f.cooldowns[idx] = cooldownTime;
+                sfxSpecial(idx);
+            }
+
+            f.state = 'attack';
+            f.attackIdx = idx;
+            f.stateTimer = idx === -1 ? 12 : (idx === 2 ? 30 : 20);
+
+            // Check hit
+            const hitX = f.x + f.facing * 30;
+            const dx = Math.abs(hitX - opponent.x);
+            const dy = Math.abs(f.y - opponent.y);
+
+            // Projectile
+            if (moveType === 'projectile' || moveType === 'breath') {
+                projectiles.push({
+                    x: f.x + f.facing * 30, y: f.y - 20,
+                    vx: f.facing * 8, vy: 0,
+                    damage, color: moveColor, owner: f.isP1 ? 'p1' : 'p2',
+                    life: 60, radius: moveType === 'breath' ? 15 : 8,
+                    type: moveType
+                });
+                return;
+            }
+
+            if (dx < range && dy < 60) {
+                // Hit!
+                if (opponent.state === 'block') {
+                    sfxBlock();
+                    damage *= 0.2;
+                    opponent.knockback = f.facing * 3;
+                    hitEffects.push({ x: (f.x+opponent.x)/2, y: f.y-30, color: '#88aaff', life: 15, text: 'BLOCK!', size: 16 });
+                } else {
+                    sfxHit();
+                    const defMult = 1 - opponent.defense / 50;
+                    const finalDmg = Math.max(1, damage * defMult * (1 + f.combo * 0.05));
+                    opponent.hp -= finalDmg;
+                    opponent.state = 'hit';
+                    opponent.stateTimer = idx === 2 ? 25 : 15;
+                    opponent.knockback = f.facing * (idx === 2 ? 12 : 6);
+                    opponent.stunTimer = idx === 2 ? 20 : 8;
+
+                    if (moveType === 'ultimate') {
+                        opponent.vy = -8;
+                        opponent.grounded = false;
+                        screenShake = 15;
+                    }
+
+                    f.combo++;
+                    f.comboTimer = 60;
+
+                    hitEffects.push({
+                        x: opponent.x, y: opponent.y - 40,
+                        color: moveColor, life: 20,
+                        text: Math.floor(finalDmg).toString(),
+                        size: idx === 2 ? 24 : 18
+                    });
+
+                    if (f.combo > 1) {
+                        hitEffects.push({
+                            x: opponent.x, y: opponent.y - 65,
+                            color: '#ffd700', life: 25,
+                            text: `${f.combo} COMBO!`,
+                            size: 14
+                        });
+                    }
+                }
+            }
+
+            // Ultimate visual
+            if (idx === 2) {
+                f.specialAnim = 'ultimate';
+                f.specialAnimTimer = 25;
+            }
+        }
+
+        function updateProjectiles() {
+            projectiles = projectiles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+
+                // Hit detection
+                const target = p.owner === 'p1' ? p2 : p1;
+                const dx = p.x - target.x;
+                const dy = p.y - (target.y - 20);
+                if (dx*dx + dy*dy < (p.radius + 14)*(p.radius + 14)) {
+                    if (target.state === 'block') {
+                        sfxBlock();
+                        target.hp -= p.damage * 0.2;
+                        hitEffects.push({ x: target.x, y: target.y-40, color: '#88aaff', life: 15, text: 'BLOCK!', size: 14 });
+                    } else {
+                        sfxHit();
+                        const defMult = 1 - target.defense / 50;
+                        target.hp -= p.damage * defMult;
+                        target.state = 'hit';
+                        target.stateTimer = 12;
+                        target.knockback = (p.vx > 0 ? 1 : -1) * 5;
+                        hitEffects.push({ x: target.x, y: target.y-40, color: p.color, life: 20, text: Math.floor(p.damage*defMult).toString(), size: 16 });
+                    }
+                    // Impact particles
+                    for (let i = 0; i < 6; i++) {
+                        hitEffects.push({ x: p.x + (Math.random()-0.5)*20, y: p.y + (Math.random()-0.5)*20, color: p.color, life: 10, text: '', size: 4 });
+                    }
+                    return false;
+                }
+
+                return p.life > 0 && p.x > -20 && p.x < W+20;
+            });
+        }
+
+        // ==================== AI ====================
+        function getAIControls(ai, opponent) {
+            const c = { left: false, right: false, up: false, specials: [false, false, false], punch: false, block: false };
+            const dx = opponent.x - ai.x;
+            const dist = Math.abs(dx);
+            const reactionTime = [30, 18, 8, 2][difficulty];
+            const aggrMult = [0.3, 0.5, 0.8, 0.95][difficulty];
+
+            // Random delay
+            if (Math.random() * 100 > (100 - difficulty * 25)) return c;
+
+            // Approach
+            if (dist > 80) {
+                if (dx > 0) c.right = true; else c.left = true;
+                if (Math.random() < 0.02 && difficulty >= 1) c.up = true;
+            }
+
+            // Attack range
+            if (dist < 100) {
+                // Use specials
+                if (Math.random() < aggrMult * 0.15) {
+                    if (ai.cooldowns[2] <= 0 && dist < 120) c.specials[2] = true;
+                    else if (ai.cooldowns[1] <= 0) c.specials[1] = true;
+                    else if (ai.cooldowns[0] <= 0) c.specials[0] = true;
+                    else c.punch = true;
+                }
+                if (Math.random() < aggrMult * 0.1) c.punch = true;
+            }
+
+            // Projectile response
+            projectiles.forEach(p => {
+                if (p.owner !== (ai.isP1 ? 'p1' : 'p2')) {
+                    const pdx = p.x - ai.x;
+                    if (Math.abs(pdx) < 150 && Math.abs(p.y - ai.y) < 50) {
+                        if (Math.random() < 0.3 + difficulty * 0.2) c.block = true;
+                        if (Math.random() < 0.2 + difficulty * 0.1) c.up = true;
+                    }
+                }
+            });
+
+            // Block when opponent attacking
+            if (opponent.state === 'attack' && dist < 80) {
+                if (Math.random() < 0.2 + difficulty * 0.25) c.block = true;
+            }
+
+            // Retreat when low HP
+            if (ai.hp < ai.maxHp * 0.3 && Math.random() < 0.3) {
+                if (dx > 0) c.left = true; else c.right = true;
+            }
+
+            return c;
+        }
+
+        // ==================== INPUT ====================
+        function getP1Controls() {
+            return {
+                left: keys['KeyA'], right: keys['KeyD'],
+                up: keys['KeyW'],
+                specials: [keys['KeyF'], keys['KeyG'], keys['KeyH']],
+                punch: keys['KeyT'],
+                block: keys['KeyR']
+            };
+        }
+
+        function getP2Controls() {
+            return {
+                left: keys['ArrowLeft'], right: keys['ArrowRight'],
+                up: keys['ArrowUp'],
+                specials: keys['KeyJ'] !== undefined ? [keys['KeyJ'], keys['KeyK'], keys['KeyL']] : [false,false,false],
+                punch: keys['KeyO'],
+                block: keys['KeyP']
+            };
+        }
+
+        document.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
+        document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+        // ==================== ROUND LOGIC ====================
+        function checkRoundEnd() {
+            if (p1.hp <= 0 || p2.hp <= 0 || roundTimer <= 0) {
+                let winner;
+                if (p1.hp <= 0 && p2.hp <= 0) { winner = 'draw'; }
+                else if (p1.hp <= 0) { winner = 'p2'; p2.wins++; }
+                else if (p2.hp <= 0) { winner = 'p1'; p1.wins++; }
+                else { winner = p1.hp > p2.hp ? 'p1' : 'p2'; if (winner === 'p1') p1.wins++; else p2.wins++; }
+
+                sfxKO();
+                roundResult = winner;
+                roundResultTimer = 120;
+
+                if (p1.wins >= 2 || p2.wins >= 2) {
+                    matchOver = true;
+                }
+            }
+        }
+
+        function resetRound() {
+            p1.x = 250; p1.y = GROUND_Y; p1.vx = 0; p1.vy = 0;
+            p1.hp = CHARACTERS[p1.charIdx].hp; p1.state = 'idle'; p1.facing = 1;
+            p1.cooldowns = [0,0,0]; p1.combo = 0; p1.stunTimer = 0;
+
+            p2.x = 650; p2.y = GROUND_Y; p2.vx = 0; p2.vy = 0;
+            p2.hp = CHARACTERS[p2.charIdx].hp; p2.state = 'idle'; p2.facing = -1;
+            p2.cooldowns = [0,0,0]; p2.combo = 0; p2.stunTimer = 0;
+
+            projectiles = [];
+            roundTimer = 99;
+            roundTimerFrame = 0;
+            roundStart = false;
+            roundStartTimer = 90;
+            roundResult = '';
+        }
+
+        function showResult() {
+            gameState = 'result';
+            const winner = p1.wins > p2.wins ? CHARACTERS[p1Char] : CHARACTERS[p2Char];
+            const winnerName = p1.wins > p2.wins ? 'Player 1' : (gameMode === '1p' ? 'AI' : 'Player 2');
+            document.getElementById('resultTitle').textContent = `${winner.avatar} ${winner.name} THẮNG!`;
+            document.getElementById('resultTitle').style.color = winner.color;
+            document.getElementById('resultSub').textContent = `${winnerName} | Tỷ số: ${p1.wins} - ${p2.wins}`;
+            document.getElementById('resultScreen').classList.remove('hidden');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        // ==================== RENDERING ====================
+        function drawArena() {
+            // Background gradient
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#0a0a2e');
+            grad.addColorStop(0.6, '#1a1a3e');
+            grad.addColorStop(1, '#2a1a1a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Background pillars
+            for (let i = 0; i < 5; i++) {
+                const px = 100 + i * 180;
+                ctx.fillStyle = 'rgba(255,255,255,0.02)';
+                ctx.fillRect(px, 50, 30, GROUND_Y - 50);
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                ctx.fillRect(px - 5, 40, 40, 15);
+                ctx.fillRect(px - 5, GROUND_Y - 5, 40, 10);
+            }
+
+            // Ground
+            ctx.fillStyle = '#1a1a2a';
+            ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+            ctx.strokeStyle = '#333355';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, GROUND_Y); ctx.lineTo(W, GROUND_Y); ctx.stroke();
+
+            // Ground lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            for (let x = 0; x < W; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, GROUND_Y); ctx.lineTo(x + 20, H); ctx.stroke();
+            }
+        }
+
+        function drawFighter(f) {
+            const ch = CHARACTERS[f.charIdx];
+            const x = f.x, y = f.y;
+            const fl = f.facing;
+
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 20, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hit flash
+            if (f.state === 'hit' && f.stateTimer > 5) {
+                ctx.globalAlpha = 0.6;
+            }
+            // Block glow
+            if (f.state === 'block') {
+                ctx.fillStyle = '#4488ff20';
+                ctx.beginPath();
+                ctx.arc(0, -35, 35, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Legs
+            const legAnim = f.state === 'walk' ? Math.sin(f.animFrame * 0.3) * 8 : 0;
+            ctx.fillStyle = ch.bodyColor;
+            ctx.fillRect(-8 * fl, -12, 7, 12 + legAnim);
+            ctx.fillRect(2 * fl, -12, 7, 12 - legAnim);
+
+            // Body
+            ctx.fillStyle = ch.bodyColor;
+            ctx.fillRect(-14, -45, 28, 30);
+
+            // Accent stripe
+            ctx.fillStyle = ch.accent;
+            ctx.fillRect(-14, -35, 28, 4);
+
+            // Arms
+            const armAngle = f.state === 'attack'
+                ? (f.attackIdx === 2 ? -1.2 : -0.8)
+                : (f.state === 'walk' ? Math.sin(f.animFrame * 0.3) * 0.3 : 0);
+
+            ctx.save();
+            ctx.translate(14 * fl, -38);
+            ctx.rotate(armAngle * fl);
+            ctx.fillStyle = ch.bodyColor;
+            ctx.fillRect(0, -3, 18 * fl, 6);
+            // Hand/weapon
+            ctx.fillStyle = ch.accent;
+            ctx.beginPath();
+            ctx.arc(18 * fl, 0, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Other arm
+            ctx.save();
+            ctx.translate(-10 * fl, -38);
+            ctx.rotate(-armAngle * fl * 0.3);
+            ctx.fillStyle = ch.bodyColor;
+            ctx.fillRect(0, -3, 14 * fl, 6);
+            ctx.restore();
+
+            // Head
+            ctx.fillStyle = ch.color;
+            ctx.beginPath();
+            ctx.arc(0, -55, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Face
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(4 * fl, -58, 5, 4);
+            ctx.fillRect(-2 * fl, -58, 5, 4);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(5 * fl, -57, 3, 3);
+            ctx.fillRect(-1 * fl, -57, 3, 3);
+
+            // Avatar emoji on head
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(ch.avatar, 0, -65);
+
+            // Block shield
+            if (f.state === 'block') {
+                ctx.strokeStyle = '#4488ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(12 * fl, -35, 20, -0.5 * fl, 0.5 * fl);
+                ctx.stroke();
+            }
+
+            ctx.globalAlpha = 1;
+
+            // Ultimate animation
+            if (f.specialAnim === 'ultimate') {
+                const t = f.specialAnimTimer / 25;
+                ctx.strokeStyle = ch.moves[2].color;
+                ctx.lineWidth = 3 * t;
+                ctx.globalAlpha = t;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(0, -35, 30 + i * 15 + (1-t) * 40, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            ctx.restore();
+
+            // HP bar above
+            const barW = 50, barH = 5;
+            const barX = x - barW/2, barY = y - 80;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.fillStyle = f.hp > f.maxHp * 0.3 ? '#44ff44' : '#ff4444';
+            ctx.fillRect(barX, barY, barW * Math.max(0, f.hp / f.maxHp), barH);
+
+            // Name
+            ctx.fillStyle = ch.color;
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(ch.name, x, barY - 4);
+
+            // Cooldown indicators
+            for (let i = 0; i < 3; i++) {
+                const cx = x - 20 + i * 20;
+                const cy = y - 90;
+                const ready = f.cooldowns[i] <= 0;
+                ctx.fillStyle = ready ? ch.moves[i].color + '60' : 'rgba(255,255,255,0.1)';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = ready ? '#fff' : '#555';
+                ctx.font = '8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(ch.moves[i].key, cx, cy + 3);
+            }
+        }
+
+        function drawProjectiles() {
+            projectiles.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+
+                if (p.type === 'breath') {
+                    ctx.fillStyle = p.color + '80';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.radius + 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Trail
+                ctx.fillStyle = p.color + '30';
+                ctx.beginPath();
+                ctx.arc(-p.vx * 2, 0, p.radius * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        function drawHitEffects() {
+            hitEffects.forEach(e => {
+                if (e.text) {
+                    ctx.globalAlpha = e.life / 20;
+                    ctx.fillStyle = e.color;
+                    ctx.font = `bold ${e.size}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(e.text, e.x, e.y - (20 - e.life) * 1.5);
+                    ctx.globalAlpha = 1;
+                } else {
+                    // Particle
+                    ctx.globalAlpha = e.life / 10;
+                    ctx.fillStyle = e.color;
+                    ctx.beginPath();
+                    ctx.arc(e.x + (Math.random()-0.5)*10, e.y + (Math.random()-0.5)*10, e.size, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            });
+        }
+
+        function drawHUD() {
+            // Health bars
+            drawHealthBar(p1, 30, 20, 1);
+            drawHealthBar(p2, W - 30, 20, -1);
+
+            // Timer
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(Math.ceil(roundTimer), W/2, 45);
+
+            // Win indicators
+            for (let i = 0; i < 2; i++) {
+                ctx.fillStyle = i < p1.wins ? '#4488ff' : '#333';
+                ctx.beginPath();
+                ctx.arc(W/2 - 30 + i * (-20), 60, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = i < p2.wins ? '#ff4444' : '#333';
+                ctx.beginPath();
+                ctx.arc(W/2 + 30 + i * 20, 60, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Round start text
+            if (!roundStart && roundStartTimer > 0) {
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 50px sans-serif';
+                ctx.textAlign = 'center';
+                const text = roundStartTimer > 60 ? 'READY' : (roundStartTimer > 20 ? 'FIGHT!' : '');
+                ctx.globalAlpha = Math.min(1, roundStartTimer / 20);
+                ctx.fillText(text, W/2, H/2 - 20);
+                ctx.globalAlpha = 1;
+            }
+
+            // Round result
+            if (roundResult && roundResultTimer > 0) {
+                ctx.globalAlpha = Math.min(1, roundResultTimer / 30);
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 44px sans-serif';
+                ctx.textAlign = 'center';
+                const text = roundResult === 'draw' ? 'HÒA!' :
+                    (roundResult === 'p1' ? `${CHARACTERS[p1Char].name} THẮNG!` : `${CHARACTERS[p2Char].name} THẮNG!`);
+                ctx.fillText(text, W/2, H/2 - 20);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function drawHealthBar(f, x, y, dir) {
+            const ch = CHARACTERS[f.charIdx];
+            const barW = 350, barH = 22;
+            const startX = dir === 1 ? x : x - barW;
+
+            // Background
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(startX, y, barW, barH);
+            ctx.strokeStyle = ch.color + '60';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(startX, y, barW, barH);
+
+            // HP
+            const hpPct = Math.max(0, f.hp / f.maxHp);
+            const hpColor = hpPct > 0.3 ? ch.color : '#ff4444';
+            if (dir === 1) {
+                ctx.fillStyle = hpColor;
+                ctx.fillRect(startX, y, barW * hpPct, barH);
+            } else {
+                ctx.fillStyle = hpColor;
+                ctx.fillRect(startX + barW * (1 - hpPct), y, barW * hpPct, barH);
+            }
+
+            // Damage flash
+            if (f.state === 'hit') {
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.fillRect(startX, y, barW, barH);
+            }
+
+            // Name and avatar
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = dir === 1 ? 'left' : 'right';
+            ctx.fillText(`${ch.avatar} ${ch.name}`, dir === 1 ? startX + 5 : startX + barW - 5, y + 15);
+
+            // HP text
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = dir === 1 ? 'right' : 'left';
+            ctx.fillText(`${Math.ceil(f.hp)}/${f.maxHp}`, dir === 1 ? startX + barW - 5 : startX + 5, y + 15);
+        }
+
+        // ==================== GAME LOOP ====================
+        function update() {
+            animFrame++;
+
+            if (gameState !== 'playing') return;
+
+            // Round start countdown
+            if (!roundStart) {
+                roundStartTimer--;
+                if (roundStartTimer <= 0) {
+                    roundStart = true;
+                    sfxRound();
+                }
+                return;
+            }
+
+            // Round result
+            if (roundResult) {
+                roundResultTimer--;
+                if (roundResultTimer <= 0) {
+                    if (matchOver) {
+                        showResult();
+                        return;
+                    }
+                    resetRound();
+                }
+                return;
+            }
+
+            // Timer
+            roundTimerFrame++;
+            if (roundTimerFrame >= 60) {
+                roundTimerFrame = 0;
+                roundTimer--;
+            }
+
+            // Update fighters
+            const p1c = getP1Controls();
+            const p2c = gameMode === '2p' ? getP2Controls() : getAIControls(p2, p1);
+
+            updateFighter(p1, p2, p1c);
+            updateFighter(p2, p1, p2c);
+            updateProjectiles();
+
+            // Hit effects
+            hitEffects = hitEffects.filter(e => {
+                e.life--;
+                if (e.text) e.y -= 1.5;
+                return e.life > 0;
+            });
+
+            // Screen shake
+            if (screenShake > 0) screenShake *= 0.9;
+
+            // Check round end
+            checkRoundEnd();
+        }
+
+        function render() {
+            ctx.save();
+            if (screenShake > 0.5) {
+                ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+            }
+
+            drawArena();
+            if (p1) drawFighter(p1);
+            if (p2) drawFighter(p2);
+            drawProjectiles();
+            drawHitEffects();
+            drawHUD();
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start
+        showMenu();
+        gameLoop();
+    </script>
+</body>
+</html>

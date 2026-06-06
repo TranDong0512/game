@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔮 AI Tử Vi & Tarot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden
+        }
+
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #0d0d2b, #12122e);
+            border-right: 1px solid rgba(255, 255, 255, .06);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0
+        }
+
+        .side-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, .06)
+        }
+
+        .side-logo {
+            font-size: 28px;
+            margin-bottom: 4px
+        }
+
+        .side-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #c4a0ff
+        }
+
+        .side-sub {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px
+        }
+
+        .side-nav {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all .2s;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #999
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, .04);
+            color: #ccc
+        }
+
+        .nav-item.active {
+            background: rgba(140, 100, 255, .12);
+            color: #c4a0ff;
+            border: 1px solid rgba(140, 100, 255, .15)
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center
+        }
+
+        .nav-label {
+            flex: 1
+        }
+
+        .nav-badge {
+            font-size: 10px;
+            background: rgba(140, 100, 255, .2);
+            color: #c4a0ff;
+            padding: 2px 8px;
+            border-radius: 10px
+        }
+
+        .side-footer {
+            padding: 12px;
+            border-top: 1px solid rgba(255, 255, 255, .06);
+            font-size: 10px;
+            color: #444;
+            text-align: center
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #08081a
+        }
+
+        .chat-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(10, 10, 30, .8);
+            backdrop-filter: blur(10px)
+        }
+
+        .chat-header-icon {
+            font-size: 24px
+        }
+
+        .chat-header-info {
+            flex: 1
+        }
+
+        .chat-header-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff
+        }
+
+        .chat-header-status {
+            font-size: 11px;
+            color: #38ef7d;
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #38ef7d;
+            border-radius: 50%;
+            animation: pulse 2s infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .4
+            }
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 6px
+        }
+
+        .header-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, .08);
+            background: rgba(255, 255, 255, .03);
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, .08);
+            color: #fff
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth
+        }
+
+        .msg {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn .3s ease
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .msg.bot {
+            align-self: flex-start
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            flex-direction: row-reverse
+        }
+
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0
+        }
+
+        .msg.bot .msg-avatar {
+            background: linear-gradient(135deg, #6a3de8, #9b6bff)
+        }
+
+        .msg.user .msg-avatar {
+            background: linear-gradient(135deg, #2a8af5, #5ba8ff)
+        }
+
+        .msg-content {
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 13px;
+            line-height: 1.6;
+            position: relative
+        }
+
+        .msg.bot .msg-content {
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-bottom-left-radius: 4px;
+            color: #ddd
+        }
+
+        .msg.user .msg-content {
+            background: linear-gradient(135deg, #6a3de8, #8b5cf6);
+            color: #fff;
+            border-bottom-right-radius: 4px
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: #555;
+            margin-top: 4px
+        }
+
+        .msg.user .msg-time {
+            text-align: right
+        }
+
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 8px 14px;
+            align-self: flex-start
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #888;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: .2s
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: .4s
+        }
+
+        @keyframes typingBounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0)
+            }
+
+            30% {
+                transform: translateY(-6px)
+            }
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px
+        }
+
+        .quick-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(140, 100, 255, .25);
+            background: rgba(140, 100, 255, .08);
+            color: #c4a0ff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all .2s
+        }
+
+        .quick-btn:hover {
+            background: rgba(140, 100, 255, .2);
+            border-color: rgba(140, 100, 255, .4)
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 8px 0
+        }
+
+        .chat-card {
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 10px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .3s
+        }
+
+        .chat-card:hover {
+            border-color: #8c64ff;
+            background: rgba(140, 100, 255, .1);
+            transform: translateY(-2px)
+        }
+
+        .chat-card-icon {
+            font-size: 28px;
+            margin-bottom: 4px
+        }
+
+        .chat-card-name {
+            font-size: 11px;
+            color: #bbb;
+            font-weight: 500
+        }
+
+        .tarot-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin: 8px 0
+        }
+
+        .tarot-card {
+            background: linear-gradient(135deg, #1a1a3a, #2a1a4a);
+            border: 2px solid rgba(140, 100, 255, .2);
+            border-radius: 8px;
+            padding: 8px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .3s;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center
+        }
+
+        .tarot-card:hover {
+            border-color: #8c64ff;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(140, 100, 255, .3)
+        }
+
+        .tarot-card.revealed {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, #2a2a1a, #3a2a1a)
+        }
+
+        .tarot-back {
+            font-size: 24px
+        }
+
+        .tarot-front {
+            font-size: 11px;
+            color: #ffd700;
+            font-weight: 600
+        }
+
+        .input-area {
+            padding: 14px 20px;
+            border-top: 1px solid rgba(255, 255, 255, .06);
+            background: rgba(10, 10, 30, .8);
+            backdrop-filter: blur(10px)
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 13px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 42px;
+            max-height: 100px;
+            transition: border-color .2s
+        }
+
+        .input-field:focus {
+            border-color: rgba(140, 100, 255, .4)
+        }
+
+        .input-field::placeholder {
+            color: #555
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #6a3de8, #8b5cf6);
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+            flex-shrink: 0
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(140, 100, 255, .4)
+        }
+
+        .send-btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        .welcome {
+            text-align: center;
+            padding: 30px 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center
+        }
+
+        .welcome-icon {
+            font-size: 60px;
+            margin-bottom: 12px;
+            animation: float 3s ease-in-out infinite
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-10px)
+            }
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px
+        }
+
+        .welcome-sub {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 24px;
+            max-width: 400px
+        }
+
+        .welcome-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 500px
+        }
+
+        .welcome-card {
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 14px;
+            padding: 18px 12px;
+            cursor: pointer;
+            transition: all .3s;
+            text-align: center
+        }
+
+        .welcome-card:hover {
+            border-color: #8c64ff;
+            background: rgba(140, 100, 255, .08);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(140, 100, 255, .15)
+        }
+
+        .welcome-card-icon {
+            font-size: 32px;
+            margin-bottom: 8px
+        }
+
+        .welcome-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px
+        }
+
+        .welcome-card-desc {
+            font-size: 11px;
+            color: #888;
+            line-height: 1.4
+        }
+
+        .reading-box {
+            background: linear-gradient(135deg, rgba(140, 100, 255, .08), rgba(100, 50, 200, .05));
+            border: 1px solid rgba(140, 100, 255, .15);
+            border-radius: 12px;
+            padding: 14px;
+            margin: 8px 0
+        }
+
+        .reading-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #c4a0ff;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .reading-text {
+            font-size: 12px;
+            color: #bbb;
+            line-height: 1.7
+        }
+
+        .reading-highlight {
+            color: #ffd700;
+            font-weight: 500
+        }
+
+        .reading-stars {
+            color: #ffd700;
+            font-size: 14px;
+            margin: 6px 0
+        }
+
+        .reading-lucky {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap
+        }
+
+        .lucky-item {
+            background: rgba(255, 215, 0, .08);
+            border: 1px solid rgba(255, 215, 0, .15);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            color: #ffd700
+        }
+
+        .api-banner {
+            background: linear-gradient(135deg, rgba(255, 200, 0, .1), rgba(255, 100, 0, .05));
+            border: 1px solid rgba(255, 200, 0, .2);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin: 8px 0;
+            font-size: 11px;
+            color: #ffcc00
+        }
+
+        .api-input {
+            width: 100%;
+            background: rgba(0, 0, 0, .3);
+            border: 1px solid rgba(255, 255, 255, .1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 12px;
+            font-family: monospace;
+            outline: none;
+            margin-top: 6px
+        }
+
+        .api-input:focus {
+            border-color: rgba(255, 200, 0, .4)
+        }
+
+        .api-btn {
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 200, 0, .3);
+            background: rgba(255, 200, 0, .1);
+            color: #ffcc00;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: all .2s
+        }
+
+        .api-btn:hover {
+            background: rgba(255, 200, 0, .2)
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .1);
+            border-radius: 2px
+        }
+
+        .side-nav::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .side-nav::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .08);
+            border-radius: 2px
+        }
+
+        @media(max-width:768px) {
+            .sidebar {
+                display: none
+            }
+
+            .chat-area {
+                width: 100%
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="side-header">
+            <div class="side-logo">🔮</div>
+            <div class="side-title">AI Tử Vi & Tarot</div>
+            <div class="side-sub">Tính toán + AI diễn giải</div>
+        </div>
+        <div class="side-nav">
+            <div class="nav-item active" onclick="showHome()"><span class="nav-icon">🏠</span><span
+                    class="nav-label">Trang chủ</span></div>
+            <div class="nav-item" onclick="startChat('tuvi')"><span class="nav-icon">🐉</span><span class="nav-label">Tử
+                    Vi</span><span class="nav-badge">AI</span></div>
+            <div class="nav-item" onclick="startChat('zodiac')"><span class="nav-icon">♈</span><span
+                    class="nav-label">Cung Hoàng Đạo</span><span class="nav-badge">AI</span></div>
+            <div class="nav-item" onclick="startChat('tarot')"><span class="nav-icon">🃏</span><span
+                    class="nav-label">Bói Tarot</span><span class="nav-badge">AI</span></div>
+            <div class="nav-item" onclick="startChat('numerology')"><span class="nav-icon">🔢</span><span
+                    class="nav-label">Thần Số Học</span><span class="nav-badge">AI</span></div>
+            <div class="nav-item" onclick="startChat('palm')"><span class="nav-icon">✋</span><span class="nav-label">Xem
+                    Chỉ Tay</span></div>
+            <div class="nav-item" onclick="startChat('dream')"><span class="nav-icon">💭</span><span
+                    class="nav-label">Giải Mã Giấc Mơ</span><span class="nav-badge">AI</span></div>
+            <div class="nav-item" onclick="startChat('love')"><span class="nav-icon">💕</span><span
+                    class="nav-label">Tình Yêu</span><span class="nav-badge">AI</span></div>
+            <div class="nav-item" onclick="showSettings()"><span class="nav-icon">⚙️</span><span class="nav-label">Cài
+                    đặt AI</span></div>
+        </div>
+        <div class="side-footer">✨ Tính toán thuật toán + Gemini AI ✨</div>
+    </div>
+    <div class="chat-area">
+        <div class="chat-header">
+            <div class="chat-header-icon">🔮</div>
+            <div class="chat-header-info">
+                <div class="chat-header-name" id="hName">AI Tử Vi & Tarot</div>
+                <div class="chat-header-status"><span class="status-dot"></span> <span id="hStatus">Sẵn sàng</span>
+                </div>
+            </div>
+            <div class="chat-header-actions">
+                <div class="header-btn" onclick="clearChat()" title="Mới">🗑️</div>
+            </div>
+        </div>
+        <div class="messages" id="msgs"></div>
+        <div class="input-area">
+            <div class="input-row"><textarea class="input-field" id="inp" placeholder="Nhập tin nhắn..." rows="1"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea><button
+                    class="send-btn" id="sBtn" onclick="sendMsg()">➤</button></div>
+        </div>
+    </div>
+    <script>
+        // ==================== AI CONFIG ====================
+        let GEMINI_KEY = localStorage.getItem('gemini_key') || '';
+
+        async function callAI(prompt) {
+            if (!GEMINI_KEY) return null;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            } catch (e) { console.error('AI Error:', e); return null; }
+        }
+
+        // ==================== CALCULATION ALGORITHMS ====================
+        // Tử Vi: Can Chi + Ngũ Hành + Cung Mệnh
+        function calcCanChi(year) {
+            const cans = ['Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ', 'Canh', 'Tân', 'Nhâm', 'Quý'];
+            const chis = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
+            const elements = ['Mộc', 'Mộc', 'Hỏa', 'Hỏa', 'Thổ', 'Thổ', 'Kim', 'Kim', 'Thủy', 'Thủy'];
+            const canIdx = (year - 4) % 10;
+            const chiIdx = (year - 4) % 12;
+            return {
+                can: cans[canIdx], chi: chis[chiIdx], element: elements[canIdx],
+                canIdx, chiIdx, nguHanh: elements[canIdx]
+            };
+        }
+
+        // Tử Vi: Tính Cung Mệnh theo tháng sinh + giờ sinh
+        function calcCungMenh(birthMonth, birthHour) {
+            // Giờ Tý = 23h-1h, Sửu = 1h-3h, ...
+            const gioIdx = Math.floor(((birthHour + 1) % 24) / 2);
+            const gioNames = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
+            // Cung Mệnh = (Tháng sinh + Giờ sinh) mod 12
+            const cungIdx = (birthMonth - 1 + gioIdx) % 12;
+            const cungNames = ['Mệnh', 'Huynh Đệ', 'Phu Thê', 'Tài Bạch', 'Tật Ách', 'Nô Bộc', 'Thiên Di', 'Quan Lộc', 'Điền Trạch', 'Phụ Mẫu', 'Phúc Đức', 'Tử Nữ'];
+            return { cung: cungNames[cungIdx], gio: gioNames[gioIdx], gioIdx, cungIdx };
+        }
+
+        // Tử Vi: Tính Sao Tử Vi theo ngày sinh
+        function calcSaoTuVi(birthDay) {
+            // Đơn giản hóa: vị trí sao Tử Vi theo ngày sinh
+            const viTri = birthDay % 12;
+            const saoChinh = ['Tử Vi', 'Thiên Cơ', 'Thái Dương', 'Vũ Khúc', 'Thiên Đồng', 'Liêm Trinh',
+                'Thiên Phủ', 'Thái Âm', 'Tham Lang', 'Cự Môn', 'Thiên Tướng', 'Thiên Lương'];
+            return saoChinh[viTri];
+        }
+
+        // Tử Vi: Tính Ngũ Hành bản mệnh
+        function calcNguHanhMenh(element, chiIdx) {
+            const nạpAm = {
+                'Tý': 'Thủy', 'Sửu': 'Thổ', 'Dần': 'Mộc', 'Mão': 'Mộc', 'Thìn': 'Thổ', 'Tỵ': 'Hỏa',
+                'Ngọ': 'Hỏa', 'Mùi': 'Thổ', 'Thân': 'Kim', 'Dậu': 'Kim', 'Tuất': 'Thổ', 'Hợi': 'Thủy'
+            };
+            const chi = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
+            return nạpAm[chi[chiIdx]];
+        }
+
+        // Tử Vi: Tính Ngũ Hành hợp/kỵ
+        function calcHopKy(element) {
+            const hop = { 'Mộc': 'Hỏa', 'Hỏa': 'Thổ', 'Thổ': 'Kim', 'Kim': 'Thủy', 'Thủy': 'Mộc' };
+            const sinh = { 'Thủy': 'Mộc', 'Mộc': 'Hỏa', 'Hỏa': 'Thổ', 'Thổ': 'Kim', 'Kim': 'Thủy' };
+            const khac = { 'Mộc': 'Thổ', 'Thổ': 'Thủy', 'Thủy': 'Hỏa', 'Hỏa': 'Kim', 'Kim': 'Mộc' };
+            return { sinh: sinh[element], hop: hop[element], biKhac: khac[element] };
+        }
+
+        // Tử Vi: Tính Vận Hạn năm
+        function calcVanHan(year, currentYear) {
+            const tuoi = currentYear - year;
+            const hanIdx = tuoi % 12;
+            const hanNames = ['Thái Tuế', 'Thiếu Dương', 'Tang Môn', 'Thiếu Âm', 'Quan Phù', 'Tử Phù',
+                'Tuế Phá', 'Long Đức', 'Bạch Hổ', 'Phúc Đức', 'Điếu Khách', 'Trực Phù'];
+            const hanGood = [false, true, false, true, false, false, false, true, false, true, false, false];
+            return { ten: hanNames[hanIdx], tot: hanGood[hanIdx], tuoi, viTri: hanIdx };
+        }
+
+        // Numerology: Pythagorean Life Path
+        function calcLifePath(day, month, year) {
+            const digits = `${day}${month}${year}`.split('').map(Number);
+            let sum = digits.reduce((a, b) => a + b, 0);
+            while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+                sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
+            }
+            return sum;
+        }
+
+        // Numerology: Destiny Number (từ tên)
+        function calcDestinyNumber(name) {
+            const vnMap = {
+                'a': 1, 'ă': 1, 'â': 1, 'b': 2, 'c': 2, 'd': 3, 'đ': 3, 'e': 5, 'ê': 5, 'g': 3, 'h': 5, 'i': 1, 'k': 2,
+                'l': 3, 'm': 4, 'n': 5, 'o': 7, 'ô': 7, 'ơ': 7, 'p': 8, 'q': 8, 'r': 9, 's': 1, 't': 2, 'u': 6, 'ư': 6, 'v': 6, 'x': 6, 'y': 1
+            };
+            let sum = 0;
+            name.toLowerCase().split('').forEach(c => { if (vnMap[c]) sum += vnMap[c]; });
+            while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+                sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
+            }
+            return sum;
+        }
+
+        // Numerology: Soul Number (nguyên âm)
+        function calcSoulNumber(name) {
+            const vowels = 'aăâeêioôơuưy';
+            const vnMap = { 'a': 1, 'ă': 1, 'â': 1, 'e': 5, 'ê': 5, 'i': 1, 'o': 7, 'ô': 7, 'ơ': 7, 'u': 6, 'ư': 6, 'y': 1 };
+            let sum = 0;
+            name.toLowerCase().split('').forEach(c => { if (vowels.includes(c) && vnMap[c]) sum += vnMap[c]; });
+            while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+                sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
+            }
+            return sum;
+        }
+
+        // Numerology: Personality Number (phụ âm)
+        function calcPersonalityNumber(name) {
+            const vowels = 'aăâeêioôơuưy';
+            const vnMap = { 'b': 2, 'c': 2, 'd': 3, 'đ': 3, 'g': 3, 'h': 5, 'k': 2, 'l': 3, 'm': 4, 'n': 5, 'p': 8, 'q': 8, 'r': 9, 's': 1, 't': 2, 'v': 6, 'x': 6 };
+            let sum = 0;
+            name.toLowerCase().split('').forEach(c => { if (!vowels.includes(c) && vnMap[c]) sum += vnMap[c]; });
+            while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+                sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
+            }
+            return sum;
+        }
+
+        // Zodiac: Xác định cung theo ngày tháng
+        function getZodiacSign(day, month) {
+            const signs = [
+                { name: 'Ma Kết', icon: '♑', start: [1, 1], end: [1, 19] },
+                { name: 'Bảo Bình', icon: '♒', start: [1, 20], end: [2, 18] },
+                { name: 'Song Ngư', icon: '♓', start: [2, 19], end: [3, 20] },
+                { name: 'Bạch Dương', icon: '♈', start: [3, 21], end: [4, 19] },
+                { name: 'Kim Ngưu', icon: '♉', start: [4, 20], end: [5, 20] },
+                { name: 'Song Tử', icon: '♊', start: [5, 21], end: [6, 20] },
+                { name: 'Cự Giải', icon: '♋', start: [6, 21], end: [7, 22] },
+                { name: 'Sư Tử', icon: '♌', start: [7, 23], end: [8, 22] },
+                { name: 'Xử Nữ', icon: '♍', start: [8, 23], end: [9, 22] },
+                { name: 'Thiên Bình', icon: '♎', start: [9, 23], end: [10, 22] },
+                { name: 'Bọ Cạp', icon: '♏', start: [10, 23], end: [11, 21] },
+                { name: 'Nhân Mã', icon: '♐', start: [11, 22], end: [12, 21] },
+                { name: 'Ma Kết', icon: '♑', start: [12, 22], end: [12, 31] }
+            ];
+            for (const s of signs) {
+                if ((month === s.start[0] && day >= s.start[1]) || (month === s.end[0] && day <= s.end[1])) return s;
+            }
+            return signs[0];
+        }
+
+        // Tarot: Fisher-Yates shuffle
+        function shuffleTarot() {
+            const deck = Array.from({ length: 22 }, (_, i) => i);
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+
+        // ==================== TAROT DATA ====================
+        const TAROT = [
+            { name: 'The Fool', icon: '🃏', up: 'Khởi đầu mới, tự do, mạo hiểm, ngây thơ', rev: 'Liều lĩnh, thiếu suy nghĩ, sợ hãi' },
+            { name: 'The Magician', icon: '🎩', up: 'Sức mạnh, sáng tạo, kỹ năng, tự tin', rev: 'Lừa dối, thao túng, nghi ngờ bản thân' },
+            { name: 'The High Priestess', icon: '🌙', up: 'Trực giác, bí ẩn, trí tuệ nội tâm', rev: 'Bí mật bị che giấu, thiếu trực giác' },
+            { name: 'The Empress', icon: '👑', up: 'Sự phong phú, nuôi dưỡng, sáng tạo, tình mẫu tử', rev: 'Phụ thuộc, cạn kiệt, thiếu sáng tạo' },
+            { name: 'The Emperor', icon: '🏛️', up: 'Quyền lực, ổn định, lãnh đạo, kỷ luật', rev: 'Độc đoán, cứng nhắc, kiểm soát quá mức' },
+            { name: 'The Hierophant', icon: '📿', up: 'Truyền thống, giáo dục, tâm linh, hướng dẫn', rev: 'Nổi loạn, phá vỡ quy tắc, giáo điều' },
+            { name: 'The Lovers', icon: '💕', up: 'Tình yêu, hài hòa, lựa chọn, kết nối sâu sắc', rev: 'Mất cân bằng, xung đột, lựa chọn sai lầm' },
+            { name: 'The Chariot', icon: '🏎️', up: 'Ý chí, chiến thắng, quyết tâm, kiểm soát', rev: 'Thiếu phương hướng, mất kiểm soát, hung hăng' },
+            { name: 'Strength', icon: '🦁', up: 'Sức mạnh nội tại, can đảm, kiên nhẫn, từ bi', rev: 'Yếu đuối, thiếu tự tin, nghi ngờ' },
+            { name: 'The Hermit', icon: '🏮', up: 'Sự cô độc tích cực, tìm kiếm nội tâm, trí tuệ', rev: 'Cô lập, trốn tránh, sợ hãi xã hội' },
+            { name: 'Wheel of Fortune', icon: '🎡', up: 'Vận may, chu kỳ, thay đổi tích cực', rev: 'Xui xẻo, kháng cự thay đổi, trì trệ' },
+            { name: 'Justice', icon: '⚖️', up: 'Công bằng, sự thật, trách nhiệm, nhân quả', rev: 'Bất công, thiếu trung thực, đổ lỗi' },
+            { name: 'The Hanged Man', icon: '🔄', up: 'Hy sinh, nhìn từ góc khác, buông bỏ, kiên nhẫn', rev: 'Trì hoãn, kháng cự, ích kỷ' },
+            { name: 'Death', icon: '🦋', up: 'Kết thúc, chuyển hóa, tái sinh, buông bỏ quá khứ', rev: 'Kháng cự thay đổi, sợ hãi, trì trệ' },
+            { name: 'Temperance', icon: '🌈', up: 'Sự cân bằng, kiên nhẫn, điều độ, chữa lành', rev: 'Mất cân bằng, thái quá, thiếu kiên nhẫn' },
+            { name: 'The Devil', icon: '⛓️', up: 'Sự ràng buộc, nghiện ngập, vật chất, bóng tối nội tâm', rev: 'Giải phóng, phá vỡ xiềng xích, tự do' },
+            { name: 'The Tower', icon: '⚡', up: 'Thay đổi đột ngột, phá vỡ, revelation, thức tỉnh', rev: 'Tránh thảm họa, sợ thay đổi, cố chấp' },
+            { name: 'The Star', icon: '⭐', up: 'Hy vọng, cảm hứng, sự chữa lành, tâm linh', rev: 'Mất niềm tin, tuyệt vọng, nghi ngờ' },
+            { name: 'The Moon', icon: '🌕', up: 'Ảo tưởng, sợ hãi, trực giác, tiềm thức', rev: 'Giải tỏa sợ hãi, sáng tỏ, đối mặt' },
+            { name: 'The Sun', icon: '☀️', up: 'Hạnh phúc, thành công, sức sống, sự rõ ràng', rev: 'Tạm thời u ám, trì hoãn niềm vui' },
+            { name: 'Judgement', icon: '📯', up: 'Phục sinh, đánh thức, mục đích, hồi sinh', rev: 'Tự nghi ngờ, hối hận, bỏ lỡ cơ hội' },
+            { name: 'The World', icon: '🌍', up: 'Hoàn thành, trọn vẹn, thành tựu, hội nhập', rev: 'Chưa hoàn thành, thiếu khép lại, trì hoãn' }
+        ];
+
+        // ==================== STATE ====================
+        let mode = '', state = {}, hist = [];
+
+        // ==================== UI ====================
+        const $ = id => document.getElementById(id);
+        function scrollB() { setTimeout(() => $('msgs').scrollTop = $('msgs').scrollHeight, 50) }
+
+        function showHome() {
+            clearChat(); mode = '';
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('.nav-item').classList.add('active');
+            $('hName').textContent = 'AI Tử Vi & Tarot';
+            const m = $('msgs');
+            m.innerHTML = `<div class="welcome"><div class="welcome-icon">🔮</div>
+        <div class="welcome-title">Xin chào! Tôi là AI Tử Vi & Tarot</div>
+        <div class="welcome-sub">Kết hợp <b>thuật toán tính toán chính xác</b> + <b>Gemini AI</b> diễn giải cá nhân hóa. Nhập API key Gemini ở mục ⚙️ Cài đặt để kích hoạt AI.</div>
+        <div class="welcome-grid">
+            <div class="welcome-card" onclick="startChat('tuvi')"><div class="welcome-card-icon">🐉</div><div class="welcome-card-title">Tử Vi</div><div class="welcome-card-desc">Can Chi, Ngũ Hành, Cung Mệnh, Sao</div></div>
+            <div class="welcome-card" onclick="startChat('zodiac')"><div class="welcome-card-icon">♈</div><div class="welcome-card-title">Cung Hoàng Đạo</div><div class="welcome-card-desc">Tính cách, tình yêu, sự nghiệp</div></div>
+            <div class="welcome-card" onclick="startChat('tarot')"><div class="welcome-card-icon">🃏</div><div class="welcome-card-title">Bói Tarot</div><div class="welcome-card-desc">Rút bài, giải mã thông điệp</div></div>
+            <div class="welcome-card" onclick="startChat('numerology')"><div class="welcome-card-icon">🔢</div><div class="welcome-card-title">Thần Số Học</div><div class="welcome-card-desc">Life Path, Destiny, Soul Number</div></div>
+            <div class="welcome-card" onclick="startChat('dream')"><div class="welcome-card-icon">💭</div><div class="welcome-card-title">Giải Mã Giấc Mơ</div><div class="welcome-card-desc">AI phân tích giấc mơ</div></div>
+            <div class="welcome-card" onclick="startChat('love')"><div class="welcome-card-icon">💕</div><div class="welcome-card-title">Tình Yêu</div><div class="welcome-card-desc">Hợp tuổi, tình duyên</div></div>
+        </div></div>`;
+        }
+
+        function addMsg(type, html, extras = '') {
+            const w = $('msgs').querySelector('.welcome'); if (w) w.remove();
+            const t = new Date(), tm = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0');
+            const d = document.createElement('div'); d.className = 'msg ' + type;
+            d.innerHTML = `<div class="msg-avatar">${type === 'bot' ? '🔮' : '👤'}</div><div><div class="msg-content">${html}${extras}</div><div class="msg-time">${tm}</div></div>`;
+            $('msgs').appendChild(d); scrollB();
+        }
+        function showTyping() {
+            const d = document.createElement('div'); d.className = 'typing'; d.id = 'typ';
+            d.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            $('msgs').appendChild(d); scrollB();
+        }
+        function hideTyping() { const t = $('typ'); if (t) t.remove(); }
+        function botSay(html, extras = '', delay = 800) {
+            showTyping(); setTimeout(() => { hideTyping(); addMsg('bot', html, extras); }, delay);
+        }
+        function qa(actions) { return '<div class="quick-actions">' + actions.map(a => `<div class="quick-btn" onclick="${a.a}">${a.l}</div>`).join('') + '</div>'; }
+        function setNav(idx) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.querySelectorAll('.nav-item')[idx]?.classList.add('active'); }
+
+        function clearChat() {
+            hist = []; mode = ''; state = {}; $('msgs').innerHTML = ''; showHome();
+        }
+        function showSettings() {
+            mode = 'settings'; setNav(8);
+            $('hName').textContent = '⚙️ Cài đặt AI';
+            const m = $('msgs'); m.innerHTML = '';
+            addMsg('bot', `<div class="api-banner">🔑 <b>Cài đặt Gemini API Key</b><br><br>
+        Để có kết quả chính xác nhất, hãy nhập API key Gemini (miễn phí):<br>
+        1. Truy cập <b>aistudio.google.com</b><br>
+        2. Tạo API key<br>
+        3. Dán vào bên dưới<br><br>
+        <b>Không có API key?</b> Bot vẫn hoạt động với kết quả tính toán thuật toán (không có AI diễn giải).</div>
+        <input class="api-input" id="apiKeyIn" placeholder="Nhập Gemini API key..." value="${GEMINI_KEY}">
+        <button class="api-btn" onclick="saveKey()">💾 Lưu key</button>
+        <button class="api-btn" onclick="testAI()" style="margin-left:6px">🧪 Test AI</button>`);
+        }
+
+        function saveKey() {
+            const k = $('apiKeyIn').value.trim();
+            GEMINI_KEY = k; localStorage.setItem('gemini_key', k);
+            botSay('✅ Đã lưu API key thành công!' + (k ? ' AI đã được kích hoạt.' : ' Chế độ không có AI.'));
+        }
+        async function testAI() {
+            if (!GEMINI_KEY) { botSay('⚠️ Chưa có API key!'); return; }
+            botSay('🔄 Đang test AI...');
+            const r = await callAI('Trả lời ngắn: "Xin chào, tôi là Gemini AI!"');
+            if (r) botSay('✅ AI hoạt động tốt! ' + r.substring(0, 100));
+            else botSay('❌ AI không phản hồi. Kiểm tra lại API key.');
+        }
+
+        // ==================== CHAT ROUTING ====================
+        function startChat(m) {
+            mode = m; state = {}; hist = [];
+            const idx = { tuvi: 1, zodiac: 2, tarot: 3, numerology: 4, palm: 5, dream: 6, love: 7, settings: 8 };
+            setNav(idx[m] || 0);
+            const names = { tuvi: '🐉 Tử Vi', zodiac: '♈ Cung Hoàng Đạo', tarot: '🃏 Bói Tarot', numerology: '🔢 Thần Số Học', palm: '✋ Xem Chỉ Tay', dream: '💭 Giải Mã Giấc Mơ', love: '💕 Tình Yêu' };
+            $('hName').textContent = names[m] || 'AI Tử Vi & Tarot';
+            const m2 = $('msgs'); m2.innerHTML = '';
+            switch (m) {
+                case 'tuvi': startTuVi(); break;
+                case 'zodiac': startZodiac(); break;
+                case 'tarot': startTarot(); break;
+                case 'numerology': startNumerology(); break;
+                case 'palm': startPalm(); break;
+                case 'dream': startDream(); break;
+                case 'love': startLove(); break;
+            }
+        }
+
+        // ==================== TU VI ====================
+        function startTuVi() {
+            state = { step: 'year' };
+            botSay('🐉 <b>Xem Tử Vi</b><br><br>Tử Vi sẽ được tính chính xác theo:<br>• Can Chi, Ngũ Hành<br>• Cung Mệnh, Sao Tử Vi<br>• Vận Hạn năm 2024<br><br>Vui lòng nhập <b>năm sinh</b> (VD: 1995):');
+        }
+        function handleTuVi(input) {
+            if (state.step === 'year') {
+                const y = parseInt(input); if (isNaN(y) || y < 1930 || y > 2010) { botSay('⚠️ Nhập năm sinh hợp lệ (1930-2010):'); return; }
+                state.year = y; state.step = 'month';
+                botSay(`Năm sinh: <b>${y}</b>. Giờ nhập <b>tháng sinh</b> (1-12):`);
+            } else if (state.step === 'month') {
+                const m = parseInt(input); if (isNaN(m) || m < 1 || m > 12) { botSay('⚠️ Nhập tháng hợp lệ (1-12):'); return; }
+                state.month = m; state.step = 'day';
+                botSay(`Tháng: <b>${m}</b>. Giờ nhập <b>ngày sinh</b> (1-31):`);
+            } else if (state.step === 'day') {
+                const d = parseInt(input); if (isNaN(d) || d < 1 || d > 31) { botSay('⚠️ Nhập ngày hợp lệ (1-31):'); return; }
+                state.day = d; state.step = 'hour';
+                botSay(`Ngày: <b>${d}</b>. Giờ nhập <b>giờ sinh</b> (0-23, nếu không biết gõ 12):`);
+            } else if (state.step === 'hour') {
+                const h = parseInt(input); if (isNaN(h) || h < 0 || h > 23) { botSay('⚠️ Nhập giờ hợp lệ (0-23):'); return; }
+                state.hour = h; state.step = 'done';
+                doTuVi();
+            }
+        }
+        async function doTuVi() {
+            const { year, month, day, hour } = state;
+            const cc = calcCanChi(year);
+            const cm = calcCungMenh(month, hour);
+            const sao = calcSaoTuVi(day);
+            const nhamenh = calcNguHanhMenh(cc.element, cc.chiIdx);
+            const hopky = calcHopKy(nhamenh);
+            const vh = calcVanHan(year, 2024);
+            const tuoi = 2024 - year;
+
+            let html = `<div class="reading-box"><div class="reading-title">🐉 Tử Vi ${cc.can} ${cc.chi} - Năm ${year}</div><div class="reading-text">
+        <b>Tuổi:</b> ${tuoi} tuổi | <b>Can Chi:</b> ${cc.can} ${cc.chi}<br>
+        <b>Thiên Can:</b> ${cc.can} (Hành ${cc.element})<br>
+        <b>Địa Chi:</b> ${cc.chi}<br>
+        <b>Nạp Âm Ngũ Hành:</b> <span class="reading-highlight">${nhamenh}</span><br>
+        <b>Giờ sinh:</b> Giờ ${cm.gio} (${hour}h)<br>
+        <b>Cung Mệnh:</b> <span class="reading-highlight">${cm.cung}</span><br>
+        <b>Sao Chính Tinh:</b> <span class="reading-highlight">${sao}</span><br><br>
+        <b>🔄 Tương sinh tương khắc:</b><br>
+        • Hợp: ${hopky.sinh} (sinh), ${hopky.hop} (hợp)<br>
+        • Kỵ: ${hopky.biKhac} (khắc)<br><br>
+        <b>📅 Vận Hạn 2024:</b><br>
+        Hạn: <span class="reading-highlight">${vh.ten}</span> - ${vh.tot ? '✅ Tốt lành, may mắn' : '⚠️ Cần thận trọng, tránh nóng vội'}
+    </div><div class="reading-stars">${vh.tot ? '★★★★★' : '★★★★☆'}</div></div>`;
+
+            addMsg('bot', '⏳ Đang tính toán...', '', 0);
+
+            // AI interpretation
+            if (GEMINI_KEY) {
+                const prompt = `Bạn là nhà tử vi học Việt Nam. Dựa trên thông tin sau, hãy diễn giải chi tiết về vận mệnh, tính cách, sự nghiệp, tình yêu, sức khỏe của người này. Trả lời bằng tiếng Việt, khoảng 200 từ.
+        Năm sinh: ${year}, Tháng: ${month}, Ngày: ${day}, Giờ: ${hour}
+        Can Chi: ${cc.can} ${cc.chi}, Ngũ Hành: ${nhamenh}
+        Cung Mệnh: ${cm.cung}, Sao Tử Vi: ${sao}
+        Vận Hạn 2024: ${vh.ten} (${vh.tot ? 'Tốt' : 'Cần thận trọng'})`;
+                const ai = await callAI(prompt);
+                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+            }
+
+            hideTyping();
+            addMsg('bot', html);
+            setTimeout(() => addMsg('bot', 'Bạn muốn xem thêm?', qa([
+                { l: '💕 Tình duyên', a: `askTuViSub('love')` },
+                { l: '💼 Sự nghiệp', a: `askTuViSub('career')` },
+                { l: '🏥 Sức khỏe', a: `askTuViSub('health')` },
+                { l: '🔄 Xem lại', a: "startChat('tuvi')" }
+            ])), 2000);
+        }
+        async function askTuViSub(topic) {
+            addMsg('user', topic === 'love' ? '💕 Tình duyên' : topic === 'career' ? '💼 Sự nghiệp' : '🏥 Sức khỏe');
+            const { year, month, day, hour } = state;
+            if (!year) { botSay('⚠️ Vui lòng xem tử vi trước!'); return; }
+            const cc = calcCanChi(year);
+            if (GEMINI_KEY) {
+                const topics = { love: 'tình duyên, mối quan hệ, hôn nhân', career: 'sự nghiệp, tài chính, công việc', health: 'sức khỏe, thể chất, tinh thần' };
+                const prompt = `Bạn là nhà tử vi học. Người sinh năm ${year} (${cc.can} ${cc.chi}), tháng ${month}, ngày ${day}, giờ ${hour}. Hãy phân tích chi tiết về ${topics[topic]} năm 2024. Trả lời tiếng Việt, khoảng 150 từ.`;
+                botSay('⏳ AI đang phân tích...');
+                const ai = await callAI(prompt);
+                if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">${topic === 'love' ? '💕' : topic === 'career' ? '💼' : '🏥'} ${topic === 'love' ? 'Tình Duyên' : topic === 'career' ? 'Sự Nghiệp' : 'Sức Khỏe'}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
+            }
+            botSay('⚠️ Cần API key Gemini để xem chi tiết. Vào ⚙️ Cài đặt để nhập.');
+        }
+
+        // ==================== ZODIAC ====================
+        function startZodiac() {
+            state = { step: 'date' };
+            botSay('♈ <b>Cung Hoàng Đạo</b><br><br>Nhập <b>ngày sinh</b> để xác định cung (VD: 15/03):');
+        }
+        async function handleZodiac(input) {
+            const parts = input.replace(/[^\d\/]/g, '').split(/[\/\-\.]/);
+            if (parts.length < 2) { botSay('⚠️ Nhập ngày/tháng (VD: 15/03):'); return; }
+            const day = parseInt(parts[0]), month = parseInt(parts[1]);
+            if (isNaN(day) || isNaN(month)) { botSay('⚠️ Định dạng không hợp lệ:'); return; }
+
+            const sign = getZodiacSign(day, month);
+            const signIdx = ['Ma Kết', 'Bảo Bình', 'Song Ngư', 'Bạch Dương', 'Kim Ngưu', 'Song Tử', 'Cự Giải', 'Sư Tử', 'Xử Nữ', 'Thiên Bình', 'Bọ Cạp', 'Nhân Mã'].indexOf(sign.name);
+
+            const elements = ['Đất', 'Khí', 'Nước', 'Lửa', 'Đất', 'Khí', 'Nước', 'Lửa', 'Đất', 'Khí', 'Nước', 'Lửa'];
+            const planets = ['Saturn', 'Uranus', 'Neptune', 'Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Pluto', 'Jupiter'];
+
+            let html = `<div class="reading-box"><div class="reading-title">${sign.icon} ${sign.name} (${day}/${month})</div><div class="reading-text">
+        <b>Nguyên tố:</b> ${elements[signIdx]}<br>
+        <b>Hành tinh chủ quản:</b> ${planets[signIdx]}<br>
+        <b>Ngày:</b> ${sign.start[0]}/${sign.start[1]} - ${sign.end[0]}/${sign.end[1]}
+    </div></div>`;
+
+            addMsg('bot', '⏳ Đang phân tích...', '', 0);
+
+            if (GEMINI_KEY) {
+                const prompt = `Bạn là nhà chiêm tinh học. Người thuộc cung ${sign.name}, sinh ngày ${day}/${month}. Hãy phân tích chi tiết tính cách, tình yêu, sự nghiệp, sức khỏe. Trả lời tiếng Việt, khoảng 200 từ.`;
+                const ai = await callAI(prompt);
+                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+            }
+
+            hideTyping(); addMsg('bot', html);
+            setTimeout(() => addMsg('bot', 'Bạn muốn khám phá thêm?', qa([
+                { l: '💕 Tình yêu', a: `askZodiacLove('${sign.name}')` },
+                { l: '🔮 Cung khác', a: "startChat('zodiac')" },
+                { l: '🃏 Rút Tarot', a: "startChat('tarot')" }
+            ])), 2000);
+        }
+        async function askZodiacLove(sign) {
+            addMsg('user', '💕 Tình yêu ' + sign);
+            if (GEMINI_KEY) {
+                botSay('⏳ AI phân tích...');
+                const ai = await callAI(`Phân tích tình yêu, mối quan hệ của cung ${sign}. Gợi ý cung hợp nhất. Tiếng Việt, 150 từ.`);
+                if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Yêu ${sign}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
+            }
+            botSay('⚠️ Cần API key Gemini. Vào ⚙️ Cài đặt.');
+        }
+
+        // ==================== TAROT ====================
+        function startTarot() {
+            state = { phase: 'question', deck: shuffleTarot(), cards: [] };
+            botSay('🃏 <b>Bói Tarot</b><br><br>Hãy <b>tập trung suy nghĩ</b> về câu hỏi bạn muốn hỏi (tình yêu, sự nghiệp, cuộc sống...), rồi nhập vào:');
+        }
+        function handleTarot(input) {
+            if (state.phase === 'question') {
+                state.question = input; state.phase = 'draw';
+                addMsg('user', input);
+                const backs = Array.from({ length: 8 }, (_, i) => `<div class="tarot-card" id="tc${i}" onclick="drawCard(${i})"><div class="tarot-back">🂠</div></div>`).join('');
+                botSay('Tuyệt vời! Bây giờ hãy <b>chọn 3 lá bài</b>:', `<div class="tarot-grid">${backs}</div>`, 1000);
+                return true;
+            }
+            return false;
+        }
+        function drawCard(idx) {
+            if (state.cards.length >= 3) return;
+            const card = TAROT[state.deck[state.cards.length]];
+            const reversed = Math.random() < 0.3;
+            state.cards.push({ ...card, reversed, idx });
+            const el = $('tc' + idx); el.classList.add('revealed');
+            el.innerHTML = `<div class="tarot-icon">${card.icon}</div><div class="tarot-front">${reversed ? '↕️ ' : ''}${card.name}</div>`;
+            el.onclick = null;
+            if (state.cards.length === 3) { state.phase = 'reading'; setTimeout(doTarotReading, 800); }
+        }
+        async function doTarotReading() {
+            const cards = state.cards;
+            const positions = ['Quá khứ', 'Hiện tại', 'Tương lai'];
+            let html = `<div class="reading-box"><div class="reading-title">🔮 Kết Quả Tarot</div><div class="reading-text">
+        <b>Câu hỏi:</b> <i>"${state.question}"</i><br><br>`;
+            cards.forEach((c, i) => {
+                html += `<b>${positions[i]}: ${c.icon} ${c.name}</b> ${c.reversed ? '(Đảo ngược ↕️)' : ''}<br>`;
+                html += `<span style="color:${c.reversed ? '#ff8888' : '#88ff88'}">${c.reversed ? c.rev : c.up}</span><br><br>`;
+            });
+            html += `</div></div>`;
+
+            addMsg('bot', '⏳ Đang giải mã bài...', '', 0);
+
+            if (GEMINI_KEY) {
+                const cardNames = cards.map((c, i) => `${positions[i]}: ${c.name} ${c.reversed ? '(đảo ngược)' : ''} - ${c.reversed ? c.rev : c.up}`).join('\n');
+                const prompt = `Bạn là nhà tarot reader. Dựa trên 3 lá bài sau, hãy diễn giải chi tiết và đưa ra lời khuyên cho câu hỏi "${state.question}":\n${cardNames}\n\nTrả lời tiếng Việt, khoảng 200 từ, giọng huyền bí.`;
+                const ai = await callAI(prompt);
+                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+            }
+
+            hideTyping(); addMsg('bot', html);
+            setTimeout(() => addMsg('bot', 'Bạn muốn rút thêm bài?', qa([
+                { l: '🃏 Rút lại', a: "startChat('tarot')" },
+                { l: '🔮 Xem tử vi', a: "startChat('tuvi')" },
+                { l: '💕 Tình yêu', a: "startChat('love')" }
+            ])), 2500);
+        }
+
+        // ==================== NUMEROLOGY ====================
+        function startNumerology() {
+            state = { step: 'date' };
+            botSay('🔢 <b>Thần Số Học</b><br><br>Sẽ tính chính xác:<br>• Life Path Number (Pythagorean)<br>• Destiny Number, Soul Number<br><br>Nhập <b>ngày sinh đầy đủ</b> (VD: 15/03/1995):');
+        }
+        function handleNumerology(input) {
+            const parts = input.replace(/[^\d\/]/g, '').split(/[\/\-\.]/);
+            if (parts.length < 3) { botSay('⚠️ Nhập ngày/tháng/năm (VD: 15/03/1995):'); return; }
+            const day = parseInt(parts[0]), month = parseInt(parts[1]), year = parseInt(parts[2]);
+            if (isNaN(day) || isNaN(month) || isNaN(year)) { botSay('⚠️ Định dạng không hợp lệ:'); return; }
+            state = { day, month, year, step: 'name' };
+            botSay(`Ngày sinh: <b>${day}/${month}/${year}</b>. Giờ nhập <b>họ tên đầy đủ</b> (để tính Destiny Number):`);
+        }
+        async function handleNumerologyName(name) {
+            const { day, month, year } = state;
+            const lp = calcLifePath(day, month, year);
+            const dn = calcDestinyNumber(name);
+            const sn = calcSoulNumber(name);
+            const pn = calcPersonalityNumber(name);
+
+            const meanings = {
+                1: { t: 'Lãnh Đạo', d: 'Độc lập, sáng tạo, tiên phong' },
+                2: { t: 'Hòa Giải', d: 'Hợp tác, nhạy cảm, trực giác' },
+                3: { t: 'Nghệ Sĩ', d: 'Sáng tạo, giao tiếp, vui vẻ' },
+                4: { t: 'Xây Dựng', d: 'Ổn định, kỷ luật, chăm chỉ' },
+                5: { t: 'Tự Do', d: 'Phiêu lưu, thay đổi, trải nghiệm' },
+                6: { t: 'Nuôi Dưỡng', d: 'Tình yêu, trách nhiệm, chăm sóc' },
+                7: { t: 'Tìm Kiếm', d: 'Trí tuệ, phân tích, tâm linh' },
+                8: { t: 'Quyền Lực', d: 'Thành công, tài chính, lãnh đạo' },
+                9: { t: 'Nhân Đạo', d: 'Trắc ẩn, lý tưởng, phục vụ' },
+                11: { t: 'Bậc Thầy Trực Giác', d: 'Trực giác phi thường, tâm linh' },
+                22: { t: 'Bậc Thầy Kiến Trúc', d: 'Biến ước mơ thành hiện thực' },
+                33: { t: 'Bậc Thầy Chữa Lành', d: 'Tình yêu vô điều kiện' }
+            };
+            const lpInfo = meanings[lp] || meanings[1];
+            const dnInfo = meanings[dn] || meanings[1];
+            const snInfo = meanings[sn] || meanings[1];
+
+            let html = `<div class="reading-box"><div class="reading-title">🔢 Thần Số Học - ${name}</div><div class="reading-text">
+        <b>Ngày sinh:</b> ${day}/${month}/${year}<br><br>
+        <b>1️⃣ Life Path (Con số chủ đạo):</b> <span class="reading-highlight">${lp} - ${lpInfo.t}</span><br>
+        ${lpInfo.d}<br><br>
+        <b>2️⃣ Destiny (Sứ mệnh):</b> <span class="reading-highlight">${dn} - ${dnInfo.t}</span><br>
+        ${dnInfo.d}<br><br>
+        <b>3️⃣ Soul (Tâm hồn):</b> <span class="reading-highlight">${sn} - ${snInfo.t}</span><br>
+        ${snInfo.d}<br><br>
+        <b>4️⃣ Personality (Bề ngoài):</b> <span class="reading-highlight">${pn}</span>
+    </div><div class="reading-stars">${lp >= 11 ? '★★★★★' : '★★★★☆'}</div></div>`;
+
+            addMsg('bot', '⏳ Đang phân tích...', '', 0);
+
+            if (GEMINI_KEY) {
+                const prompt = `Bạn là nhà thần số học. Phân tích chi tiết cho người tên "${name}", sinh ${day}/${month}/${year}:
+        Life Path: ${lp} (${lpInfo.t}), Destiny: ${dn} (${dnInfo.t}), Soul: ${sn} (${snInfo.t}), Personality: ${pn}
+        Diễn giải tính cách, sự nghiệp, tình yêu, lời khuyên. Tiếng Việt, 200 từ.`;
+                const ai = await callAI(prompt);
+                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+            }
+
+            hideTyping(); addMsg('bot', html);
+            state = { step: 'done' };
+            setTimeout(() => addMsg('bot', 'Bạn muốn xem thêm?', qa([
+                { l: '🔮 Tử vi', a: "startChat('tuvi')" },
+                { l: '🃏 Tarot', a: "startChat('tarot')" },
+                { l: '💕 Tình yêu', a: "startChat('love')" }
+            ])), 2000);
+        }
+
+        // ==================== DREAM ====================
+        function startDream() {
+            state = { step: 'input' };
+            botSay('💭 <b>Giải Mã Giấc Mơ</b><br><br>Nhập mô tả giấc mơ, AI sẽ phân tích cho bạn:');
+        }
+        async function handleDream(input) {
+            addMsg('user', input);
+            if (GEMINI_KEY) {
+                botSay('⏳ AI đang giải mã giấc mơ...');
+                const ai = await callAI(`Bạn là nhà giải mã giấc mơ chuyên nghiệp. Giải mã giấc mơ sau: "${input}". Phân tích ý nghĩa tâm lý, điềm báo, lời khuyên. Tiếng Việt, khoảng 150 từ.`);
+                if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💭 Giải Mã Giấc Mơ</div><div class="reading-text"><b>Mô tả:</b> "${input}"<br><br>${ai.replace(/\n/g, '<br>')}</div></div>`); }
+                else { hideTyping(); botSay('⚠️ Lỗi AI. Thử lại sau.'); }
+            } else {
+                const dreams = { 'rắn': 'Chuyển hóa, chữa lành, sức mạnh nội tâm', 'rơi': 'Mất kiểm soát, lo lắng', 'bay': 'Tự do, thăng tiến', 'nước': 'Cảm xúc, tiềm thức', 'chết': 'Kết thúc giai đoạn, tái sinh', 'cưới': 'Cam kết, hợp nhất', 'mèo': 'Độc lập, trực giác', 'chó': 'Trung thành, tình bạn', 'mưa': 'Thanh tẩy, bắt đầu mới', 'ma': 'Nỗi sợ quá khứ', 'tiền': 'Giá trị bản thân', 'trẻ con': 'Ngây thơ, sáng tạo' };
+                const lower = input.toLowerCase(); let found = false;
+                for (const [k, v] of Object.entries(dreams)) { if (lower.includes(k)) { found = true; botSay(`💭 Thấy <b>${k}</b>: ${v}`); break; } }
+                if (!found) botSay('💭 Giấc mơ này phản ánh suy nghĩ sâu thẳm trong tiềm thức. Cần API Gemini để phân tích chi tiết hơn.');
+            }
+            setTimeout(() => addMsg('bot', 'Bạn muốn giải mã thêm?', qa([{ l: '💭 Giấc mơ khác', a: "startChat('dream')" }, { l: '🔮 Tử vi', a: "startChat('tuvi')" }])), 2000);
+        }
+
+        // ==================== LOVE ====================
+        function startLove() {
+            state = { step: 'choice' };
+            botSay('💕 <b>Xem Tình Yêu</b><br><br>Bạn muốn xem gì?', qa([
+                { l: '💕 Tình duyên theo tuổi', a: "state={step:'love_age'};botSay('Nhập năm sinh:')" },
+                { l: '👫 Hợp tuổi', a: "state={step:'love_compat'};botSay('Nhập 2 năm sinh, cách nhau bằng dấu phẩy (VD: 1995, 1997):')" },
+                { l: '🔮 Vận mệnh tình yêu', a: "state={step:'love_fate'};botSay('Nhập năm sinh:')" }
+            ]));
+        }
+        async function handleLove(input) {
+            if (state.step === 'love_age' || state.step === 'love_fate') {
+                const y = parseInt(input); if (isNaN(y)) { botSay('⚠️ Nhập năm sinh:'); return; }
+                const cc = calcCanChi(y);
+                if (GEMINI_KEY) {
+                    addMsg('user', input); botSay('⏳ AI phân tích...');
+                    const ai = await callAI(`Bạn là nhà tử vi. Phân tích tình duyên, vận mệnh tình yêu cho người tuổi ${cc.can} ${cc.chi} (năm ${y}). Gợi ý đối tượng hợp. Tiếng Việt, 150 từ.`);
+                    if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Duyên Tuổi ${cc.chi}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
+                }
+                botSay(`💕 Tuổi ${cc.can} ${cc.chi}: Năm 2024 tình duyên thuận lợi, đặc biệt vào mùa xuân và thu.`);
+            } else if (state.step === 'love_compat') {
+                const years = input.split(/[,\s]+/).map(Number).filter(n => !isNaN(n));
+                if (years.length < 2) { botSay('⚠️ Nhập 2 năm (VD: 1995, 1997):'); return; }
+                const c1 = calcCanChi(years[0]), c2 = calcCanChi(years[1]);
+                const score = 60 + Math.floor(Math.random() * 35);
+                let html = `<div class="reading-box"><div class="reading-title">👫 ${c1.chi} (${years[0]}) & ${c2.chi} (${years[1]})</div><div class="reading-text">
+            <b>Điểm hợp:</b> <span class="reading-highlight">${score}/100</span><br>
+            <div class="reading-stars">${score >= 85 ? '★★★★★' : score >= 70 ? '★★★★☆' : score >= 55 ? '★★★☆☆' : '★★☆☆☆'}</div></div></div>`;
+                addMsg('user', input); botSay('⏳ Đang phân tích...', '', 0);
+                if (GEMINI_KEY) {
+                    const ai = await callAI(`Phân tích sự hợp nhau giữa tuổi ${c1.can} ${c1.chi} (${years[0]}) và ${c2.can} ${c2.chi} (${years[1]}). Điểm: ${score}/100. Diễn giải chi tiết. Tiếng Việt, 150 từ.`);
+                    if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Phân Tích</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+                }
+                hideTyping(); addMsg('bot', html);
+            }
+            setTimeout(() => addMsg('bot', 'Bạn muốn xem thêm?', qa([{ l: '💕 Xem lại', a: "startChat('love')" }, { l: '🔮 Tử vi', a: "startChat('tuvi')" }])), 2000);
+        }
+
+        // ==================== PALM ====================
+        function startPalm() {
+            state = { step: 'gender' };
+            botSay('✋ <b>Xem Chỉ Tay</b><br><br>Bạn là:', qa([{ l: '👨 Nam', a: "doPalm('male')" }, { l: '👩 Nữ', a: "doPalm('female')" }]));
+        }
+        function doPalm(g) {
+            addMsg('user', g === 'male' ? '👨 Nam' : '👩 Nữ');
+            const hand = g === 'male' ? 'tay trái' : 'tay phải';
+            const pick = a => a[Math.floor(Math.random() * a.length)];
+            const readings = {
+                life: ['Dài và sâu: Sức khỏe dồi dào, sống thọ.', 'Ngắn nhưng rõ: Sống chất lượng.', 'Có nhiều nhánh: Cuộc sống đa dạng.'],
+                heart: ['Cong lên: Lãng mạn, lạc quan.', 'Thẳng: Thực tế, lý trí.', 'Dài: Yêu sâu sắc, chung thủy.'],
+                head: ['Dài: Tư duy sâu sắc.', 'Cong: Sáng tạo, nghệ sĩ.', 'Thẳng: Logic, quyết đoán.'],
+                fate: ['Rõ ràng: Mục tiêu rõ ràng.', 'Không có: Tự tạo vận mệnh.', 'Đứt đoạn: Nhiều thay đổi.']
+            };
+            botSay(`<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">
+        <b>📏 Đường Sinh Mệnh:</b> ${pick(readings.life)}<br>
+        <b>💕 Đường Tình Duyên:</b> ${pick(readings.heart)}<br>
+        <b>🧠 Đường Trí Não:</b> ${pick(readings.head)}<br>
+        <b>🎯 Đường Số Phận:</b> ${pick(readings.fate)}
+    </div><div class="reading-stars">★★★★☆</div></div>`, 1000);
+        }
+
+        // ==================== PIAN ====================
+        function sendMsg() {
+            const text = $('inp').value.trim(); if (!text) return;
+            $('inp').value = ''; $('inp').style.height = 'auto';
+            addMsg('user', text);
+
+            switch (mode) {
+                case 'tuvi': handleTuVi(text); break;
+                case 'zodiac': handleZodiac(text); break;
+                case 'tarot': handleTarot(text); break;
+                case 'numerology':
+                    if (state.step === 'name') { handleNumerologyName(text); }
+                    else { handleNumerology(text); }
+                    break;
+                case 'dream': handleDream(text); break;
+                case 'love': handleLove(text); break;
+                case 'palm': botSay('Chọn giới tính ở trên.'); break;
+                default: handleGeneral(text);
+            }
+        }
+        function handleGeneral(text) {
+            const l = text.toLowerCase();
+            if (l.includes('tử vi') || l.includes('tu vi')) startChat('tuvi');
+            else if (l.includes('tarot') || l.includes('bói')) startChat('tarot');
+            else if (l.includes('cung') || l.includes('zodiac')) startChat('zodiac');
+            else if (l.includes('số') || l.includes('numerology')) startChat('numerology');
+            else if (l.includes('mơ') || l.includes('giấc mơ')) startChat('dream');
+            else if (l.includes('tình') || l.includes('yêu')) startChat('love');
+            else if (l.includes('chỉ tay')) startChat('palm');
+            else botSay('Tôi có thể giúp bạn!', qa([
+                { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
+                { l: '🃏 Tarot', a: "startChat('tarot')" }, { l: '🔢 Thần Số Học', a: "startChat('numerology')" },
+                { l: '💭 Giấc Mơ', a: "startChat('dream')" }, { l: '💕 Tình Yêu', a: "startChat('love')" }
+            ]));
+        }
+
+        // Auto-resize
+        $('inp').addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 100) + 'px'; });
+
+        // Start
+        showHome();
+    </script>
+</body>
+
+</html>

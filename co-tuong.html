@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cờ Tướng - Nhiều Chế Độ</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: linear-gradient(135deg, #1a0a00, #2d1810, #1a0a00);
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; font-family: 'Segoe UI', sans-serif;
+  color: #f0d9b5;
+}
+.container {
+  display: flex; gap: 30px; align-items: flex-start;
+  flex-wrap: wrap; justify-content: center;
+}
+.game-area { text-align: center; }
+h1 {
+  font-size: 28px; margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(255,100,0,0.5);
+  color: #ffd700;
+}
+canvas {
+  border: 4px solid #8b6914;
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(139,105,20,0.5);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+canvas.shake {
+  animation: shakeBoard 0.3s ease;
+}
+@keyframes shakeBoard {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.info-panel {
+  background: rgba(30,15,5,0.9);
+  border: 2px solid #8b6914;
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 270px;
+}
+.boss-card {
+  text-align: center;
+  padding: 15px;
+  background: rgba(139,105,20,0.15);
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+.boss-avatar {
+  font-size: 60px;
+  margin-bottom: 8px;
+}
+.boss-name {
+  font-size: 22px;
+  color: #ff4444;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255,0,0,0.5);
+}
+.boss-title {
+  font-size: 13px;
+  color: #aaa;
+  margin-top: 4px;
+}
+.status-box {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 16px;
+  min-height: 50px;
+  display: flex; align-items: center; justify-content: center;
+}
+.status-box.check { border-color: #ff0; color: #ff0; animation: blink 0.5s infinite; }
+@keyframes blink { 50% { opacity: 0.6; } }
+.turn-indicator {
+  font-size: 18px; font-weight: bold;
+  padding: 8px; border-radius: 6px;
+  margin: 10px 0;
+}
+.turn-red { background: rgba(200,0,0,0.3); color: #ff4444; }
+.turn-black { background: rgba(0,0,0,0.5); color: #aaa; }
+.btn-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+button {
+  flex: 1; padding: 10px 15px;
+  background: linear-gradient(180deg, #8b6914, #6b4f10);
+  border: 1px solid #a08020;
+  border-radius: 6px;
+  color: #ffd700;
+  font-size: 14px; font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+button:hover {
+  background: linear-gradient(180deg, #a08020, #8b6914);
+  box-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+button:active { transform: scale(0.95); }
+.captured {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+}
+.captured h3 { font-size: 14px; margin-bottom: 5px; color: #aaa; }
+.captured-pieces { font-size: 20px; min-height: 30px; word-wrap: break-word; }
+.overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: none; justify-content: center; align-items: center;
+  z-index: 100;
+}
+.overlay.show { display: flex; }
+.modal {
+  background: linear-gradient(135deg, #2d1810, #1a0a00);
+  border: 3px solid #ffd700;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  max-width: 500px;
+  width: 90%;
+}
+.modal h2 { font-size: 32px; color: #ffd700; margin-bottom: 10px; }
+.modal p { font-size: 18px; color: #f0d9b5; margin-bottom: 20px; }
+.modal button { font-size: 18px; padding: 12px 30px; margin: 5px; }
+
+/* Menu Screen */
+.menu-screen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, #1a0a00, #2d1810, #1a0a00);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 200;
+  flex-direction: column;
+}
+.menu-screen.hidden { display: none; }
+.menu-title {
+  font-size: 48px; color: #ffd700;
+  text-shadow: 0 0 30px rgba(255,215,0,0.5);
+  margin-bottom: 10px;
+}
+.menu-subtitle {
+  font-size: 18px; color: #aaa;
+  margin-bottom: 40px;
+}
+.menu-cards {
+  display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
+  max-width: 800px;
+}
+.menu-card {
+  background: rgba(30,15,5,0.9);
+  border: 2px solid #8b6914;
+  border-radius: 16px;
+  padding: 25px 20px;
+  width: 220px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.menu-card:hover {
+  border-color: #ffd700;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(255,215,0,0.2);
+}
+.menu-card-icon { font-size: 50px; margin-bottom: 10px; }
+.menu-card-title { font-size: 20px; color: #ffd700; font-weight: bold; margin-bottom: 8px; }
+.menu-card-desc { font-size: 13px; color: #aaa; line-height: 1.4; }
+
+/* Difficulty selector */
+.diff-selector {
+  display: flex; gap: 8px; margin-top: 15px; justify-content: center; flex-wrap: wrap;
+}
+.diff-btn {
+  padding: 8px 16px; font-size: 13px; min-width: auto;
+  border-radius: 20px;
+}
+.diff-btn.active {
+  background: linear-gradient(180deg, #ffd700, #b8860b);
+  color: #1a0a00;
+  border-color: #ffd700;
+}
+
+/* Timer display */
+.timer-box {
+  display: flex; justify-content: space-between; gap: 10px;
+  margin: 10px 0;
+}
+.timer {
+  flex: 1; text-align: center;
+  padding: 8px; border-radius: 6px;
+  font-size: 22px; font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+.timer-red { background: rgba(200,0,0,0.3); color: #ff4444; border: 1px solid #cc0000; }
+.timer-black { background: rgba(0,0,0,0.5); color: #aaa; border: 1px solid #555; }
+.timer.active { animation: timerPulse 1s infinite; }
+@keyframes timerPulse { 50% { opacity: 0.8; } }
+.timer.urgent { color: #ff0 !important; animation: blink 0.5s infinite; }
+
+/* Mode label */
+.mode-label {
+  font-size: 12px; color: #888;
+  text-align: center; margin-bottom: 10px;
+  padding: 4px 12px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  display: inline-block;
+}
+</style>
+</head>
+<body>
+
+<!-- MENU SCREEN -->
+<div id="menuScreen" class="menu-screen">
+  <div class="menu-title">⚔️ Cờ Tướng ⚔️</div>
+  <div class="menu-subtitle">Chọn chế độ chơi</div>
+  <div class="menu-cards">
+    <div class="menu-card" onclick="startGame('pve', 'hard')">
+      <div class="menu-card-icon">🐉</div>
+      <div class="menu-card-title">vs Boss</div>
+      <div class="menu-card-desc">Đấu trí với Hắc Long Boss — AI mạnh nhất</div>
+    </div>
+    <div class="menu-card" onclick="showDiffSelect()">
+      <div class="menu-card-icon">🤖</div>
+      <div class="menu-card-title">vs Máy</div>
+      <div class="menu-card-desc">Chọn độ khó phù hợp với trình độ của bạn</div>
+    </div>
+    <div class="menu-card" onclick="startGame('pvp')">
+      <div class="menu-card-icon">👥</div>
+      <div class="menu-card-title">2 Người</div>
+      <div class="menu-card-desc">Hai người chơi cùng một máy, luân phiên đi</div>
+    </div>
+    <div class="menu-card" onclick="showTimerSelect()">
+      <div class="menu-card-icon">⏱️</div>
+      <div class="menu-card-title">Đếm Giờ</div>
+      <div class="menu-card-desc">Chơi với thời gian giới hạn — hết giờ thua!</div>
+    </div>
+  </div>
+</div>
+
+<!-- DIFFICULTY SELECT -->
+<div id="diffScreen" class="overlay">
+  <div class="modal">
+    <h2>🤖 Chọn Độ Khó</h2>
+    <p>Chọn trình độ AI phù hợp</p>
+    <div class="diff-selector" style="flex-direction:column; align-items:center;">
+      <button onclick="startGame('pve','easy')" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        🟢 Dễ — AI nông, phù hợp người mới
+      </button>
+      <button onclick="startGame('pve','medium')" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        🟡 Trung Bình — AI biết chặn và ăn quân
+      </button>
+      <button onclick="startGame('pve','hard')" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        🔴 Khó — AI suy nghĩ sâu, khó thắng
+      </button>
+      <button onclick="startGame('pve','boss')" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        💀 Boss — Thiên Hạ Vô Địch, không khoan nhượng
+      </button>
+    </div>
+    <br>
+    <button onclick="document.getElementById('diffScreen').classList.remove('show')" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">↩ Quay lại</button>
+  </div>
+</div>
+
+<!-- TIMER SELECT -->
+<div id="timerScreen" class="overlay">
+  <div class="modal">
+    <h2>⏱️ Chọn Thời Gian</h2>
+    <p>Mỗi bên có thời gian bằng nhau, hết giờ thua!</p>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <button onclick="startGame('pvp_timer',null,5*60)" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        ⏱️ 5 Phút — Tốc chiến tốc thắng
+      </button>
+      <button onclick="startGame('pvp_timer',null,10*60)" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        ⏱️ 10 Phút — Cân bằng tốc độ và chiến thuật
+      </button>
+      <button onclick="startGame('pvp_timer',null,15*60)" style="width:80%;margin:5px 0;padding:14px;font-size:18px;">
+        ⏱️ 15 Phút — Truyền thống
+      </button>
+    </div>
+    <br>
+    <button onclick="document.getElementById('timerScreen').classList.remove('show')" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">↩ Quay lại</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="container" id="gameContainer" style="display:none;">
+  <div class="game-area">
+    <h1 id="gameTitle">⚔️ Cờ Tướng ⚔️</h1>
+    <div id="modeLabel" class="mode-label"></div>
+    <canvas id="board" width="540" height="600"></canvas>
+  </div>
+  <div class="info-panel">
+    <div class="boss-card" id="bossCard">
+      <div class="boss-avatar" id="bossAvatar">🐉</div>
+      <div class="boss-name" id="bossName">Hắc Long Boss</div>
+      <div class="boss-title" id="bossTitle">Thiên Hạ Vô Địch · Cấp 99</div>
+    </div>
+    <div id="turnDisplay" class="turn-indicator turn-red">🔴 Lượt của Bạn</div>
+    <div id="timerBox" class="timer-box" style="display:none;">
+      <div id="timerRed" class="timer timer-red">10:00</div>
+      <div id="timerBlack" class="timer timer-black">10:00</div>
+    </div>
+    <div id="statusBox" class="status-box">Chọn quân cờ để di chuyển</div>
+    <div class="btn-group">
+      <button onclick="undoMove()">↩ Undo</button>
+      <button onclick="restartGame()">🔄 Chơi lại</button>
+      <button onclick="backToMenu()">🏠 Menu</button>
+    </div>
+    <div class="captured">
+      <h3>Quân Đỏ Ăn Được:</h3>
+      <div id="capturedRed" class="captured-pieces"></div>
+      <h3 style="margin-top:8px">Quân Đen Ăn Được:</h3>
+      <div id="capturedBlack" class="captured-pieces"></div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <p id="modalMsg"></p>
+    <button onclick="restartGame(); document.getElementById('overlay').classList.remove('show')">🔄 Chơi lại</button>
+    <button onclick="backToMenu()" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">🏠 Menu</button>
+  </div>
+</div>
+
+<script>
+// ==================== CONSTANTS ====================
+const COLS = 9, ROWS = 10;
+const CELL = 60;
+const PAD = 30;
+const RED = 'r', BLACK = 'b';
+const KING='K', ADVISOR='A', ELEPHANT='E', HORSE='H', CANNON='C', CHARIOT='R', SOLDIER='S';
+
+const PIECE_CHARS = {
+  r: { K:'帥', A:'仕', E:'相', H:'馬', C:'炮', R:'車', S:'兵' },
+  b: { K:'將', A:'士', E:'象', H:'馬', C:'炮', R:'車', S:'卒' }
+};
+
+const PIECE_VALUES = { K:10000, R:900, C:450, H:400, E:200, A:200, S:100 };
+
+const POS_BONUS = {
+  S: [
+    [0,0,0,0,0,0,0,0,0],[90,90,110,120,120,120,110,90,90],
+    [90,90,110,120,120,120,110,90,90],[70,90,110,110,110,110,110,90,70],
+    [70,70,70,70,70,70,70,70,70],
+    [0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]
+  ],
+  H: [
+    [40,50,40,40,40,40,40,50,40],[40,60,80,60,60,60,80,60,40],
+    [50,60,80,80,90,80,80,60,50],[40,60,80,90,80,90,80,60,40],
+    [40,60,80,80,90,80,80,60,40],[40,60,80,80,90,80,80,60,40],
+    [40,60,80,90,80,90,80,60,40],[50,60,70,70,70,70,70,60,50],
+    [40,50,60,60,60,60,60,50,40],[40,40,50,50,50,50,50,40,40]
+  ],
+  R: [
+    [190,200,210,220,220,220,210,200,190],[200,220,230,240,250,240,230,220,200],
+    [190,210,220,230,230,230,220,210,190],[190,210,220,230,230,230,220,210,190],
+    [190,210,220,230,230,230,220,210,190],[190,210,220,230,230,230,220,210,190],
+    [190,210,220,230,230,230,220,210,190],[190,210,220,230,230,230,220,210,190],
+    [200,220,230,240,250,240,230,220,200],[190,200,210,220,220,220,210,200,190]
+  ],
+  C: [
+    [100,100,100,110,130,110,100,100,100],[100,100,100,110,130,110,100,100,100],
+    [100,100,100,110,130,110,100,100,100],[100,100,110,120,120,120,110,100,100],
+    [100,100,110,120,120,120,110,100,100],[100,100,110,120,120,120,110,100,100],
+    [100,100,100,110,130,110,100,100,100],[100,100,100,110,120,110,100,100,100],
+    [100,100,100,100,110,100,100,100,100],[100,100,100,100,110,100,100,100,100]
+  ]
+};
+
+const BOSS_PROFILES = {
+  easy:   { avatar:'🐣', name:'Tân Thủ',     title:'Mới Tập Chơi · Cấp 1',  depth:1 },
+  medium: { avatar:'🦊', name:'Hồ Ly Tiên',  title:'Trung Đẳng · Cấp 30',   depth:2 },
+  hard:   { avatar:'🐯', name:'Bạch Hổ',     title:'Cao Thủ · Cấp 60',       depth:3 },
+  boss:   { avatar:'🐉', name:'Hắc Long Boss', title:'Thiên Hạ Vô Địch · Cấp 99', depth:4 }
+};
+
+const MODE_NAMES = {
+  pve: '🤖 Người vs Máy',
+  pvp: '👥 2 Người Chơi',
+  pvp_timer: '⏱️ Đếm Giờ'
+};
+
+// ==================== GAME STATE ====================
+let board = [];
+let currentTurn = RED;
+let selectedPiece = null;
+let validMoves = [];
+let moveHistory = [];
+let capturedRed = [];
+let capturedBlack = [];
+let gameOver = false;
+let lastMove = null;
+let gameMode = 'pve';
+let aiDepth = 3;
+let timerSeconds = 0;
+let timerRed = 0, timerBlack = 0;
+let timerInterval = null;
+let animating = false;
+
+// Animation state
+let animPiece = null; // {piece, fromR, fromC, toR, toC, progress}
+let particles = []; // [{x,y,vx,vy,life,color,size}]
+let glowTime = 0;
+
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+
+// ==================== MENU ====================
+function showDiffSelect() {
+  document.getElementById('diffScreen').classList.add('show');
+}
+function showTimerSelect() {
+  document.getElementById('timerScreen').classList.add('show');
+}
+
+function startGame(mode, diff, timer) {
+  document.getElementById('menuScreen').classList.add('hidden');
+  document.getElementById('diffScreen').classList.remove('show');
+  document.getElementById('timerScreen').classList.remove('show');
+  document.getElementById('gameContainer').style.display = 'flex';
+
+  gameMode = mode;
+  aiDepth = diff ? BOSS_PROFILES[diff].depth : 3;
+  timerSeconds = timer || 0;
+
+  // Update UI based on mode
+  document.getElementById('modeLabel').textContent = MODE_NAMES[mode] || '';
+
+  if (mode === 'pve' || mode === 'pvp_timer') {
+    const profile = diff ? BOSS_PROFILES[diff] : BOSS_PROFILES['hard'];
+    document.getElementById('bossCard').style.display = 'block';
+    document.getElementById('bossAvatar').textContent = profile.avatar;
+    document.getElementById('bossName').textContent = profile.name;
+    document.getElementById('bossTitle').textContent = profile.title;
+    document.getElementById('gameTitle').textContent = '⚔️ Người vs ' + profile.name + ' ⚔️';
+  } else if (mode === 'pvp') {
+    document.getElementById('bossCard').style.display = 'block';
+    document.getElementById('bossAvatar').textContent = '👥';
+    document.getElementById('bossName').textContent = '2 Người Chơi';
+    document.getElementById('bossTitle').textContent = 'Luân phiên trên cùng máy';
+    document.getElementById('gameTitle').textContent = '⚔️ Cờ Tướng — 2 Người ⚔️';
+  }
+
+  // Timer setup
+  if (timerSeconds > 0) {
+    document.getElementById('timerBox').style.display = 'flex';
+    document.getElementById('bossCard').style.display = 'block';
+    document.getElementById('bossAvatar').textContent = '⏱️';
+    document.getElementById('bossName').textContent = 'Chế Độ Đếm Giờ';
+    document.getElementById('bossTitle').textContent = formatTime(timerSeconds) + ' mỗi bên';
+    document.getElementById('gameTitle').textContent = '⚔️ Cờ Tướng — Đếm Giờ ⚔️';
+  } else {
+    document.getElementById('timerBox').style.display = 'none';
+  }
+
+  restartGame();
+}
+
+function backToMenu() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('gameContainer').style.display = 'none';
+  document.getElementById('menuScreen').classList.remove('hidden');
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+// ==================== TIMER ====================
+function startTimer() {
+  if (timerSeconds <= 0) return;
+  timerRed = timerSeconds;
+  timerBlack = timerSeconds;
+  updateTimerDisplay();
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (gameOver || animating) return;
+    if (currentTurn === RED) {
+      timerRed--;
+      if (timerRed <= 0) { timerRed = 0; endByTimeout(RED); }
+    } else {
+      timerBlack--;
+      if (timerBlack <= 0) { timerBlack = 0; endByTimeout(BLACK); }
+    }
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const elR = document.getElementById('timerRed');
+  const elB = document.getElementById('timerBlack');
+  elR.textContent = formatTime(timerRed);
+  elB.textContent = formatTime(timerBlack);
+  elR.className = 'timer timer-red' + (currentTurn === RED ? ' active' : '') + (timerRed <= 30 ? ' urgent' : '');
+  elB.className = 'timer timer-black' + (currentTurn === BLACK ? ' active' : '') + (timerBlack <= 30 ? ' urgent' : '');
+}
+
+function endByTimeout(loser) {
+  gameOver = true;
+  if (timerInterval) clearInterval(timerInterval);
+  const winner = loser === RED ? 'Đen' : 'Đỏ';
+  document.getElementById('modalTitle').textContent = '⏰ Hết Giờ!';
+  document.getElementById('modalMsg').textContent = (loser === RED ? 'Bạn' : 'Đối thủ') + ' hết thời gian! ' + winner + ' thắng!';
+  document.getElementById('overlay').classList.add('show');
+  updateUI();
+}
+
+// ==================== INITIALIZATION ====================
+function initBoard() {
+  board = Array.from({length:ROWS}, () => Array(COLS).fill(null));
+  const backRow = [CHARIOT,HORSE,ELEPHANT,ADVISOR,KING,ADVISOR,ELEPHANT,HORSE,CHARIOT];
+  for (let c = 0; c < COLS; c++) {
+    board[0][c] = {type: backRow[c], color: BLACK};
+    board[9][c] = {type: backRow[c], color: RED};
+  }
+  board[2][1] = {type:CANNON, color:BLACK}; board[2][7] = {type:CANNON, color:BLACK};
+  board[7][1] = {type:CANNON, color:RED};   board[7][7] = {type:CANNON, color:RED};
+  for (let c = 0; c < COLS; c += 2) {
+    board[3][c] = {type:SOLDIER, color:BLACK};
+    board[6][c] = {type:SOLDIER, color:RED};
+  }
+}
+
+// ==================== DRAWING ====================
+function drawBoard() {
+  // Background
+  ctx.fillStyle = '#d4a843';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#c9a03a';
+  for (let i = 0; i < canvas.height; i += 3) ctx.fillRect(0, i, canvas.width, 1);
+
+  // Grid
+  ctx.strokeStyle = '#4a3000';
+  ctx.lineWidth = 1;
+  for (let r = 0; r < ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(PAD, PAD+r*CELL); ctx.lineTo(PAD+8*CELL, PAD+r*CELL); ctx.stroke();
+  }
+  for (let c = 0; c < COLS; c++) {
+    if (c === 0 || c === 8) {
+      ctx.beginPath(); ctx.moveTo(PAD+c*CELL, PAD); ctx.lineTo(PAD+c*CELL, PAD+9*CELL); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(PAD+c*CELL, PAD); ctx.lineTo(PAD+c*CELL, PAD+4*CELL); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD+c*CELL, PAD+5*CELL); ctx.lineTo(PAD+c*CELL, PAD+9*CELL); ctx.stroke();
+    }
+  }
+
+  // Palace diagonals
+  ctx.beginPath();
+  ctx.moveTo(PAD+3*CELL,PAD); ctx.lineTo(PAD+5*CELL,PAD+2*CELL);
+  ctx.moveTo(PAD+5*CELL,PAD); ctx.lineTo(PAD+3*CELL,PAD+2*CELL);
+  ctx.moveTo(PAD+3*CELL,PAD+7*CELL); ctx.lineTo(PAD+5*CELL,PAD+9*CELL);
+  ctx.moveTo(PAD+5*CELL,PAD+7*CELL); ctx.lineTo(PAD+3*CELL,PAD+9*CELL);
+  ctx.stroke();
+
+  // River
+  ctx.fillStyle = '#4a3000';
+  ctx.font = 'bold 24px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('楚 河', PAD+2*CELL, PAD+4.5*CELL);
+  ctx.fillText('漢 界', PAD+6*CELL, PAD+4.5*CELL);
+
+  // Last move highlight
+  if (lastMove) {
+    ctx.fillStyle = 'rgba(255,255,0,0.15)';
+    ctx.fillRect(PAD+lastMove.from.c*CELL-CELL/2, PAD+lastMove.from.r*CELL-CELL/2, CELL, CELL);
+    ctx.fillRect(PAD+lastMove.to.c*CELL-CELL/2, PAD+lastMove.to.r*CELL-CELL/2, CELL, CELL);
+    // Arrow indicator
+    ctx.strokeStyle = 'rgba(255,200,0,0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(PAD+lastMove.from.c*CELL, PAD+lastMove.from.r*CELL);
+    ctx.lineTo(PAD+lastMove.to.c*CELL, PAD+lastMove.to.r*CELL);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Valid moves
+  for (const m of validMoves) {
+    const x = PAD+m.c*CELL, y = PAD+m.r*CELL;
+    if (board[m.r][m.c]) {
+      ctx.strokeStyle = 'rgba(255,0,0,0.7)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, CELL/2-4, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(0,200,0,0.4)';
+      ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Selected piece glow
+  if (selectedPiece) {
+    const x = PAD+selectedPiece.col*CELL, y = PAD+selectedPiece.row*CELL;
+    glowTime += 0.05;
+    const glowAlpha = 0.4 + Math.sin(glowTime * 3) * 0.3;
+    ctx.strokeStyle = `rgba(0,255,100,${glowAlpha})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, CELL/2-2, 0, Math.PI*2); ctx.stroke();
+    // Outer glow
+    ctx.strokeStyle = `rgba(0,255,100,${glowAlpha * 0.3})`;
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(x, y, CELL/2+2, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // Draw pieces (skip animating piece at its original position)
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c]) {
+        if (animPiece && r === animPiece.fromR && c === animPiece.fromC) continue;
+        drawPiece(PAD+c*CELL, PAD+r*CELL, board[r][c]);
+      }
+    }
+  }
+
+  // Draw animating piece
+  if (animPiece) {
+    const t = animPiece.progress;
+    const cx = PAD + animPiece.fromC*CELL + (animPiece.toC - animPiece.fromC)*CELL*t;
+    const cy = PAD + animPiece.fromR*CELL + (animPiece.toR - animPiece.fromR)*CELL*t;
+    // Bounce effect at end
+    const bounce = t > 0.7 ? Math.sin((t-0.7)/0.3 * Math.PI) * 4 : 0;
+    drawPiece(cx, cy - bounce, animPiece.piece);
+  }
+
+  // Draw particles
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPiece(x, y, piece) {
+  const radius = CELL/2 - 4;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.arc(x+2, y+2, radius, 0, Math.PI*2); ctx.fill();
+
+  // Body
+  const grad = ctx.createRadialGradient(x-5, y-5, 2, x, y, radius);
+  if (piece.color === RED) {
+    grad.addColorStop(0, '#ffe0c0');
+    grad.addColorStop(1, '#d4a060');
+  } else {
+    grad.addColorStop(0, '#e0e0e0');
+    grad.addColorStop(1, '#808080');
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2); ctx.fill();
+
+  // Border
+  ctx.strokeStyle = piece.color === RED ? '#8b0000' : '#222';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2); ctx.stroke();
+
+  // Inner circle
+  ctx.strokeStyle = piece.color === RED ? '#8b0000' : '#333';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, y, radius-5, 0, Math.PI*2); ctx.stroke();
+
+  // Text
+  ctx.fillStyle = piece.color === RED ? '#cc0000' : '#111';
+  ctx.font = 'bold 26px "KaiTi","STKaiti","SimSun",serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(PIECE_CHARS[piece.color][piece.type], x, y+1);
+}
+
+// ==================== ANIMATION ====================
+function animateMove(fromR, fromC, toR, toC, piece, callback) {
+  animating = true;
+  animPiece = { piece, fromR, fromC, toR, toC, progress: 0 };
+
+  const duration = 300; // ms
+  const startTime = performance.now();
+
+  // Spawn capture particles if there's a piece at destination
+  const capturedPiece = board[toR][toC];
+
+  function step(now) {
+    const elapsed = now - startTime;
+    animPiece.progress = Math.min(elapsed / duration, 1);
+
+    // Easing: ease-out cubic
+    animPiece.progress = 1 - Math.pow(1 - animPiece.progress, 3);
+
+    drawBoard();
+
+    if (animPiece.progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      // Animation done
+      animPiece = null;
+
+      // Spawn capture particles
+      if (capturedPiece) {
+        spawnCaptureParticles(PAD+toC*CELL, PAD+toR*CELL, capturedPiece.color);
+        // Shake board
+        canvas.classList.add('shake');
+        setTimeout(() => canvas.classList.remove('shake'), 300);
+      }
+
+      animating = false;
+      if (callback) callback();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function spawnCaptureParticles(x, y, color) {
+  const colors = color === RED
+    ? ['#ff4444','#ff8888','#ffcccc','#ff6644','#ffaa00']
+    : ['#888888','#bbbbbb','#dddddd','#666666','#aaaaaa'];
+
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 3 + Math.random() * 5
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.15; // gravity
+    p.life -= 0.025;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+// ==================== MOVE VALIDATION ====================
+function isInBoard(r, c) { return r>=0 && r<ROWS && c>=0 && c<COLS; }
+function isInPalace(r, c, color) {
+  if (c<3||c>5) return false;
+  return color===RED ? r>=7&&r<=9 : r>=0&&r<=2;
+}
+
+function getValidMoves(row, col) {
+  const piece = board[row][col];
+  if (!piece) return [];
+  const moves = [];
+  const color = piece.color;
+
+  switch (piece.type) {
+    case KING: {
+      for (const [dr,dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+        const nr=row+dr, nc=col+dc;
+        if (isInBoard(nr,nc) && isInPalace(nr,nc,color)) {
+          const t=board[nr][nc]; if(!t||t.color!==color) moves.push({r:nr,c:nc});
+        }
+      }
+      const dir=color===RED?-1:1;
+      let nr=row+dir;
+      while (isInBoard(nr,col)) {
+        if (board[nr][col]) {
+          if (board[nr][col].type===KING&&board[nr][col].color!==color) moves.push({r:nr,c:col});
+          break;
+        }
+        nr+=dir;
+      }
+      break;
+    }
+    case ADVISOR: {
+      for (const [dr,dc] of [[1,1],[1,-1],[-1,1],[-1,-1]]) {
+        const nr=row+dr, nc=col+dc;
+        if (isInBoard(nr,nc)&&isInPalace(nr,nc,color)) {
+          const t=board[nr][nc]; if(!t||t.color!==color) moves.push({r:nr,c:nc});
+        }
+      }
+      break;
+    }
+    case ELEPHANT: {
+      for (const [dr,dc] of [[2,2],[2,-2],[-2,2],[-2,-2]]) {
+        const nr=row+dr, nc=col+dc;
+        const br=row+dr/2, bc=col+dc/2;
+        if (isInBoard(nr,nc)) {
+          if (color===RED&&nr<5) continue;
+          if (color===BLACK&&nr>4) continue;
+          if (!board[br][bc]) {
+            const t=board[nr][nc]; if(!t||t.color!==color) moves.push({r:nr,c:nc});
+          }
+        }
+      }
+      break;
+    }
+    case HORSE: {
+      for (const [dr,dc] of [[-2,-1],[-2,1],[2,-1],[2,1],[-1,-2],[-1,2],[1,-2],[1,2]]) {
+        const nr=row+dr, nc=col+dc;
+        let br, bc;
+        if (Math.abs(dr)===2) { br=row+dr/2; bc=col; } else { br=row; bc=col+dc/2; }
+        if (isInBoard(nr,nc)&&!board[br][bc]) {
+          const t=board[nr][nc]; if(!t||t.color!==color) moves.push({r:nr,c:nc});
+        }
+      }
+      break;
+    }
+    case CHARIOT: {
+      for (const [dr,dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+        let nr=row+dr, nc=col+dc;
+        while (isInBoard(nr,nc)) {
+          if (board[nr][nc]) {
+            if (board[nr][nc].color!==color) moves.push({r:nr,c:nc});
+            break;
+          }
+          moves.push({r:nr,c:nc});
+          nr+=dr; nc+=dc;
+        }
+      }
+      break;
+    }
+    case CANNON: {
+      for (const [dr,dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+        let nr=row+dr, nc=col+dc, jumped=false;
+        while (isInBoard(nr,nc)) {
+          if (!jumped) {
+            if (board[nr][nc]) jumped=true;
+            else moves.push({r:nr,c:nc});
+          } else {
+            if (board[nr][nc]) {
+              if (board[nr][nc].color!==color) moves.push({r:nr,c:nc});
+              break;
+            }
+          }
+          nr+=dr; nc+=dc;
+        }
+      }
+      break;
+    }
+    case SOLDIER: {
+      const fwd=color===RED?-1:1;
+      let nr=row+fwd, nc=col;
+      if (isInBoard(nr,nc)) { const t=board[nr][nc]; if(!t||t.color!==color) moves.push({r:nr,c:nc}); }
+      const crossed=color===RED?row<=4:row>=5;
+      if (crossed) {
+        for (const dc of [-1,1]) {
+          nr=row; nc=col+dc;
+          if (isInBoard(nr,nc)) { const t=board[nr][nc]; if(!t||t.color!==color) moves.push({r:nr,c:nc}); }
+        }
+      }
+      break;
+    }
+  }
+  return moves;
+}
+
+// ==================== CHECK DETECTION ====================
+function findKing(color) {
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++)
+    if (board[r][c]&&board[r][c].type===KING&&board[r][c].color===color) return {r,c};
+  return null;
+}
+
+function isInCheck(color) {
+  const king=findKing(color);
+  if (!king) return true;
+  const enemy=color===RED?BLACK:RED;
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    if (board[r][c]&&board[r][c].color===enemy) {
+      if (getValidMoves(r,c).some(m=>m.r===king.r&&m.c===king.c)) return true;
+    }
+  }
+  const dir=color===RED?-1:1;
+  let nr=king.r+dir;
+  while (isInBoard(nr,king.c)) {
+    if (board[nr][king.c]) {
+      if (board[nr][king.c].type===KING&&board[nr][king.c].color!==color) return true;
+      break;
+    }
+    nr+=dir;
+  }
+  return false;
+}
+
+function hasLegalMoves(color) {
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    if (board[r][c]&&board[r][c].color===color) {
+      for (const m of getValidMoves(r,c)) {
+        const cap=board[m.r][m.c];
+        board[m.r][m.c]=board[r][c]; board[r][c]=null;
+        const ok=!isInCheck(color);
+        board[r][c]=board[m.r][m.c]; board[m.r][m.c]=cap;
+        if (ok) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ==================== MOVE EXECUTION ====================
+function makeMove(fromR, fromC, toR, toC) {
+  const captured=board[toR][toC];
+  if (captured) {
+    if (captured.color===RED) capturedRed.push(captured);
+    else capturedBlack.push(captured);
+  }
+  moveHistory.push({from:{r:fromR,c:fromC},to:{r:toR,c:toC},piece:board[fromR][fromC],captured});
+  board[toR][toC]=board[fromR][fromC];
+  board[fromR][fromC]=null;
+  lastMove={from:{r:fromR,c:fromC},to:{r:toR,c:toC}};
+}
+
+function undoLastMove() {
+  if (moveHistory.length===0) return false;
+  const move=moveHistory.pop();
+  board[move.from.r][move.from.c]=move.piece;
+  board[move.to.r][move.to.c]=move.captured;
+  if (move.captured) {
+    if (move.captured.color===RED) capturedRed.pop();
+    else capturedBlack.pop();
+  }
+  lastMove=moveHistory.length>0?
+    {from:moveHistory[moveHistory.length-1].from,to:moveHistory[moveHistory.length-1].to}:null;
+  return true;
+}
+
+// ==================== AI ====================
+function evaluateBoard(color) {
+  let score=0;
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    const p=board[r][c];
+    if (!p) continue;
+    let val=PIECE_VALUES[p.type];
+    const pr=p.color===RED?r:(9-r);
+    if (POS_BONUS[p.type]) val+=POS_BONUS[p.type][pr][c];
+    if (p.color===color) score+=val; else score-=val;
+  }
+  return score;
+}
+
+function minimax(depth, alpha, beta, maximizing, aiColor) {
+  if (depth===0) return evaluateBoard(aiColor);
+  const color=maximizing?aiColor:(aiColor===RED?BLACK:RED);
+  if (!hasLegalMoves(color)) {
+    if (isInCheck(color)) return maximizing?-99999+(4-depth):99999-(4-depth);
+    return 0;
+  }
+  const moves=getAllMoves(color);
+  if (maximizing) {
+    let best=-Infinity;
+    for (const m of moves) {
+      const cap=board[m.to.r][m.to.c];
+      board[m.to.r][m.to.c]=board[m.from.r][m.from.c]; board[m.from.r][m.from.c]=null;
+      const v=minimax(depth-1,alpha,beta,false,aiColor);
+      board[m.from.r][m.from.c]=board[m.to.r][m.to.c]; board[m.to.r][m.to.c]=cap;
+      best=Math.max(best,v); alpha=Math.max(alpha,v);
+      if (beta<=alpha) break;
+    }
+    return best;
+  } else {
+    let best=Infinity;
+    for (const m of moves) {
+      const cap=board[m.to.r][m.to.c];
+      board[m.to.r][m.to.c]=board[m.from.r][m.from.c]; board[m.from.r][m.from.c]=null;
+      const v=minimax(depth-1,alpha,beta,true,aiColor);
+      board[m.from.r][m.from.c]=board[m.to.r][m.to.c]; board[m.to.r][m.to.c]=cap;
+      best=Math.min(best,v); beta=Math.min(beta,v);
+      if (beta<=alpha) break;
+    }
+    return best;
+  }
+}
+
+function getAllMoves(color) {
+  const moves=[];
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    if (board[r][c]&&board[r][c].color===color) {
+      for (const m of getValidMoves(r,c)) {
+        const cap=board[m.r][m.c];
+        board[m.r][m.c]=board[r][c]; board[r][c]=null;
+        const legal=!isInCheck(color);
+        board[r][c]=board[m.r][m.c]; board[m.r][m.c]=cap;
+        if (legal) moves.push({from:{r,c},to:{r:m.r,c:m.c}});
+      }
+    }
+  }
+  moves.sort((a,b)=>{
+    const av=board[a.to.r][a.to.c]?PIECE_VALUES[board[a.to.r][a.to.c].type]:0;
+    const bv=board[b.to.r][b.to.c]?PIECE_VALUES[board[b.to.r][b.to.c].type]:0;
+    return bv-av;
+  });
+  return moves;
+}
+
+function aiMove() {
+  if (gameOver) return;
+  const depth=aiDepth;
+  const moves=getAllMoves(BLACK);
+  if (moves.length===0) return;
+
+  let bestScore=-Infinity, bestMoves=[];
+  for (const m of moves) {
+    const cap=board[m.to.r][m.to.c];
+    board[m.to.r][m.to.c]=board[m.from.r][m.from.c]; board[m.from.r][m.from.c]=null;
+    const score=minimax(depth-1,-Infinity,Infinity,false,BLACK);
+    board[m.from.r][m.from.c]=board[m.to.r][m.to.c]; board[m.to.r][m.to.c]=cap;
+    if (score>bestScore) { bestScore=score; bestMoves=[m]; }
+    else if (score===bestScore) bestMoves.push(m);
+  }
+
+  const chosen=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  const piece=board[chosen.from.r][chosen.from.c];
+
+  // Animate AI move
+  animateMove(chosen.from.r, chosen.from.c, chosen.to.r, chosen.to.c, piece, () => {
+    makeMove(chosen.from.r, chosen.from.c, chosen.to.r, chosen.to.c);
+    currentTurn=RED;
+    checkGameState();
+    updateUI();
+    drawBoard();
+  });
+}
+
+// ==================== GAME STATE CHECK ====================
+function checkGameState() {
+  const color=currentTurn;
+  if (!hasLegalMoves(color)) {
+    gameOver=true;
+    if (timerInterval) clearInterval(timerInterval);
+    if (isInCheck(color)) {
+      const winner=color===RED?'Đen':'Đỏ';
+      const emoji=color===RED?'💀':'🎉';
+      const isPvP=gameMode==='pvp'||gameMode==='pvp_timer';
+      const winName=isPvP?winner:(color===RED?'Boss':'Bạn');
+      document.getElementById('modalTitle').textContent=emoji+' '+(color===RED?'Thua!':'Thắng!')+' '+emoji;
+      document.getElementById('modalMsg').textContent=winName+' thắng bằng chiếu bí!';
+    } else {
+      document.getElementById('modalTitle').textContent='🤝 Hòa!';
+      document.getElementById('modalMsg').textContent='Không còn nước đi hợp lệ!';
+    }
+    document.getElementById('overlay').classList.add('show');
+  }
+}
+
+// ==================== UI UPDATE ====================
+function updateUI() {
+  const turnEl=document.getElementById('turnDisplay');
+  const statusEl=document.getElementById('statusBox');
+
+  if (gameOver) {
+    turnEl.className='turn-indicator';
+    turnEl.textContent='🏁 Trò chơi kết thúc';
+    statusEl.className='status-box';
+    statusEl.textContent='Nhấn "Chơi lại" hoặc "Menu"';
+    return;
+  }
+
+  const isPvP=gameMode==='pvp'||gameMode==='pvp_timer';
+  if (currentTurn===RED) {
+    turnEl.className='turn-indicator turn-red';
+    turnEl.textContent=isPvP?'🔴 Lượt Đỏ':'🔴 Lượt của Bạn';
+  } else {
+    turnEl.className='turn-indicator turn-black';
+    turnEl.textContent=isPvP?'⚫ Lượt Đen':'⚫ Boss đang suy nghĩ...';
+  }
+
+  const inCheck=isInCheck(currentTurn);
+  if (inCheck) {
+    statusEl.className='status-box check';
+    const who=currentTurn===RED?(isPvP?'Đỏ':'Bạn'):(isPvP?'Đen':'Boss');
+    statusEl.textContent='⚠️ '+who+' đang bị chiếu! ⚠️';
+  } else {
+    statusEl.className='status-box';
+    statusEl.textContent=selectedPiece?'Chọn ô đích để di chuyển':'Chọn quân cờ để di chuyển';
+  }
+
+  document.getElementById('capturedRed').textContent=capturedRed.map(p=>PIECE_CHARS[p.color][p.type]).join(' ');
+  document.getElementById('capturedBlack').textContent=capturedBlack.map(p=>PIECE_CHARS[p.color][p.type]).join(' ');
+}
+
+// ==================== EVENT HANDLING ====================
+canvas.addEventListener('click', (e) => {
+  if (gameOver||animating) return;
+  const isPvP=gameMode==='pvp'||gameMode==='pvp_timer';
+  if (!isPvP && currentTurn!==RED) return;
+
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const col=Math.round((x-PAD)/CELL), row=Math.round((y-PAD)/CELL);
+  if (!isInBoard(row,col)) return;
+
+  if (selectedPiece) {
+    const move=validMoves.find(m=>m.r===row&&m.c===col);
+    if (move) {
+      const piece=board[selectedPiece.row][selectedPiece.col];
+      const fromR=selectedPiece.row, fromC=selectedPiece.col;
+
+      animateMove(fromR, fromC, row, col, piece, () => {
+        makeMove(fromR, fromC, row, col);
+        selectedPiece=null;
+        validMoves=[];
+
+        const nextTurn=currentTurn===RED?BLACK:RED;
+        currentTurn=nextTurn;
+        checkGameState();
+        updateUI();
+        drawBoard();
+
+        // AI move in PvE mode
+        if (!gameOver && gameMode==='pve' && currentTurn===BLACK) {
+          setTimeout(aiMove, 300);
+        }
+      });
+      // Temporarily clear selection during animation
+      selectedPiece=null;
+      validMoves=[];
+      drawBoard();
+      return;
+    }
+  }
+
+  const piece=board[row][col];
+  if (piece && piece.color===currentTurn) {
+    selectedPiece={row,col};
+    validMoves=getValidMoves(row,col).filter(m=>{
+      const cap=board[m.r][m.c];
+      board[m.r][m.c]=board[row][col]; board[row][col]=null;
+      const legal=!isInCheck(currentTurn);
+      board[row][col]=board[m.r][m.c]; board[m.r][m.c]=cap;
+      return legal;
+    });
+    updateUI();
+    drawBoard();
+  } else {
+    selectedPiece=null;
+    validMoves=[];
+    updateUI();
+    drawBoard();
+  }
+});
+
+// ==================== GAME CONTROLS ====================
+function undoMove() {
+  if (gameOver||animating) return;
+  if (gameMode==='pvp'||gameMode==='pvp_timer') {
+    if (moveHistory.length<1) return;
+    undoLastMove();
+    currentTurn=currentTurn===RED?BLACK:RED;
+  } else {
+    if (moveHistory.length<2) return;
+    undoLastMove();
+    undoLastMove();
+    currentTurn=RED;
+  }
+  selectedPiece=null;
+  validMoves=[];
+  lastMove=moveHistory.length>0?
+    {from:moveHistory[moveHistory.length-1].from,to:moveHistory[moveHistory.length-1].to}:null;
+  updateUI();
+  drawBoard();
+}
+
+function restartGame() {
+  initBoard();
+  currentTurn=RED;
+  selectedPiece=null;
+  validMoves=[];
+  moveHistory=[];
+  capturedRed=[];
+  capturedBlack=[];
+  gameOver=false;
+  lastMove=null;
+  animating=false;
+  animPiece=null;
+  particles=[];
+  document.getElementById('overlay').classList.remove('show');
+
+  if (timerSeconds>0) startTimer();
+  else if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+
+  updateUI();
+  drawBoard();
+}
+
+// ==================== ANIMATION LOOP ====================
+function animLoop() {
+  updateParticles();
+  if (particles.length > 0) drawBoard();
+  requestAnimationFrame(animLoop);
+}
+
+// ==================== START ====================
+animLoop();
+</script>
+</body>
+</html>
