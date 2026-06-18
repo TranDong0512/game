@@ -829,8 +829,23 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const data = await res.json();
+                if (data.error) { console.error('Gemini Error:', data.error.message); return null; }
                 return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
             } catch (e) { console.error('AI Error:', e); return null; }
+        }
+
+        async function askAI(prompt, onResult) {
+            showTyping();
+            try {
+                const ai = await callAI(prompt);
+                hideTyping();
+                if (ai) { onResult(ai); return true; }
+                addMsg('bot', '⚠️ AI không phản hồi. Kiểm tra lại API key trong ⚙️ Cài đặt.');
+                return true;
+            } catch (e) { console.error('askAI error:', e); }
+            hideTyping();
+            addMsg('bot', '⚠️ Lỗi kết nối AI. Thử lại sau.');
+            return true;
         }
 
         // ==================== SIDEBAR TOGGLE ====================
@@ -1165,8 +1180,7 @@
         Can Chi: ${cc.can} ${cc.chi}, Ngũ Hành: ${nhamenh}
         Cung Mệnh: ${cm.cung}, Sao Tử Vi: ${sao}
         Vận Hạn 2024: ${vh.ten} (${vh.tot ? 'Tốt' : 'Cần thận trọng'})`;
-                const ai = await callAI(prompt);
-                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+                await askAI(prompt, ai => { html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
             }
 
             hideTyping();
@@ -1186,9 +1200,9 @@
             if (GEMINI_KEY) {
                 const topics = { love: 'tình duyên, mối quan hệ, hôn nhân', career: 'sự nghiệp, tài chính, công việc', health: 'sức khỏe, thể chất, tinh thần' };
                 const prompt = `Bạn là nhà tử vi học. Người sinh năm ${year} (${cc.can} ${cc.chi}), tháng ${month}, ngày ${day}, giờ ${hour}. Hãy phân tích chi tiết về ${topics[topic]} năm 2024. Trả lời tiếng Việt, khoảng 150 từ.`;
-                botSay('⏳ AI đang phân tích...');
-                const ai = await callAI(prompt);
-                if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">${topic === 'love' ? '💕' : topic === 'career' ? '💼' : '🏥'} ${topic === 'love' ? 'Tình Duyên' : topic === 'career' ? 'Sự Nghiệp' : 'Sức Khỏe'}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
+                const title = topic === 'love' ? '💕 Tình Duyên' : topic === 'career' ? '💼 Sự Nghiệp' : '🏥 Sức Khỏe';
+                const used = await askAI(prompt, ai => { addMsg('bot', `<div class="reading-box"><div class="reading-title">${title}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); });
+                if (used) return;
             }
             const localResponses = {
                 love: {
@@ -1271,7 +1285,17 @@
             };
             const t = traits[sign.name] || traits['Ma Kết'];
 
-            let html = `<div class="reading-box"><div class="reading-title">${sign.icon} ${sign.name} (${day}/${month})</div><div class="reading-text">
+            let html = '';
+
+            if (GEMINI_KEY) {
+                html = `<div class="reading-box"><div class="reading-title">${sign.icon} ${sign.name} (${day}/${month})</div><div class="reading-text">
+        <b>Nguyên tố:</b> ${elements[signIdx]} | <b>Hành tinh:</b> ${planets[signIdx]}<br>
+        <b>Ngày:</b> ${sign.start[0]}/${sign.start[1]} - ${sign.end[0]}/${sign.end[1]}
+    </div></div>`;
+                const prompt = `Bạn là nhà chiêm tinh học. Người thuộc cung ${sign.name}, sinh ngày ${day}/${month}. Hãy phân tích chi tiết tính cách, tình yêu, sự nghiệp, sức khỏe. Trả lời tiếng Việt, khoảng 200 từ.`;
+                await askAI(prompt, ai => { html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải ${sign.icon} ${sign.name}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
+            } else {
+                html = `<div class="reading-box"><div class="reading-title">${sign.icon} ${sign.name} (${day}/${month})</div><div class="reading-text">
         <b>Nguyên tố:</b> ${elements[signIdx]} | <b>Hành tinh:</b> ${planets[signIdx]}<br>
         <b>Ngày:</b> ${sign.start[0]}/${sign.start[1]} - ${sign.end[0]}/${sign.end[1]}<br><br>
         <b>🔑 Tính cách:</b> ${t.desc}<br><br>
@@ -1279,13 +1303,6 @@
         <b>💼 Sự nghiệp:</b> ${t.career}<br>
         <b>🏥 Sức khỏe chú ý:</b> ${t.health}
     </div><div class="reading-stars">★★★★★</div></div>`;
-
-            addMsg('bot', '⏳ Đang phân tích...', '', 0);
-
-            if (GEMINI_KEY) {
-                const prompt = `Bạn là nhà chiêm tinh học. Người thuộc cung ${sign.name}, sinh ngày ${day}/${month}. Hãy phân tích chi tiết tính cách, tình yêu, sự nghiệp, sức khỏe. Trả lời tiếng Việt, khoảng 200 từ.`;
-                const ai = await callAI(prompt);
-                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
             }
 
             hideTyping(); addMsg('bot', html);
@@ -1298,9 +1315,8 @@
         async function askZodiacLove(sign) {
             addMsg('user', '💕 Tình yêu ' + sign);
             if (GEMINI_KEY) {
-                botSay('⏳ AI phân tích...');
-                const ai = await callAI(`Phân tích tình yêu, mối quan hệ của cung ${sign}. Gợi ý cung hợp nhất. Tiếng Việt, 150 từ.`);
-                if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Yêu ${sign}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
+                const used = await askAI(`Phân tích tình yêu, mối quan hệ của cung ${sign}. Gợi ý cung hợp nhất. Tiếng Việt, 150 từ.`, ai => { addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Yêu ${sign}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); });
+                if (used) return;
             }
             const loveData = {
                 'Ma Kết': { best: 'Kim Ngưu, Xử Nữ, Bọ Crape', trait: 'Thực tế, nghiêm túc trong tình yêu, cần người ổn định', tip: 'Đừng quá nghiêm khắc với bản thân và đối phương' },
@@ -1366,8 +1382,7 @@
             if (GEMINI_KEY) {
                 const cardNames = cards.map((c, i) => `${positions[i]}: ${c.name} ${c.reversed ? '(đảo ngược)' : ''} - ${c.reversed ? c.rev : c.up}`).join('\n');
                 const prompt = `Bạn là nhà tarot reader. Dựa trên 3 lá bài sau, hãy diễn giải chi tiết và đưa ra lời khuyên cho câu hỏi "${state.question}":\n${cardNames}\n\nTrả lời tiếng Việt, khoảng 200 từ, giọng huyền bí.`;
-                const ai = await callAI(prompt);
-                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+                await askAI(prompt, ai => { html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
             }
 
             hideTyping(); addMsg('bot', html);
@@ -1433,8 +1448,7 @@
                 const prompt = `Bạn là nhà thần số học. Phân tích chi tiết cho người tên "${name}", sinh ${day}/${month}/${year}:
         Life Path: ${lp} (${lpInfo.t}), Destiny: ${dn} (${dnInfo.t}), Soul: ${sn} (${snInfo.t}), Personality: ${pn}
         Diễn giải tính cách, sự nghiệp, tình yêu, lời khuyên. Tiếng Việt, 200 từ.`;
-                const ai = await callAI(prompt);
-                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+                await askAI(prompt, ai => { html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
             }
 
             hideTyping(); addMsg('bot', html);
@@ -1454,10 +1468,8 @@
         async function handleDream(input) {
             addMsg('user', input);
             if (GEMINI_KEY) {
-                botSay('⏳ AI đang giải mã giấc mơ...');
-                const ai = await callAI(`Bạn là nhà giải mã giấc mơ chuyên nghiệp. Giải mã giấc mơ sau: "${input}". Phân tích ý nghĩa tâm lý, điềm báo, lời khuyên. Tiếng Việt, khoảng 150 từ.`);
-                if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💭 Giải Mã Giấc Mơ</div><div class="reading-text"><b>Mô tả:</b> "${input}"<br><br>${ai.replace(/\n/g, '<br>')}</div></div>`); }
-                else { hideTyping(); botSay('⚠️ Lỗi AI. Thử lại sau.'); }
+                const used = await askAI(`Bạn là nhà giải mã giấc mơ chuyên nghiệp. Giải mã giấc mơ sau: "${input}". Phân tích ý nghĩa tâm lý, điềm báo, lời khuyên. Tiếng Việt, khoảng 150 từ.`, ai => { addMsg('bot', `<div class="reading-box"><div class="reading-title">💭 Giải Mã Giấc Mơ</div><div class="reading-text"><b>Mô tả:</b> "${input}"<br><br>${ai.replace(/\n/g, '<br>')}</div></div>`); });
+                if (used) return;
             } else {
                 const dreams = {
                     'rắn': { meaning: 'Chuyển hóa, chữa lành, sức mạnh nội tâm', advice: 'Đây là điềm báo bạn đang trong quá trình thay đổi tích cực. Hãy đón nhận sự chuyển hóa này.' },
@@ -1517,9 +1529,9 @@
                 const y = parseInt(input); if (isNaN(y)) { botSay('⚠️ Nhập năm sinh:'); return; }
                 const cc = calcCanChi(y);
                 if (GEMINI_KEY) {
-                    addMsg('user', input); botSay('⏳ AI phân tích...');
-                    const ai = await callAI(`Bạn là nhà tử vi. Phân tích tình duyên, vận mệnh tình yêu cho người tuổi ${cc.can} ${cc.chi} (năm ${y}). Gợi ý đối tượng hợp. Tiếng Việt, 150 từ.`);
-                    if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Duyên Tuổi ${cc.chi}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
+                    addMsg('user', input);
+                    const used = await askAI(`Bạn là nhà tử vi. Phân tích tình duyên, vận mệnh tình yêu cho người tuổi ${cc.can} ${cc.chi} (năm ${y}). Gợi ý đối tượng hợp. Tiếng Việt, 150 từ.`, ai => { addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Duyên Tuổi ${cc.chi}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); });
+                    if (used) return;
                 }
                 const loveData = {
                     'Tý': { season: 'mùa đông', best: 'Thìn, Thân, Sửu', tip: 'Cẩn thận trong giao tiếp, đừng quá lý trí' },
@@ -1579,8 +1591,7 @@
         </div></div>`;
                 addMsg('user', input); botSay('⏳ Đang phân tích...', '', 0);
                 if (GEMINI_KEY) {
-                    const ai = await callAI(`Phân tích sự hợp nhau giữa tuổi ${c1.can} ${c1.chi} (${years[0]}) và ${c2.can} ${c2.chi} (${years[1]}). Điểm: ${score}/100. Diễn giải chi tiết. Tiếng Việt, 150 từ.`);
-                    if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Phân Tích</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+                    await askAI(`Phân tích sự hợp nhau giữa tuổi ${c1.can} ${c1.chi} (${years[0]}) và ${c2.can} ${c2.chi} (${years[1]}). Điểm: ${score}/100. Diễn giải chi tiết. Tiếng Việt, 150 từ.`, ai => { html += `<div class="reading-box"><div class="reading-title">🤖 AI Phân Tích</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
                 }
                 hideTyping(); addMsg('bot', html);
             }
@@ -1603,25 +1614,26 @@
                 fate: ['Rõ ràng: Mục tiêu rõ ràng.', 'Không có: Tự tạo vận mệnh.', 'Đứt đoạn: Nhiều thay đổi.']
             };
             const lifeR = pick(readings.life), heartR = pick(readings.heart), headR = pick(readings.head), fateR = pick(readings.fate);
-            let html = `<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">
+
+            if (GEMINI_KEY) {
+                const prompt = `Bạn là nhà chiêm tinh học chuyên về xem chỉ tay. Dựa trên thông tin sau, hãy diễn giải chi tiết về vận mệnh, tính cách, tình yêu, sự nghiệp của người xem. Trả lời tiếng Việt, khoảng 150 từ.
+                Tay: ${hand}
+                Đường Sinh Mệnh: ${lifeR}
+                Đường Tình Duyên: ${heartR}
+                Đường Trí Não: ${headR}
+                Đường Số Phận: ${fateR}`;
+                let html = '';
+                await askAI(prompt, ai => { html = `<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
+                hideTyping(); addMsg('bot', html);
+            } else {
+                const html = `<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">
         <b>📏 Đường Sinh Mệnh:</b> ${lifeR}<br>
         <b>💕 Đường Tình Duyên:</b> ${heartR}<br>
         <b>🧠 Đường Trí Não:</b> ${headR}<br>
         <b>🎯 Đường Số Phận:</b> ${fateR}
     </div><div class="reading-stars">★★★★☆</div></div>`;
-
-            if (GEMINI_KEY) {
-                addMsg('bot', '⏳ AI đang phân tích chỉ tay...', '', 0);
-                const ai = await callAI(`Bạn là nhà chiêm tinh học chuyên về xem chỉ tay. Dựa trên thông tin sau, hãy diễn giải chi tiết về vận mệnh, tính cách, tình yêu, sự nghiệp của người xem. Trả lời tiếng Việt, khoảng 150 từ.
-                Tay: ${hand}
-                Đường Sinh Mệnh: ${lifeR}
-                Đường Tình Duyên: ${heartR}
-                Đường Trí Não: ${headR}
-                Đường Số Phận: ${fateR}`);
-                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+                hideTyping(); addMsg('bot', html);
             }
-
-            hideTyping(); addMsg('bot', html);
         }
 
         // ==================== PIAN ====================
@@ -1655,9 +1667,8 @@
             else if (l.includes('chỉ tay')) startChat('palm');
             else if (l.includes('xin chào') || l.includes('hello') || l.includes('chào')) {
                 if (GEMINI_KEY) {
-                    botSay('⏳ ...');
-                    const ai = await callAI(`Bạn là AI Tử Vi & Tarot thông minh, thân thiện. Người dùng chào bạn bằng "${text}". Hãy chào lại một cách tự nhiên, thân thiện bằng tiếng Việt. Giới thiệu ngắn gọn về các khả năng của bạn: xem tử vi, bói tarot, thần số học, giải mã giấc mơ, xem tình yêu, xem chỉ tay.`);
-                    if (ai) { hideTyping(); addMsg('bot', ai.replace(/\n/g, '<br>')); return; }
+                    const used = await askAI(`Bạn là AI Tử Vi & Tarot thông minh, thân thiện. Người dùng chào bạn bằng "${text}". Hãy chào lại một cách tự nhiên, thân thiện bằng tiếng Việt. Giới thiệu ngắn gọn về các khả năng của bạn: xem tử vi, bói tarot, thần số học, giải mã giấc mơ, xem tình yêu, xem chỉ tay.`, ai => { addMsg('bot', ai.replace(/\n/g, '<br>')); });
+                    if (used) return;
                 }
                 botSay('Xin chào! 👋 Tôi là AI Tử Vi & Tarot. Tôi có thể giúp bạn xem tử vi, bói tarot, thần số học, giải mã giấc mơ và nhiều hơn nữa!', qa([
                     { l: '🐉 Xem tử vi', a: "startChat('tuvi')" }, { l: '♈ Cung hoàng đạo', a: "startChat('zodiac')" },
@@ -1666,9 +1677,8 @@
             }
             else if (l.includes('cảm ơn') || l.includes('thank')) {
                 if (GEMINI_KEY) {
-                    botSay('⏳ ...');
-                    const ai = await callAI(`Bạn là AI Tử Vi & Tarot. Người dùng cảm ơn bạn bằng "${text}". Hãy đáp lại một cách tự nhiên, thân thiện bằng tiếng Việt.`);
-                    if (ai) { hideTyping(); addMsg('bot', ai.replace(/\n/g, '<br>')); return; }
+                    const used = await askAI(`Bạn là AI Tử Vi & Tarot. Người dùng cảm ơn bạn bằng "${text}". Hãy đáp lại một cách tự nhiên, thân thiện bằng tiếng Việt.`, ai => { addMsg('bot', ai.replace(/\n/g, '<br>')); });
+                    if (used) return;
                 }
                 botSay('Không có gì! 😊 Nếu bạn cần xem thêm bất kỳ gì, hãy cho tôi biết nhé!', qa([
                     { l: '🐉 Tử vi', a: "startChat('tuvi')" }, { l: '💕 Tình yêu', a: "startChat('love')" },
@@ -1676,24 +1686,14 @@
                 ]));
             }
             else if (GEMINI_KEY) {
-                botSay('⏳ ...');
-                const ai = await callAI(`Bạn là AI Tử Vi & Tarot thông minh, am hiểu về tử vi, phong thủy, bói toán, tâm linh. Người dùng hỏi: "${text}". Hãy trả lời một cách chi tiết, thân thiện bằng tiếng Việt. Nếu câu hỏi liên quan đến tử vi/tarot/số học, hãy gợi ý người dùng chọn chức năng tương ứng.`);
-                if (ai) {
-                    hideTyping();
-                    let response = ai.replace(/\n/g, '<br>');
-                    response += '<br><br>' + qa([
-                        { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
-                        { l: '🃏 Tarot', a: "startChat('tarot')" }, { l: '🔢 Thần Số Học', a: "startChat('numerology')" },
-                        { l: '💭 Giấc Mơ', a: "startChat('dream')" }, { l: '💕 Tình Yêu', a: "startChat('love')" }
-                    ]);
-                    addMsg('bot', response);
-                    return;
-                }
-                botSay('Tôi có thể giúp bạn!', qa([
+                const quickBtns = qa([
                     { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
                     { l: '🃏 Tarot', a: "startChat('tarot')" }, { l: '🔢 Thần Số Học', a: "startChat('numerology')" },
                     { l: '💭 Giấc Mơ', a: "startChat('dream')" }, { l: '💕 Tình Yêu', a: "startChat('love')" }
-                ]));
+                ]);
+                const used = await askAI(`Bạn là AI Tử Vi & Tarot thông minh, am hiểu về tử vi, phong thủy, bói toán, tâm linh. Người dùng hỏi: "${text}". Hãy trả lời một cách chi tiết, thân thiện bằng tiếng Việt. Nếu câu hỏi liên quan đến tử vi/tarot/số học, hãy gợi ý người dùng chọn chức năng tương ứng.`, ai => { addMsg('bot', ai.replace(/\n/g, '<br>') + '<br><br>' + quickBtns); });
+                if (used) return;
+                botSay('Tôi có thể giúp bạn!', quickBtns);
             }
             else botSay('Tôi có thể giúp bạn!', qa([
                 { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
