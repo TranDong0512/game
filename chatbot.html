@@ -818,7 +818,7 @@
     </div>
     <script>
         // ==================== AI CONFIG ====================
-        let GEMINI_KEY = localStorage.getItem('gemini_key') || 'AIzaSyBjfcZIBOeRQcuY3TwYrJCJNiO_SPnfz4g';
+        let GEMINI_KEY = localStorage.getItem('gemini_key');
 
         async function callAI(prompt) {
             if (!GEMINI_KEY) return null;
