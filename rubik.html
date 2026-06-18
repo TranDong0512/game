@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rubik's Cube</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;font-family:'Segoe UI',sans-serif;color:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;user-select:none}
+#header{display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 16px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);z-index:10;flex-wrap:wrap;gap:6px}
+#header h1{font-size:1.2em;background:linear-gradient(135deg,#e94560,#0f3460);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stats{display:flex;gap:14px;font-size:0.85em}
+.stat-item{display:flex;align-items:center;gap:4px}
+.stat-item .label{color:#888}
+.stat-item .value{font-weight:bold;color:#e94560;font-size:1.05em;min-width:35px}
+.size-btns{display:flex;gap:4px}
+.size-btn{padding:5px 12px;border:2px solid rgba(255,255,255,0.15);border-radius:6px;background:rgba(255,255,255,0.05);color:#aaa;font-size:0.8em;font-weight:bold;cursor:pointer;transition:all 0.2s}
+.size-btn:hover{border-color:#e94560;color:#fff}
+.size-btn.active{background:rgba(233,69,96,0.3);border-color:#e94560;color:#fff}
+#canvas-container{flex:1;width:100%;position:relative}
+canvas{display:block;cursor:grab}
+canvas:active{cursor:grabbing}
+#hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:6px 14px;border-radius:16px;font-size:0.72em;color:#888;pointer-events:none;text-align:center;white-space:nowrap}
+#timer-big{position:absolute;top:45px;left:50%;transform:translateX(-50%);font-size:2em;font-weight:bold;color:rgba(255,255,255,0.1);pointer-events:none;font-variant-numeric:tabular-nums}
+#move-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2.5em;font-weight:bold;color:rgba(233,69,96,0.8);pointer-events:none;opacity:0;transition:opacity 0.15s;text-shadow:0 0 20px rgba(233,69,96,0.5)}
+#controls{display:flex;gap:6px;padding:8px 12px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);width:100%;justify-content:center;flex-wrap:wrap}
+.btn{padding:7px 16px;border:none;border-radius:7px;font-size:0.82em;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.btn:active{transform:translateY(0)}
+.btn-scramble{background:linear-gradient(135deg,#e94560,#c23152);color:#fff}
+.btn-solve{background:linear-gradient(135deg,#0f3460,#16213e);color:#fff}
+.btn-reset{background:linear-gradient(135deg,#533483,#3b1f6e);color:#fff}
+.btn-undo{background:linear-gradient(135deg,#2b9348,#1e6b35);color:#fff}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.solved-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.88);padding:25px 40px;border-radius:16px;text-align:center;z-index:20;animation:popIn 0.4s ease;border:2px solid #e94560}
+.solved-overlay h2{font-size:1.8em;margin-bottom:8px;background:linear-gradient(135deg,#e94560,#ffd500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.solved-overlay p{color:#aaa;margin:4px 0}
+@keyframes popIn{0%{transform:translate(-50%,-50%) scale(0.5);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+#log-panel{position:absolute;top:45px;left:8px;z-index:20;background:rgba(0,0,0,0.85);border:1px solid rgba(233,69,96,0.3);border-radius:10px;min-width:180px;max-width:220px;backdrop-filter:blur(10px);overflow:hidden}
+#log-header{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(233,69,96,0.15);font-size:0.75em;font-weight:bold;color:#e94560}
+#log-toggle{background:none;border:none;color:#e94560;cursor:pointer;font-size:1em}
+#log-content{max-height:220px;overflow-y:auto;padding:6px;transition:max-height 0.3s}
+#log-content.collapsed{max-height:0;padding:0 6px}
+#log-moves{display:flex;flex-wrap:wrap;gap:3px}
+.log-move{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:24px;padding:0 5px;background:rgba(255,255,255,0.08);border-radius:4px;font-size:0.7em;font-weight:bold;color:#ccc;font-family:'Courier New',monospace}
+.log-move.active{background:rgba(233,69,96,0.4);color:#fff;box-shadow:0 0 8px rgba(233,69,96,0.3)}
+.log-move.done{background:rgba(43,147,72,0.3);color:#6f6}
+.log-move.clickable{cursor:default;opacity:0.35;pointer-events:none}
+.log-move.clickable.done{opacity:1;pointer-events:none}
+.log-move.clickable.next{cursor:pointer;opacity:1;pointer-events:auto;border:1px solid rgba(233,69,96,0.5);animation:pulse 1.5s infinite}
+.log-move.clickable.next:hover{background:rgba(233,69,96,0.3);transform:scale(1.05)}
+@keyframes pulse{0%,100%{box-shadow:0 0 5px rgba(233,69,96,0.2)}50%{box-shadow:0 0 12px rgba(233,69,96,0.5)}}
+.log-move .num{font-size:0.65em;color:#666;margin-right:2px}
+#log-status{padding:4px 10px;font-size:0.68em;color:#888;border-top:1px solid rgba(255,255,255,0.05);text-align:center}
+@media(max-width:600px){#header h1{font-size:1em}#log-panel{left:4px;top:40px;max-width:160px}}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Rubik's Cube</h1>
+  <div class="size-btns">
+    <button class="size-btn" onclick="window.setCubeSize(2)">2x2</button>
+    <button class="size-btn active" onclick="window.setCubeSize(3)">3x3</button>
+    <button class="size-btn" onclick="window.setCubeSize(4)">4x4</button>
+    <button class="size-btn" onclick="window.setCubeSize(5)">5x5</button>
+  </div>
+  <div class="stats">
+    <div class="stat-item"><span class="label">Moves:</span><span class="value" id="move-count">0</span></div>
+    <div class="stat-item"><span class="label">Time:</span><span class="value" id="time">0:00</span></div>
+  </div>
+</div>
+
+<div id="canvas-container">
+  <canvas id="canvas"></canvas>
+  <div id="timer-big">0:00</div>
+  <div id="move-flash"></div>
+  <div id="hint">Click cubie to select layer | Drag to rotate | Click empty space to rotate camera</div>
+
+  <div id="log-panel">
+    <div id="log-header"><span>Steps</span><button id="log-toggle" onclick="window.toggleLog()">v</button></div>
+    <div id="log-content">
+      <div id="log-moves"></div>
+      <div id="log-status">Ready</div>
+    </div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="btn btn-scramble" onclick="window.scrambleCube()">Scramble</button>
+  <button class="btn btn-solve" onclick="window.solveCube()" id="solveBtn">Solve</button>
+  <button class="btn btn-undo" onclick="window.undoMove()">Undo</button>
+  <button class="btn btn-reset" onclick="window.resetCube()">Reset</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+var cubeSize = 3;
+var CUBIE_SIZE = 1, GAP = 0.06, CUBIE_STEP = CUBIE_SIZE + GAP;
+var ANIMATION_SPEED = 0.1;
+var DRAG_THRESHOLD = 0.35;
+
+var COLORS = {R:0x009e60,L:0x0051ba,U:0xffffff,D:0xffd500,F:0xe94560,B:0xff6b00,X:0x1a1a2e};
+var FACE_AXIS={R:'x',L:'x',U:'y',D:'y',F:'z',B:'z'};
+var FACE_SIGN={R:1,L:-1,U:1,D:-1,F:1,B:-1};
+var FLIP_SIGN={F:false,B:true,R:false,L:true,U:false,D:true};
+
+var scene,camera,renderer;
+var cubeGroup,cubies=[];
+var moveHistory=[],moveCount=0;
+var timerInterval=null,startTime=null,timerRunning=false,solved=true;
+var isDragging=false,dragStartPoint=null,dragFaceNormal=null,dragCubiePos=null;
+var selectedLayerAxis=null,selectedLayerIdx=null;
+var raycaster=new THREE.Raycaster();
+var highlightCubies=[];
+var moveQueue=[],processingQueue=false,queueGeneration=0;
+var solvingMode=false;
+
+// Camera
+var camSph=new THREE.Spherical(),camSphDelta=new THREE.Spherical(),camScale=1,camTarget=new THREE.Vector3();
+
+function initCamera(){
+  var r=cubeSize*CUBIE_STEP*1.2+2;
+  camera.position.set(r*0.7,r*0.6,r*0.7);
+  var off=new THREE.Vector3().copy(camera.position).sub(camTarget);
+  camSph.setFromVector3(off);
+  updateCamera();
+}
+function updateCamera(){
+  var off=new THREE.Vector3().copy(camera.position).sub(camTarget);
+  camSph.setFromVector3(off);
+  camSph.theta+=camSphDelta.theta;
+  camSph.phi+=camSphDelta.phi;
+  camSph.phi=Math.max(0.1,Math.min(Math.PI-0.1,camSph.phi));
+  camSph.radius*=camScale;
+  camSph.radius=Math.max(cubeSize+3,Math.min(25,camSph.radius));
+  off.setFromSpherical(camSph);
+  camera.position.copy(camTarget).add(off);
+  camera.lookAt(camTarget);
+  camSphDelta.theta*=0.92;camSphDelta.phi*=0.92;camScale=1;
+}
+
+// ========== INIT ==========
+function init(){
+  var container=document.getElementById('canvas-container');
+  var canvas=document.getElementById('canvas');
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45,container.clientWidth/container.clientHeight,0.1,100);
+  renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+  renderer.setSize(container.clientWidth,container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setClearColor(0x1a1a2e,1);
+  scene.add(new THREE.AmbientLight(0xffffff,0.6));
+  var dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(5,10,7);scene.add(dl);
+  var dl2=new THREE.DirectionalLight(0xffffff,0.3);dl2.position.set(-5,-2,-5);scene.add(dl2);
+  cubeGroup=new THREE.Group();scene.add(cubeGroup);
+  buildCube();initCamera();setupInput(canvas);
+  window.addEventListener('resize',function(){var c=document.getElementById('canvas-container');camera.aspect=c.clientWidth/c.clientHeight;camera.updateProjectionMatrix();renderer.setSize(c.clientWidth,c.clientHeight);});
+  (function loop(){requestAnimationFrame(loop);updateCamera();renderer.render(scene,camera)})();
+}
+
+// ========== BUILD CUBE ==========
+function buildCube(){
+  while(cubeGroup.children.length)cubeGroup.remove(cubeGroup.children[0]);
+  cubies=[];
+  var half=(cubeSize-1)/2;
+  for(var x=0;x<cubeSize;x++)for(var y=0;y<cubeSize;y++)for(var z=0;z<cubeSize;z++){
+    if(cubeSize%2===1&&x===Math.floor(cubeSize/2)&&y===Math.floor(cubeSize/2)&&z===Math.floor(cubeSize/2))continue;
+    var wx=(x-half)*CUBIE_STEP,wy=(y-half)*CUBIE_STEP,wz=(z-half)*CUBIE_STEP;
+    var c=createCubie(x,y,z,wx,wy,wz);
+    c.userData={gx:x,gy:y,gz:z};
+    cubeGroup.add(c);cubies.push(c);
+  }
+}
+function createCubie(gx,gy,gz,wx,wy,wz){
+  var geo=new THREE.BoxGeometry(CUBIE_SIZE*0.95,CUBIE_SIZE*0.95,CUBIE_SIZE*0.95);
+  var last=cubeSize-1;
+  var mats=[
+    new THREE.MeshStandardMaterial({color:gx===last?COLORS.R:COLORS.X,roughness:0.3}),
+    new THREE.MeshStandardMaterial({color:gx===0?COLORS.L:COLORS.X,roughness:0.3}),
+    new THREE.MeshStandardMaterial({color:gy===last?COLORS.U:COLORS.X,roughness:0.3}),
+    new THREE.MeshStandardMaterial({color:gy===0?COLORS.D:COLORS.X,roughness:0.3}),
+    new THREE.MeshStandardMaterial({color:gz===last?COLORS.F:COLORS.X,roughness:0.3}),
+    new THREE.MeshStandardMaterial({color:gz===0?COLORS.B:COLORS.X,roughness:0.3}),
+  ];
+  var mesh=new THREE.Mesh(geo,mats);
+  mesh.position.set(wx,wy,wz);
+  rebuildEdges(mesh);
+  return mesh;
+}
+function rebuildEdges(mesh){
+  for(var i=mesh.children.length-1;i>=0;i--){var ch=mesh.children[i];if(ch.isLineSegments){mesh.remove(ch);ch.geometry.dispose();ch.material.dispose()}}
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color:0x000000})));
+}
+
+// ========== LAYER LOGIC ==========
+function posToLayerIdx(axis,pos){
+  if(axis==='x')return pos.gx;
+  if(axis==='y')return pos.gy;
+  return pos.gz;
+}
+function getLayerCubies(axis,idx){
+  return cubies.filter(function(c){return posToLayerIdx(axis,c.userData)===idx});
+}
+function isOuterLayer(axis,idx){
+  return idx===0||idx===cubeSize-1;
+}
+function layerToFace(axis,idx){
+  if(idx===0){
+    if(axis==='x')return'L';if(axis==='y')return'D';return'B';
+  }
+  if(idx===cubeSize-1){
+    if(axis==='x')return'R';if(axis==='y')return'U';return'F';
+  }
+  return null;
+}
+
+// ========== HIGHLIGHT ==========
+function showLayerHL(axis,idx){
+  hideLayerHL();
+  var lc=getLayerCubies(axis,idx);
+  lc.forEach(function(c){
+    var hl=new THREE.Mesh(new THREE.BoxGeometry(CUBIE_SIZE*1.01,CUBIE_SIZE*1.01,CUBIE_SIZE*1.01),
+      new THREE.MeshBasicMaterial({color:isOuterLayer(axis,idx)?0xe94560:0xffd500,transparent:true,opacity:0.18,depthTest:false}));
+    hl.position.copy(c.position);hl.quaternion.copy(c.quaternion);
+    cubeGroup.add(hl);highlightCubies.push(hl);
+  });
+}
+function hideLayerHL(){highlightCubies.forEach(function(h){cubeGroup.remove(h);h.geometry.dispose();h.material.dispose()});highlightCubies=[]}
+
+// ========== INPUT ==========
+var dragMode=0,camDragStart=new THREE.Vector2(),camDragEnd=new THREE.Vector2();
+
+function setupInput(canvas){
+  function ptr(e){var r=canvas.getBoundingClientRect();var ev=e.touches?e.touches[0]:e;return{x:(ev.clientX-r.left)/r.width*2-1,y:-(ev.clientY-r.top)/r.height*2+1}}
+  function scr(e){var ev=e.touches?e.touches[0]:e;return{x:ev.clientX,y:ev.clientY}}
+  function hitCubie(nx,ny){
+    raycaster.setFromCamera(new THREE.Vector2(nx,ny),camera);
+    var h=raycaster.intersectObjects(cubies,false);
+    if(!h.length)return null;
+    var hit=h[0],n=hit.face.normal.clone();
+    n.applyMatrix3(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize();
+    var ax='x';if(Math.abs(n.y)>Math.abs(n[ax]))ax='y';if(Math.abs(n.z)>Math.abs(n[ax]))ax='z';
+    var sn=new THREE.Vector3();sn[ax]=n[ax]>0?1:-1;
+    return{object:hit.object,point:hit.point.clone(),faceNormal:sn};
+  }
+  function onDown(e){
+    if(dragMode!==0)return;
+    var p=ptr(e),s=scr(e);
+    var hit=(moveQueue.length===0&&!processingQueue)?hitCubie(p.x,p.y):null;
+    if(hit){
+      e.preventDefault();dragMode=2;isDragging=true;
+      dragStartPoint=hit.point;dragFaceNormal=hit.faceNormal;dragCubiePos=hit.object.userData;
+      var fn=hit.faceNormal;
+      var faceAxis=Math.abs(fn.x)>0.5?'x':Math.abs(fn.y)>0.5?'y':'z';
+      var otherAxes=['x','y','z'].filter(function(a){return a!==faceAxis});
+      var la=otherAxes[0],lb=otherAxes[1];
+      if(posToLayerIdx(lb,dragCubiePos)!==0&&posToLayerIdx(la,dragCubiePos)===0)la=lb;
+      selectedLayerAxis=la;
+      selectedLayerIdx=posToLayerIdx(la,dragCubiePos);
+      showLayerHL(selectedLayerAxis,selectedLayerIdx);
+    }else{
+      dragMode=1;camDragStart.set(s.x,s.y);
+    }
+  }
+  function onMove(e){
+    if(dragMode===0)return;
+    e.preventDefault();
+    var s=scr(e);
+    if(dragMode===1){
+      camDragEnd.set(s.x,s.y);
+      var dx=camDragEnd.x-camDragStart.x,dy=camDragEnd.y-camDragStart.y;
+      camSphDelta.theta-=0.4*Math.PI*dx/canvas.clientHeight;
+      camSphDelta.phi-=0.4*Math.PI*dy/canvas.clientHeight;
+      camDragStart.copy(camDragEnd);updateCamera();
+    }
+    if(dragMode===2&&isDragging){
+      var p=ptr(e);
+      raycaster.setFromCamera(new THREE.Vector2(p.x,p.y),camera);
+      var plane=new THREE.Plane();plane.setFromNormalAndCoplanarPoint(dragFaceNormal,dragStartPoint);
+      var wp=new THREE.Vector3();raycaster.ray.intersectPlane(plane,wp);
+      if(!wp)return;
+      var drag=wp.clone().sub(dragStartPoint);
+      if(drag.length()<DRAG_THRESHOLD)return;
+      var fn=dragFaceNormal;
+      var face=Math.abs(fn.x-1)<0.1?'R':Math.abs(fn.x+1)<0.1?'L':Math.abs(fn.y-1)<0.1?'U':Math.abs(fn.y+1)<0.1?'D':Math.abs(fn.z-1)<0.1?'F':'B';
+      var cross=new THREE.Vector3().crossVectors(fn,drag.clone().normalize());
+      var sign=Math.sign(cross[selectedLayerAxis]);
+      if(Math.abs(sign)<0.1)sign=1;
+      var f=layerToFace(selectedLayerAxis,selectedLayerIdx);
+      if(f&&FLIP_SIGN[f])sign=-sign;
+      var cw=sign>0;
+      hideLayerHL();isDragging=false;dragMode=0;
+      var moveName;
+      if(f){moveName=f+(cw?'':"'")}
+      else{moveName=(selectedLayerAxis==='x'?'L':selectedLayerAxis==='y'?'D':'B')+(selectedLayerIdx+1)+(cw?'':"'")}
+      flashMove(moveName);
+      enqueueMove(selectedLayerAxis,selectedLayerIdx,cw,true).then(function(){onUserMoveDuringSolve(selectedLayerAxis,selectedLayerIdx,cw)});
+    }
+  }
+  function onUp(){if(dragMode===2&&isDragging){hideLayerHL();isDragging=false}dragMode=0}
+  canvas.addEventListener('mousedown',onDown);
+  canvas.addEventListener('mousemove',onMove);
+  canvas.addEventListener('mouseup',onUp);
+  canvas.addEventListener('mouseleave',onUp);
+  canvas.addEventListener('wheel',function(e){e.preventDefault();camScale*=e.deltaY<0?1/1.05:1.05;updateCamera()},{passive:false});
+  canvas.addEventListener('touchstart',onDown,{passive:false});
+  canvas.addEventListener('touchmove',onMove,{passive:false});
+  canvas.addEventListener('touchend',onUp);
+}
+
+function flashMove(t){var el=document.getElementById('move-flash');el.textContent=t;el.style.opacity='1';setTimeout(function(){el.style.opacity='0'},400)}
+
+// ========== MOVE QUEUE ==========
+function enqueueMove(axis,layerIdx,clockwise,animated){
+  var gen=queueGeneration;
+  return new Promise(function(resolve){
+    moveQueue.push({axis:axis,layerIdx:layerIdx,clockwise:clockwise,animated:animated,resolve:resolve,gen:gen});
+    processQueue();
+  });
+}
+function cancelQueue(){queueGeneration++;moveQueue.forEach(function(m){m.resolve()});moveQueue=[]}
+function processQueue(){if(processingQueue||!moveQueue.length)return;processingQueue=true;runQueue()}
+function runQueue(){if(!moveQueue.length){processingQueue=false;return}var t=moveQueue.shift();if(t.gen!==queueGeneration){t.resolve();runQueue();return}doSingleMove(t.axis,t.layerIdx,t.clockwise,t.animated).then(function(){t.resolve();runQueue()})}
+
+// ========== FACE ROTATION ==========
+function doSingleMove(axis,layerIdx,clockwise,animated){
+  return new Promise(function(resolve){
+    var fc=getLayerCubies(axis,layerIdx);
+    if(!fc.length){resolve();return}
+    var angle=(clockwise?-1:1)*Math.PI/2;
+    var pivot=new THREE.Group();cubeGroup.add(pivot);
+    fc.forEach(function(c){var wp=new THREE.Vector3(),wq=new THREE.Quaternion();c.getWorldPosition(wp);c.getWorldQuaternion(wq);cubeGroup.remove(c);pivot.add(c);c.position.copy(wp);c.quaternion.copy(wq)});
+    if(!animated){pivot.rotation[axis]=angle;pivot.updateMatrixWorld();restoreCubies(pivot,fc);resolve();return}
+    var t=0;
+    function step(){t+=ANIMATION_SPEED;if(t>=1){pivot.rotation[axis]=angle;pivot.updateMatrixWorld();restoreCubies(pivot,fc);resolve();return}pivot.rotation[axis]=angle*(1-Math.pow(1-t,3));requestAnimationFrame(step)}
+    step();
+  });
+}
+function restoreCubies(pivot,fc){
+  pivot.updateMatrixWorld(true);cubeGroup.updateMatrixWorld(true);
+  var inv=new THREE.Matrix4().copy(cubeGroup.matrixWorld).invert();
+  var cgq=new THREE.Quaternion();cubeGroup.getWorldQuaternion(cgq);var invq=cgq.clone().invert();
+  fc.forEach(function(c){
+    var wp=new THREE.Vector3(),wq=new THREE.Quaternion();c.getWorldPosition(wp);c.getWorldQuaternion(wq);
+    pivot.remove(c);cubeGroup.add(c);
+    c.position.copy(wp.applyMatrix4(inv));c.quaternion.copy(invq.clone().multiply(wq));
+    var half=(cubeSize-1)/2;
+    c.userData.gx=Math.round(c.position.x/CUBIE_STEP+half);
+    c.userData.gy=Math.round(c.position.y/CUBIE_STEP+half);
+    c.userData.gz=Math.round(c.position.z/CUBIE_STEP+half);
+    rebuildEdges(c);
+  });
+  cubeGroup.remove(pivot);
+}
+
+// ========== RECORD ==========
+function recordMove(axis,layerIdx,clockwise){
+  if(solvingMode)return;
+  moveHistory.push({axis:axis,layerIdx:layerIdx,clockwise:clockwise});
+  moveCount++;document.getElementById('move-count').textContent=moveCount;
+  if(!timerRunning&&moveCount===1){clearLog();addLogSection('Your Moves');startTimer()}
+  var f=layerToFace(axis,layerIdx);
+  var name=f?f+(clockwise?'':"'"):(axis==='x'?'R':axis==='y'?'U':'F')+(layerIdx+1)+(clockwise?'':"'");
+  addLogMove(name,moveCount-1,false);
+  checkSolved();
+}
+
+// ========== SCRAMBLE ==========
+window.scrambleCube=function(){
+  cancelQueue();resetTimer();solvingMode=false;
+  moveCount=0;moveHistory=[];clearLog();
+  document.getElementById('move-count').textContent='0';
+  var axes=['x','y','z'];
+  var count=cubeSize<=2?10:cubeSize===3?20:cubeSize===4?30:40;
+  var scrambleMoves=[];
+  var lastAxis='';
+  for(var i=0;i<count;i++){
+    var ax;do{ax=axes[Math.random()*3|0]}while(ax===lastAxis);lastAxis=ax;
+    var layer=Math.random()*cubeSize|0;
+    var cw=Math.random()>0.5;
+    scrambleMoves.push({axis:ax,layerIdx:layer,clockwise:cw});
+  }
+  var chain=Promise.resolve();
+  scrambleMoves.forEach(function(m){
+    chain=chain.then(function(){return enqueueMove(m.axis,m.layerIdx,m.clockwise,true)});
+  });
+  chain.then(function(){
+    solved=false;removeSolvedOverlay();startTimer();
+    var solution=[];
+    for(var i=scrambleMoves.length-1;i>=0;i--){
+      solution.push({axis:scrambleMoves[i].axis,layerIdx:scrambleMoves[i].layerIdx,clockwise:!scrambleMoves[i].clockwise});
+    }
+    showSolutionSteps(solution);
+  });
+};
+
+// ========== SOLVE ==========
+window.solveCube=function(){
+  if(solved||!moveHistory.length)return;
+  stopTimer();
+  var solution=[];
+  for(var i=moveHistory.length-1;i>=0;i--){
+    solution.push({axis:moveHistory[i].axis,layerIdx:moveHistory[i].layerIdx,clockwise:!moveHistory[i].clockwise});
+  }
+  showSolutionSteps(solution);
+};
+
+// ========== SOLUTION STEPS ==========
+function showSolutionSteps(solution){
+  clearLog();solvingMode=true;
+  addLogSection('Solving Steps ('+solution.length+')');
+  logMoves=solution;logNextIdx=0;
+  solution.forEach(function(m,i){
+    var f=layerToFace(m.axis,m.layerIdx);
+    var name=f?f+(m.clockwise?'':"'"):(m.axis==='x'?'R':m.axis==='y'?'U':'F')+(m.layerIdx+1)+(m.clockwise?'':"'");
+    addLogMove(name,i,true);
+  });
+  setLogStatus('Click step 1!');
+  var btn=document.getElementById('solveBtn');btn.disabled=true;btn.textContent='Click steps...';
+}
+function onAllStepsDone(){
+  solvingMode=false;moveHistory=[];moveCount=0;
+  document.getElementById('move-count').textContent='0';
+  solved=true;stopTimer();showSolvedOverlay();
+  setLogStatus('Solved in '+logMoves.length+' moves!');markAllLogDone();
+  var btn=document.getElementById('solveBtn');btn.disabled=false;btn.textContent='Solve';
+}
+
+// ========== RECALCULATE SOLUTION ON MANUAL MOVE ==========
+function rebuildLogDisplay(){
+  document.getElementById('log-moves').innerHTML='';
+  addLogSection('Solving Steps ('+logMoves.length+')');
+  logMoves.forEach(function(m,i){
+    var f=layerToFace(m.axis,m.layerIdx);
+    var name=f?f+(m.clockwise?'':"'"):(m.axis==='x'?'R':m.axis==='y'?'U':'F')+(m.layerIdx+1)+(m.clockwise?'':"'");
+    addLogMove(name,i,true);
+  });
+  setLogStatus('Click step 1!');
+}
+function onUserMoveDuringSolve(axis,layerIdx,clockwise){
+  if(!solvingMode||!logMoves.length){
+    recordMove(axis,layerIdx,clockwise);
+    return;
+  }
+  moveCount++;document.getElementById('move-count').textContent=moveCount;
+  var remaining=logMoves.slice(logNextIdx);
+  var inverse={axis:axis,layerIdx:layerIdx,clockwise:!clockwise};
+  logMoves=[inverse].concat(remaining);
+  logNextIdx=0;
+  rebuildLogDisplay();
+}
+
+// ========== UNDO / RESET ==========
+window.undoMove=function(){if(!moveHistory.length)return;var last=moveHistory.pop();moveCount--;document.getElementById('move-count').textContent=moveCount;enqueueMove(last.axis,last.layerIdx,!last.clockwise,true).then(function(){checkSolved()})};
+window.resetCube=function(){cancelQueue();solvingMode=false;cubeGroup.clear();cubies=[];buildCube();moveHistory=[];moveCount=0;document.getElementById('move-count').textContent='0';resetTimer();solved=true;removeSolvedOverlay()};
+
+// ========== SIZE SELECTOR ==========
+window.setCubeSize=function(size){
+  cubeSize=size;
+  cancelQueue();solvingMode=false;
+  cubeGroup.clear();cubies=[];buildCube();initCamera();
+  moveHistory=[];moveCount=0;document.getElementById('move-count').textContent='0';
+  resetTimer();solved=true;removeSolvedOverlay();clearLog();
+  var btns=document.querySelectorAll('.size-btn');
+  for(var i=0;i<btns.length;i++){btns[i].classList.toggle('active',btns[i].textContent===size+'x'+size)}
+};
+
+// ========== TIMER ==========
+function startTimer(){if(timerRunning)return;timerRunning=true;startTime=Date.now();timerInterval=setInterval(updateTimer,100)}
+function stopTimer(){timerRunning=false;if(timerInterval)clearInterval(timerInterval)}
+function resetTimer(){stopTimer();startTime=null;document.getElementById('time').textContent='0:00';document.getElementById('timer-big').textContent='0:00'}
+function updateTimer(){if(!startTime)return;var s=Math.floor((Date.now()-startTime)/1000);var d=(s/60|0)+':'+('0'+(s%60)).slice(-2);document.getElementById('time').textContent=d;document.getElementById('timer-big').textContent=d}
+
+// ========== CHECK SOLVED ==========
+var IDQ=new THREE.Quaternion();
+function checkSolved(){
+  var half=(cubeSize-1)/2;
+  for(var i=0;i<cubies.length;i++){
+    var c=cubies[i],d=c.userData;
+    if(d.gx!==Math.round(c.position.x/CUBIE_STEP+half)||
+       d.gy!==Math.round(c.position.y/CUBIE_STEP+half)||
+       d.gz!==Math.round(c.position.z/CUBIE_STEP+half))return;
+    if(Math.abs(c.quaternion.dot(IDQ))<0.95)return;
+  }
+  if(moveCount>0){solved=true;stopTimer();showSolvedOverlay()}
+}
+function showSolvedOverlay(){removeSolvedOverlay();var s=startTime?Math.floor((Date.now()-startTime)/1000):0;var d=(s/60|0)+':'+('0'+(s%60)).slice(-2);var ov=document.createElement('div');ov.className='solved-overlay';ov.id='solved-overlay';ov.innerHTML='<h2>Hoan Thanh!</h2><p>Buoc: <strong>'+moveCount+'</strong></p><p>Thoi gian: <strong>'+d+'</strong></p>';document.getElementById('canvas-container').appendChild(ov)}
+function removeSolvedOverlay(){var e=document.getElementById('solved-overlay');if(e)e.remove()}
+
+// ========== LOG ==========
+var logMoves=[],logNextIdx=0;
+function clearLog(){document.getElementById('log-moves').innerHTML='';logMoves=[];logNextIdx=0}
+function addLogSection(t){var el=document.getElementById('log-moves');var s=document.createElement('div');s.style.cssText='width:100%;font-size:0.65em;color:#e94560;padding:3px 0;font-weight:bold';s.textContent=t;el.appendChild(s)}
+function addLogMove(text,idx,clickable){
+  var el=document.getElementById('log-moves');var m=document.createElement('span');m.className='log-move';m.id='logm-'+idx;
+  m.innerHTML='<span class="num">'+(idx+1)+'</span>'+text;
+  if(clickable){m.classList.add('clickable');if(idx===logNextIdx)m.classList.add('next');m.addEventListener('click',function(){onLogClick(idx)})}
+  el.appendChild(m);document.getElementById('log-content').scrollTop=99999;
+}
+function onLogClick(idx){
+  if(idx!==logNextIdx)return;if(moveQueue.length||processingQueue)return;if(logNextIdx>=logMoves.length)return;
+  var m=logMoves[idx];if(!m)return;
+  highlightLogMove(idx);
+  enqueueMove(m.axis,m.layerIdx,m.clockwise,true).then(function(){
+    markLogDone(idx);logNextIdx++;
+    if(logNextIdx<logMoves.length){var ne=document.getElementById('logm-'+logNextIdx);if(ne)ne.classList.add('next');setLogStatus('Step '+(idx+1)+'/'+logMoves.length+' done. Click '+(logNextIdx+1)+'.')}
+    else onAllStepsDone();
+  });
+}
+function highlightLogMove(idx){var p=document.querySelector('.log-move.active');if(p)p.classList.remove('active');var e=document.getElementById('logm-'+idx);if(e){e.classList.add('active');e.scrollIntoView({behavior:'smooth',block:'nearest'})}}
+function markLogDone(idx){var e=document.getElementById('logm-'+idx);if(e){e.classList.remove('active');e.classList.remove('next');e.classList.add('done')}}
+function markAllLogDone(){var ms=document.querySelectorAll('.log-move');for(var i=0;i<ms.length;i++){ms[i].classList.remove('active');ms[i].classList.remove('next');ms[i].classList.add('done')}}
+function setLogStatus(t){var e=document.getElementById('log-status');if(e)e.textContent=t}
+window.toggleLog=function(){var c=document.getElementById('log-content'),b=document.getElementById('log-toggle');c.classList.toggle('collapsed');b.textContent=c.classList.contains('collapsed')?'>' :'v'};
+
+// ========== KEYBOARD ==========
+document.addEventListener('keydown',function(e){
+  var k=e.key.toUpperCase();
+  if('UDFBLR'.indexOf(k)>=0){
+    e.preventDefault();
+    var faceMap={U:{ax:'y',li:cubeSize-1},D:{ax:'y',li:0},R:{ax:'x',li:cubeSize-1},L:{ax:'x',li:0},F:{ax:'z',li:cubeSize-1},B:{ax:'z',li:0}};
+    var f=faceMap[k];if(!f)return;
+    enqueueMove(f.ax,f.li,!e.shiftKey,true).then(function(){onUserMoveDuringSolve(f.ax,f.li,!e.shiftKey)});
+  }
+});
+
+init();
+})();
+</script>
+</body>
+</html>
