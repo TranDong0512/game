@@ -162,6 +162,74 @@
             color: #555; font-size: 11px; margin-top: 10px;
             line-height: 1.6; text-align: center;
         }
+        #mobileControls {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            padding: 10px 15px 20px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .mobile-joystick {
+            position: absolute;
+            bottom: 20px; left: 20px;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .mobile-joystick-knob {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+        }
+        .mobile-action-btns {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            display: flex; gap: 10px;
+            pointer-events: auto;
+        }
+        .mobile-action-btn {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff;
+            font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: none;
+            user-select: none;
+        }
+        .mobile-action-btn:active { background: rgba(255,255,255,0.35); }
+        .mobile-action-btn.fire { width: 70px; height: 70px; background: rgba(255,50,50,0.25); border-color: rgba(255,50,50,0.5); }
+        .mobile-action-btn.fire:active { background: rgba(255,50,50,0.5); }
+        @media (max-width: 960px) {
+            body { overflow: auto; align-items: flex-start; padding-top: 10px; }
+            #gameWrapper { flex-direction: column; align-items: center; gap: 10px; padding-bottom: 120px; }
+            canvas#game { max-width: 98vw; height: auto !important; }
+            #sidebar {
+                width: 98vw; max-width: 700px;
+                display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 6px; padding: 10px;
+            }
+            .side-title { grid-column: 1/-1; font-size: 16px; margin-bottom: 4px; }
+            .stat-box { padding: 6px 8px; margin-bottom: 0; }
+            .stat-value { font-size: 16px; }
+            .controls-info { display: none; }
+            #overlay { width: 98vw; height: auto; max-height: 85vh; position: relative; }
+            .overlay-title { font-size: 28px; }
+            .overlay-sub { font-size: 12px; }
+            .mode-grid { grid-template-columns: repeat(2, 1fr); }
+            .mode-card { padding: 10px 6px; }
+            .mode-icon { font-size: 22px; }
+            .mode-name { font-size: 12px; }
+            #mobileControls { display: block; }
+        }
     </style>
 </head>
 <body>
@@ -229,6 +297,17 @@
             <div class="overlay-title" id="overlayTitle" style="color:#ff4444">🔫 CHIẾN BINH</div>
             <div class="overlay-sub" id="overlaySub">Chọn chế độ và tiêu diệt kẻ thù!</div>
             <div id="overlayContent"></div>
+        </div>
+    </div>
+
+    <div id="mobileControls">
+        <div class="mobile-joystick" id="joystick">
+            <div class="mobile-joystick-knob" id="joystickKnob"></div>
+        </div>
+        <div class="mobile-action-btns">
+            <div class="mobile-action-btn" id="btnDash">💨</div>
+            <div class="mobile-action-btn" id="btnReload">🔄</div>
+            <div class="mobile-action-btn fire" id="btnShoot">🎯</div>
         </div>
     </div>
 
@@ -1432,6 +1511,102 @@
         });
         canvas.addEventListener('mouseup', () => { mouse.down = false; });
         canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        // ==================== TOUCH INPUT ====================
+        let touchJoystick = { active: false, dx: 0, dy: 0 };
+        const joystickEl = document.getElementById('joystick');
+        const joystickKnob = document.getElementById('joystickKnob');
+
+        if (joystickEl) {
+            joystickEl.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchJoystick.active = true;
+                updateJoystick(e.touches[0]);
+            }, { passive: false });
+            joystickEl.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                updateJoystick(e.touches[0]);
+            }, { passive: false });
+            joystickEl.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchJoystick.active = false;
+                touchJoystick.dx = 0;
+                touchJoystick.dy = 0;
+                keys['KeyW'] = false; keys['KeyS'] = false;
+                keys['KeyA'] = false; keys['KeyD'] = false;
+                if (joystickKnob) {
+                    joystickKnob.style.transform = 'translate(-50%, -50%)';
+                }
+            }, { passive: false });
+            joystickEl.addEventListener('touchcancel', () => {
+                touchJoystick.active = false;
+                touchJoystick.dx = 0;
+                touchJoystick.dy = 0;
+                keys['KeyW'] = false; keys['KeyS'] = false;
+                keys['KeyA'] = false; keys['KeyD'] = false;
+            });
+        }
+
+        function updateJoystick(touch) {
+            const rect = joystickEl.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            let dx = touch.clientX - cx;
+            let dy = touch.clientY - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxDist = rect.width / 2 - 20;
+            if (dist > maxDist) {
+                dx = dx / dist * maxDist;
+                dy = dy / dist * maxDist;
+            }
+            if (joystickKnob) {
+                joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            }
+            touchJoystick.dx = dx / maxDist;
+            touchJoystick.dy = dy / maxDist;
+            keys['KeyA'] = touchJoystick.dx < -0.3;
+            keys['KeyD'] = touchJoystick.dx > 0.3;
+            keys['KeyW'] = touchJoystick.dy < -0.3;
+            keys['KeyS'] = touchJoystick.dy > 0.3;
+        }
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            initAudio();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = W / rect.width;
+            const scaleY = H / rect.height;
+            mouse.x = (touch.clientX - rect.left) * scaleX;
+            mouse.y = (touch.clientY - rect.top) * scaleY;
+            mouse.down = true;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = W / rect.width;
+            const scaleY = H / rect.height;
+            mouse.x = (touch.clientX - rect.left) * scaleX;
+            mouse.y = (touch.clientY - rect.top) * scaleY;
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            mouse.down = false;
+        }, { passive: false });
+
+        // Mobile action buttons
+        const btnDash = document.getElementById('btnDash');
+        const btnReload = document.getElementById('btnReload');
+        const btnShoot = document.getElementById('btnShoot');
+        if (btnDash) btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'playing') dash(); }, { passive: false });
+        if (btnReload) btnReload.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'playing') startReload(); }, { passive: false });
+        if (btnShoot) {
+            btnShoot.addEventListener('touchstart', (e) => { e.preventDefault(); initAudio(); mouse.down = true; }, { passive: false });
+            btnShoot.addEventListener('touchend', (e) => { e.preventDefault(); mouse.down = false; }, { passive: false });
+        }
 
         // ==================== CAMERA ====================
         function updateCamera() {

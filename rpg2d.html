@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RPG 2D - Cuộc Phiêu Lưu</title>
   <style>
     * {
@@ -370,6 +371,46 @@
     #shop-close:hover {
       color: #fff
     }
+    #mobileJoystick {
+      display: none;
+      position: fixed;
+      bottom: 20px; left: 20px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      z-index: 200;
+      touch-action: none;
+    }
+    #mobileJoystickKnob {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transform: translate(-50%, -50%);
+    }
+    #mobileSkills {
+      display: none;
+      position: fixed;
+      bottom: 10px; right: 10px;
+      z-index: 200;
+      pointer-events: none;
+    }
+    #mobileSkills .skill {
+      pointer-events: auto;
+    }
+    @media (max-width: 768px) {
+      body { overflow: auto; }
+      canvas { max-width: 100vw; height: auto !important; }
+      #ui { font-size: 11px; top: 5px; left: 5px; }
+      .bar { width: 140px; height: 14px; }
+      #log { width: 200px; font-size: 10px; bottom: 80px; max-height: 80px; }
+      #skills { display: none; }
+      #mobileJoystick, #mobileSkills { display: block; }
+      #mobileSkills { display: flex; gap: 4px; }
+      #mobileSkills .skill { width: 40px; height: 40px; font-size: 9px; }
+    }
   </style>
 </head>
 
@@ -426,6 +467,17 @@
     <span id="shop-close" onclick="toggleShop()">✕</span>
     <h3>🏪 Cửa Hàng</h3>
     <div id="shop-items"></div>
+  </div>
+
+  <div id="mobileJoystick">
+    <div id="mobileJoystickKnob"></div>
+  </div>
+  <div id="mobileSkills">
+    <div class="skill" onclick="useSkill(0)">1</div>
+    <div class="skill" onclick="useSkill(1)">2</div>
+    <div class="skill" onclick="useSkill(2)">3</div>
+    <div class="skill" onclick="useSkill(3)">4</div>
+    <div class="skill" onclick="useSkill(4)">5</div>
   </div>
 
   <script>
@@ -594,6 +646,51 @@
     const keys = {};
     window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; handleKeyPress(e.key); });
     window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+    // ==================== TOUCH INPUT ====================
+    const joystickEl = document.getElementById('mobileJoystick');
+    const joystickKnob = document.getElementById('mobileJoystickKnob');
+    let touchJoystickActive = false;
+    if (joystickEl) {
+      joystickEl.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchJoystickActive = true;
+        updateJoystickPos(e.touches[0]);
+      }, { passive: false });
+      joystickEl.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        updateJoystickPos(e.touches[0]);
+      }, { passive: false });
+      joystickEl.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        touchJoystickActive = false;
+        keys['w'] = false; keys['s'] = false; keys['a'] = false; keys['d'] = false;
+        if (joystickKnob) joystickKnob.style.transform = 'translate(-50%, -50%)';
+      }, { passive: false });
+      joystickEl.addEventListener('touchcancel', () => {
+        touchJoystickActive = false;
+        keys['w'] = false; keys['s'] = false; keys['a'] = false; keys['d'] = false;
+      });
+    }
+    function updateJoystickPos(touch) {
+      const rect = joystickEl.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = touch.clientX - cx;
+      let dy = touch.clientY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxDist = rect.width / 2 - 22;
+      if (dist > maxDist) { dx = dx / dist * maxDist; dy = dy / dist * maxDist; }
+      if (joystickKnob) joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      keys['a'] = dx < -15;
+      keys['d'] = dx > 15;
+      keys['w'] = dy < -15;
+      keys['s'] = dy > 15;
+    }
+
+    function useSkill(idx) {
+      handleKeyPress(String(idx + 1));
+    }
 
     let showInv = false, showStats = false, showShop = false;
 

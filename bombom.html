@@ -245,6 +245,99 @@
             font-size: 11px;
             color: #aaa;
         }
+        #mobileControls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 15px 20px;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .mobile-dpad {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .mobile-btn:active {
+            background: rgba(255,255,255,0.35);
+            transform: scale(0.9);
+        }
+        .mobile-btn-fire {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,100,100,0.25);
+            border-color: rgba(255,100,100,0.5);
+        }
+        .mobile-btn-fire:active {
+            background: rgba(255,100,100,0.5);
+        }
+        @media (max-width: 768px) {
+            body { overflow: auto; align-items: flex-start; padding-top: 10px; }
+            #gameWrapper {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                padding-bottom: 100px;
+            }
+            canvas#game {
+                max-width: 95vw;
+                height: auto !important;
+            }
+            #sidebar {
+                width: 95vw;
+                max-width: 500px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 12px;
+            }
+            .sidebar-title { grid-column: 1/-1; font-size: 18px; margin-bottom: 5px; }
+            .mode-badge { grid-column: 1/-1; }
+            .stat-box { padding: 6px 10px; margin-bottom: 0; }
+            .stat-value { font-size: 18px; }
+            .next-bubble { margin-top: 0; }
+            .power-bar-container { margin-top: 0; }
+            .color-counts { margin-top: 0; grid-column: 1/-1; }
+            #sidebar .btn { grid-column: span 1; padding: 8px; font-size: 12px; }
+            #overlay {
+                width: 95vw;
+                height: auto;
+                max-height: 80vh;
+                padding: 20px 10px;
+                position: relative;
+            }
+            .overlay-title { font-size: 28px; }
+            .overlay-subtitle { font-size: 13px; padding: 0 10px; }
+            .mode-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+            .mode-card { padding: 10px 6px; }
+            .mode-icon { font-size: 24px; }
+            .mode-name { font-size: 13px; }
+            .mode-desc { font-size: 10px; }
+            #mobileControls { display: flex; }
+        }
+        @media (max-width: 400px) {
+            .mode-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -306,6 +399,14 @@
             <div class="overlay-subtitle" id="overlaySubtitle">Chọn chế độ chơi yêu thích của bạn!</div>
             <div id="overlayContent"></div>
         </div>
+    </div>
+
+    <div id="mobileControls">
+        <div class="mobile-dpad">
+            <div class="mobile-btn" id="btnPowerUp">▲</div>
+            <div class="mobile-btn" id="btnPowerDown">▼</div>
+        </div>
+        <div class="mobile-btn mobile-btn-fire" id="btnFire">🎯</div>
     </div>
 
     <script>
@@ -1466,6 +1567,79 @@
             if (e.code === 'ArrowUp') { shooter.power = Math.min(MAX_POWER, shooter.power + 0.5); updateUI(); }
             if (e.code === 'ArrowDown') { shooter.power = Math.max(MIN_POWER, shooter.power - 0.5); updateUI(); }
         });
+
+        // ==================== TOUCH INPUT ====================
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            initAudio();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = W / rect.width;
+            const scaleY = H / rect.height;
+            const mx = (touch.clientX - rect.left) * scaleX;
+            const my = (touch.clientY - rect.top) * scaleY;
+            shooter.angle = Math.atan2(my - shooter.y, mx - shooter.x);
+            if (shooter.angle > -0.15) shooter.angle = -0.15;
+            if (shooter.angle < -Math.PI + 0.15) shooter.angle = -Math.PI + 0.15;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = W / rect.width;
+            const scaleY = H / rect.height;
+            const mx = (touch.clientX - rect.left) * scaleX;
+            const my = (touch.clientY - rect.top) * scaleY;
+            shooter.angle = Math.atan2(my - shooter.y, mx - shooter.x);
+            if (shooter.angle > -0.15) shooter.angle = -0.15;
+            if (shooter.angle < -Math.PI + 0.15) shooter.angle = -Math.PI + 0.15;
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing') shoot();
+        }, { passive: false });
+
+        // Mobile button controls
+        const btnPowerUp = document.getElementById('btnPowerUp');
+        const btnPowerDown = document.getElementById('btnPowerDown');
+        const btnFire = document.getElementById('btnFire');
+        let powerUpInterval = null, powerDownInterval = null;
+
+        if (btnPowerUp) {
+            btnPowerUp.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                shooter.power = Math.min(MAX_POWER, shooter.power + 1);
+                updateUI();
+                powerUpInterval = setInterval(() => {
+                    shooter.power = Math.min(MAX_POWER, shooter.power + 0.5);
+                    updateUI();
+                }, 100);
+            }, { passive: false });
+            btnPowerUp.addEventListener('touchend', () => { clearInterval(powerUpInterval); });
+            btnPowerUp.addEventListener('touchcancel', () => { clearInterval(powerUpInterval); });
+        }
+        if (btnPowerDown) {
+            btnPowerDown.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                shooter.power = Math.max(MIN_POWER, shooter.power - 1);
+                updateUI();
+                powerDownInterval = setInterval(() => {
+                    shooter.power = Math.max(MIN_POWER, shooter.power - 0.5);
+                    updateUI();
+                }, 100);
+            }, { passive: false });
+            btnPowerDown.addEventListener('touchend', () => { clearInterval(powerDownInterval); });
+            btnPowerDown.addEventListener('touchcancel', () => { clearInterval(powerDownInterval); });
+        }
+        if (btnFire) {
+            btnFire.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                initAudio();
+                if (gameState === 'playing') shoot();
+            }, { passive: false });
+        }
 
         // ==================== MENU ====================
         function showMenu() {

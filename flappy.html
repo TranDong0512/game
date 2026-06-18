@@ -34,6 +34,11 @@
             font-size: 12px;
             pointer-events: none;
         }
+        @media (max-width: 480px) {
+            body { align-items: flex-start; padding-top: 10px; }
+            .game-wrapper { border-radius: 0; box-shadow: none; width: 100%; }
+            canvas { display: block; max-width: 100vw; height: auto !important; }
+        }
     </style>
 </head>
 <body>
