@@ -818,7 +818,7 @@
     </div>
     <script>
         // ==================== AI CONFIG ====================
-        let GEMINI_KEY = localStorage.getItem('gemini_key');
+        let GEMINI_KEY = localStorage.getItem('gemini_key') || 'AIzaSyBjfcZIBOeRQcuY3TwYrJCJNiO_SPnfz4g';
 
         async function callAI(prompt) {
             if (!GEMINI_KEY) return null;
@@ -829,9 +829,18 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const data = await res.json();
-                if (data.error) { console.error('Gemini Error:', data.error.message); return null; }
+                if (data.error) {
+                    const msg = data.error.message || 'Lỗi không xác định';
+                    console.error('Gemini Error:', msg);
+                    if (msg.includes('API_KEY_INVALID')) return '🔑 API key không hợp lệ. Vui lòng vào ⚙️ Cài đặt để nhập key mới.';
+                    if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) return '⚠️ Đã hết quota API key. Vui lòng vào ⚙️ Cài đặt nhập key mới hoặc chờ reset quota.';
+                    return '⚠️ Lỗi AI: ' + msg;
+                }
                 return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-            } catch (e) { console.error('AI Error:', e); return null; }
+            } catch (e) {
+                console.error('AI Error:', e);
+                return '⚠️ Lỗi kết nối mạng. Kiểm tra lại internet.';
+            }
         }
 
         async function askAI(prompt, onResult) {
@@ -840,11 +849,11 @@
                 const ai = await callAI(prompt);
                 hideTyping();
                 if (ai) { onResult(ai); return true; }
-                addMsg('bot', '⚠️ AI không phản hồi. Kiểm tra lại API key trong ⚙️ Cài đặt.');
+                addMsg('bot', '⚠️ AI không phản hồi. Vào ⚙️ Cài đặt kiểm tra API key.');
                 return true;
             } catch (e) { console.error('askAI error:', e); }
             hideTyping();
-            addMsg('bot', '⚠️ Lỗi kết nối AI. Thử lại sau.');
+            addMsg('bot', '⚠️ Lỗi kết nối. Thử lại sau.');
             return true;
         }
 
