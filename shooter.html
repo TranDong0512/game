@@ -348,7 +348,8 @@
         };
 
         // ==================== GAME STATE ====================
-        let player, bullets, enemies, particles, pickups, enemyBullets, explosions;
+        let player = { x: MAP_W/2, y: MAP_H/2, vx: 0, vy: 0, hp: 100, maxHp: 100, angle: 0, fireTimer: 0, reloading: false, reloadTimer: 0, dashing: false, dashTimer: 0, dashCooldown: 0, dashAngle: 0, invincible: 0, speed: PLAYER_SPEED };
+        let bullets = [], enemies = [], particles = [], pickups = [], enemyBullets = [], explosions = [];
         let camera = { x: 0, y: 0 };
         let score = 0, wave = 1, kills = 0, totalEnemies = 0;
         let gameState = 'menu';
