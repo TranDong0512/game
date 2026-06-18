@@ -684,9 +684,60 @@
             border-radius: 2px
         }
 
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, .5);
+            z-index: 99;
+            -webkit-tap-highlight-color: transparent
+        }
+
+        .hamburger-btn {
+            display: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, .08);
+            background: rgba(255, 255, 255, .03);
+            color: #888;
+            font-size: 16px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+            flex-shrink: 0
+        }
+
+        .hamburger-btn:hover {
+            background: rgba(255, 255, 255, .08);
+            color: #fff
+        }
+
         @media(max-width:768px) {
             .sidebar {
-                display: none
+                position: fixed;
+                top: 0;
+                left: -290px;
+                width: 280px;
+                height: 100%;
+                z-index: 100;
+                transition: left .3s ease
+            }
+
+            .sidebar.open {
+                left: 0
+            }
+
+            .sidebar-overlay.show {
+                display: block
+            }
+
+            .hamburger-btn {
+                display: flex
             }
 
             .chat-area {
@@ -697,7 +748,8 @@
 </head>
 
 <body>
-    <div class="sidebar">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
         <div class="side-header">
             <div class="side-logo">🔮</div>
             <div class="side-title">AI Tử Vi & Tarot</div>
@@ -727,6 +779,7 @@
     </div>
     <div class="chat-area">
         <div class="chat-header">
+            <div class="hamburger-btn" id="hamburger" onclick="toggleSidebar()">☰</div>
             <div class="chat-header-icon">🔮</div>
             <div class="chat-header-info">
                 <div class="chat-header-name" id="hName">AI Tử Vi & Tarot</div>
@@ -759,6 +812,14 @@
                 const data = await res.json();
                 return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
             } catch (e) { console.error('AI Error:', e); return null; }
+        }
+
+        // ==================== SIDEBAR TOGGLE ====================
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('show');
         }
 
         // ==================== CALCULATION ALGORITHMS ====================
@@ -939,6 +1000,7 @@
 
         function showHome() {
             clearChat(); mode = '';
+            if (window.innerWidth <= 768) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelector('.nav-item').classList.add('active');
             $('hName').textContent = 'AI Tử Vi & Tarot';
@@ -1009,6 +1071,7 @@
         // ==================== CHAT ROUTING ====================
         function startChat(m) {
             mode = m; state = {}; hist = [];
+            if (window.innerWidth <= 768) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
             const idx = { tuvi: 1, zodiac: 2, tarot: 3, numerology: 4, palm: 5, dream: 6, love: 7, settings: 8 };
             setNav(idx[m] || 0);
             const names = { tuvi: '🐉 Tử Vi', zodiac: '♈ Cung Hoàng Đạo', tarot: '🃏 Bói Tarot', numerology: '🔢 Thần Số Học', palm: '✋ Xem Chỉ Tay', dream: '💭 Giải Mã Giấc Mơ', love: '💕 Tình Yêu' };
@@ -1108,7 +1171,53 @@
                 const ai = await callAI(prompt);
                 if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">${topic === 'love' ? '💕' : topic === 'career' ? '💼' : '🏥'} ${topic === 'love' ? 'Tình Duyên' : topic === 'career' ? 'Sự Nghiệp' : 'Sức Khỏe'}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
             }
-            botSay('⚠️ Cần API key Gemini để xem chi tiết. Vào ⚙️ Cài đặt để nhập.');
+            const localResponses = {
+                love: {
+                    'Tý': '💕 Tuổi Tý trong tình yêu rất chung thủy. Mùa thu là thời điểm lãng mạn nhất. Hợp nhất với tuổi Thìn, Thân.',
+                    'Sửu': '💕 Tuổi Sửu yêu chân thành và bền vững. Nên chủ động hơn trong bày tỏ. Hợp nhất với tuổi Tỵ, Dậu.',
+                    'Dần': '💕 Tuổi Dần đầy đam mê và mãnh liệt. Cần kiềm chế cái tôi trong tình yêu. Hợp nhất với tuổi Ngọ, Tuất.',
+                    'Mão': '💕 Tuổi Mão lãng mạn và tinh tế. Nên trực tiếp hơn trong bày tỏ. Hợp nhất với tuổi Mùi, Hợi.',
+                    'Thìn': '💕 Tuổi Thìn quyến rũ và tự tin. Nên lắng nghe đối phương nhiều hơn. Hợp nhất với tuổi Tý, Thân.',
+                    'Tỵ': '💕 Tuổi Tỵ bí ẩn và hấp dẫn. Tình yêu đến bất ngờ. Hợp nhất với tuổi Sửu, Dậu.',
+                    'Ngọ': '💕 Tuổi Ngọ yêu tự do và phiêu lưu. Nên cam kết sâu sắc hơn. Hợp nhất với tuổi Dần, Tuất.',
+                    'Mùi': '💕 Tuổi Mùi dịu dàng và chiều chuộng. Nên độc lập hơn trong tình yêu. Hợp nhất với tuổi Mão, Hợi.',
+                    'Thân': '💕 Tuổi Thân hài hước và thú vị. Luôn mang niềm vui cho đối phương. Hợp nhất với tuổi Tý, Thìn.',
+                    'Dậu': '💕 Tuổi Dậu chân thành và đáng tin. Nên mở lòng nhiều hơn. Hợp nhất với tuổi Sửu, Tỵ.',
+                    'Tuất': '💕 Tuổi Tuất trung thành và bảo vệ. Tình yêu bền vững theo thời gian. Hợp nhất với tuổi Dần, Ngọ.',
+                    'Hợi': '💕 Tuổi Hợi hào phóng và lãng mạn. Luôn quan tâm đối phương. Hợp nhất với tuổi Mão, Mùi.'
+                },
+                career: {
+                    'Tý': '💼 Tuổi Tý nhanh nhẹn và thông minh. Phù hợp kinh doanh, tài chính, công nghệ. Năm nay có cơ hội thăng tiến.',
+                    'Sửu': '💼 Tuổi Sửu chăm chỉ và kiên nhẫn. Phù hợp quản lý, kế toán, bất động sản. Năm nay ổn định.',
+                    'Dần': '💼 Tuổi Dần dũng cảm và tiên phong. Phù hợp khởi nghiệp, quân đội, thể thao. Năm nay có thử thách.',
+                    'Mão': '💼 Tuổi Mão tinh tế và khéo léo. Phù hợp nghệ thuật, thiết kế, ngoại giao. Năm nay thuận lợi.',
+                    'Thìn': '💼 Tuổi Thìn mạnh mẽ và có tầm nhìn. Phù hợp lãnh đạo, quản lý cấp cao. Năm nay thành công.',
+                    'Tỵ': '💼 Tuổi Tỵ sắc sảo và chiến lược. Phù hợp phân tích, đầu tư, luật. Năm nay phát triển.',
+                    'Ngọ': '💼 Tuổi Ngọ năng động và sáng tạo. Phù hợp truyền thông, du lịch, marketing. Năm nay nhiều cơ hội.',
+                    'Mùi': '💼 Tuổi Mùi sáng tạo và giàu cảm hứng. Phù hợp nghệ thuật, giáo dục, y tế. Năm nay ổn định.',
+                    'Thân': '💼 Tuổi Thân linh hoạt và thông minh. Phù hợp công nghệ, kinh doanh, giải trí. Năm nay thuận lợi.',
+                    'Dậu': '💼 Tuổi Dậu tỉ mỉ và chuyên nghiệp. Phù hợp kế toán, kiểm toán, y khoa. Năm nay thăng tiến.',
+                    'Tuất': '💼 Tuổi Tuất trung thành và có trách nhiệm. Phù hợp dịch vụ công, tư vấn, đào tạo. Năm nay vững vàng.',
+                    'Hợi': '💼 Tuổi Hợi nhân hậu và rộng lượng. Phù hợp từ thiện, y tế, giáo dục. Năm nay may mắn.'
+                },
+                health: {
+                    'Tý': '🏥 Tuổi Tý cần chú ý hệ thần kinh và giấc ngủ. Nên tập yoga hoặc thiền. Tránh stress quá mức.',
+                    'Sửu': '🏥 Tuổi Sửu cần chú ý xương khớp và tiêu hóa. Nên vận động nhẹ nhàng mỗi ngày. Ăn uống điều độ.',
+                    'Dần': '🏥 Tuổi Dần cần chú ý đầu và cơ bắp. Nên thể thao vừa phải. Tránh nóng giận ảnh hưởng sức khỏe.',
+                    'Mão': '🏥 Tuổi Mão cần chú ý gan và mắt. Nên nghỉ ngơi đầy đủ. Tránh thức khuya.',
+                    'Thìn': '🏥 Tuổi Thìn cần chú ý tim mạch và lưng. Nên tập thể dục đều đặn. Kiểm soát huyết áp.',
+                    'Tỵ': '🏥 Tuổi Tỵ cần chú ý tuần hoàn và da. Nên uống đủ nước. Tránh nắng gắt.',
+                    'Ngọ': '🏥 Tuổi Ngọ cần chú ý hô hấp và vai. Nên tập thở sâu. Tránh lạnh đột ngột.',
+                    'Mùi': '🏥 Tuổi Mùi cần chú ý dạ dày và tiêu hóa. Nên ăn đúng giờ. Tránh đồ cay nóng.',
+                    'Thân': '🏥 Tuổi Thân cần chú ý phổi và phế quản. Nên hít thở không khí trong lành. Tránh khói bụi.',
+                    'Dậu': '🏥 Tuổi Dậu cần chú ý thận và tiết niệu. Nên uống đủ nước. Tránh lạnh.',
+                    'Tuất': '🏥 Tuổi Tuất cần chú ý ruột và tiêu hóa. Nên ăn nhiều rau xanh. Tránh đồ nhiều dầu mỡ.',
+                    'Hợi': '🏥 Tuổi Hợi cần chú ý tuyến giáp và cổ. Nên vận động cổ vai thường xuyên. Tránh ngồi một chỗ.'
+                }
+            };
+            const chiResponses = localResponses[topic] || {};
+            const responseText = chiResponses[cc.chi] || `Phân tích ${topic} cho tuổi ${cc.can} ${cc.chi}.`;
+            botSay(`<div class="reading-box"><div class="reading-title">${topic === 'love' ? '💕' : topic === 'career' ? '💼' : '🏥'} ${topic === 'love' ? 'Tình Duyên' : topic === 'career' ? 'Sự Nghiệp' : 'Sức Khỏe'} - ${cc.can} ${cc.chi}</div><div class="reading-text">${responseText}<br><br><i>Để phân tích chi tiết hơn, hãy nhập Gemini API key trong ⚙️ Cài đặt.</i></div><div class="reading-stars">★★★★☆</div></div>`);
         }
 
         // ==================== ZODIAC ====================
@@ -1127,12 +1236,30 @@
 
             const elements = ['Đất', 'Khí', 'Nước', 'Lửa', 'Đất', 'Khí', 'Nước', 'Lửa', 'Đất', 'Khí', 'Nước', 'Lửa'];
             const planets = ['Saturn', 'Uranus', 'Neptune', 'Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Pluto', 'Jupiter'];
+            const traits = {
+                'Ma Kết': { love: 'Kim Ngưu, Xử Nữ, Bọ Cạp', career: 'Quản lý, tài chính, kiến trúc', health: 'Xương khớp, da, khớp gối', desc: 'Thực tế, kiên nhẫn, tham vọng, có trách nhiệm. Luôn đặt mục tiêu rõ ràng và theo đuổi đến cùng.' },
+                'Bảo Bình': { love: 'Song Tử, Thiên Bình, Nhân Mã', career: 'Công nghệ, khoa học, nhân đạo', health: 'Mắt cá chân, tuần hoàn máu', desc: 'Sáng tạo, độc lập, tư duy cấp tiến, yêu tự do. Luôn đi trước thời đại.' },
+                'Song Ngư': { love: 'Cự Giải, Bọ Crape, Kim Ngưu', career: 'Nghệ thuật, y tế, tâm linh', health: 'Bàn chân, hệ thần kinh', desc: 'Nhạy cảm, giàu trí tưởng tượng, từ bi, dễ đồng cảm. Sống trong thế giới cảm xúc phong phú.' },
+                'Bạch Dương': { love: 'Sư Tử, Nhân Mã, Bảo Bình', career: 'Khởi nghiệp, thể thao, quân đội', health: 'Đầu, cơ bắp, cháy bỏng', desc: 'Dũng cảm, tiên phong, đầy năng lượng, hay竞争. Luôn dẫn đầu và không sợ thử thách.' },
+                'Kim Ngưu': { love: 'Xử Nữ, Ma Kết, Cự Giải', career: 'Tài chính, bất động sản, ẩm thực', health: 'Cổ họng, tuyến giáp, cổ', desc: 'Kiên định, thực tế, trung thành, yêu thích sự ổn định và vẻ đẹp.' },
+                'Song Tử': { love: 'Thiên Bình, Bảo Bình, Nhân Mã', career: 'Truyền thông, viết lách, marketing', health: 'Phổi, vai, cánh tay', desc: 'Thông minh, linh hoạt, hài hước, giỏi giao tiếp. Luôn tò mò và thích khám phá.' },
+                'Cự Giải': { love: 'Bọ Cạp, Song Ngư, Kim Ngưu', career: 'Dạy học, y tế, bất động sản', health: 'Dạ dày, ngực, tiêu hóa', desc: 'Tình cảm, bảo vệ gia đình, nhạy cảm, trực giác mạnh. Sống bằng cả trái tim.' },
+                'Sư Tử': { love: 'Bạch Dương, Nhân Mã, Thiên Bình', career: 'Giải trí, lãnh đạo, marketing', health: 'Tim, lưng, cột sống', desc: 'Tự tin, hào phóng, quyền lực, thích được chú ý. Sinh ra để tỏa sáng.' },
+                'Xử Nữ': { love: 'Kim Ngưu, Ma Kết, Cự Giải', career: 'Y tế, phân tích, kế toán', health: 'Ruột, hệ tiêu hóa, thần kinh', desc: 'Tỉ mỉ, thông minh, thực tế, hay phân tích. Đam mê sự hoàn hảo.' },
+                'Thiên Bình': { love: 'Song Tử, Bảo Bình, Sư Tử', career: 'Pháp luật, nghệ thuật, ngoại giao', health: 'Thận, lưng dưới, da', desc: 'Hòa nhã, công bằng, thích hài hòa, có gu thẩm mỹ. Luôn tìm kiếm sự cân bằng.' },
+                'Bọ Cạp': { love: 'Cự Giải, Song Ngư, Ma Kết', career: 'Tâm lý, điều tra, y khoa', health: 'Bộ phận sinh dục, mũi', desc: 'Bí ẩn, đam mê, mạnh mẽ, thâm sâu. Khả năng tập trung phi thường.' },
+                'Nhân Mã': { love: 'Bạch Dương, Sư Tử, Bảo Bình', career: 'Du lịch, giáo dục, xuất bản', health: 'Hông, đùi, thần kinh tọa', desc: 'Tự do, phiêu lưu, lạc quan, yêu tri thức. Đam mê khám phá thế giới.' }
+            };
+            const t = traits[sign.name] || traits['Ma Kết'];
 
             let html = `<div class="reading-box"><div class="reading-title">${sign.icon} ${sign.name} (${day}/${month})</div><div class="reading-text">
-        <b>Nguyên tố:</b> ${elements[signIdx]}<br>
-        <b>Hành tinh chủ quản:</b> ${planets[signIdx]}<br>
-        <b>Ngày:</b> ${sign.start[0]}/${sign.start[1]} - ${sign.end[0]}/${sign.end[1]}
-    </div></div>`;
+        <b>Nguyên tố:</b> ${elements[signIdx]} | <b>Hành tinh:</b> ${planets[signIdx]}<br>
+        <b>Ngày:</b> ${sign.start[0]}/${sign.start[1]} - ${sign.end[0]}/${sign.end[1]}<br><br>
+        <b>🔑 Tính cách:</b> ${t.desc}<br><br>
+        <b>💕 Tình yêu hợp:</b> ${t.love}<br>
+        <b>💼 Sự nghiệp:</b> ${t.career}<br>
+        <b>🏥 Sức khỏe chú ý:</b> ${t.health}
+    </div><div class="reading-stars">★★★★★</div></div>`;
 
             addMsg('bot', '⏳ Đang phân tích...', '', 0);
 
@@ -1156,7 +1283,27 @@
                 const ai = await callAI(`Phân tích tình yêu, mối quan hệ của cung ${sign}. Gợi ý cung hợp nhất. Tiếng Việt, 150 từ.`);
                 if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Yêu ${sign}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
             }
-            botSay('⚠️ Cần API key Gemini. Vào ⚙️ Cài đặt.');
+            const loveData = {
+                'Ma Kết': { best: 'Kim Ngưu, Xử Nữ, Bọ Crape', trait: 'Thực tế, nghiêm túc trong tình yêu, cần người ổn định', tip: 'Đừng quá nghiêm khắc với bản thân và đối phương' },
+                'Bảo Bình': { best: 'Song Tử, Thiên Bình, Nhân Mã', trait: 'Độc đáo, cần không gian tự do, yêu chiều sâu', tip: 'Hãy mở lòng nhiều hơn và chia sẻ cảm xúc' },
+                'Song Ngư': { best: 'Cự Giải, Bọ Crape, Kim Ngưu', trait: 'Lãng mạn, nhạy cảm, dễ đồng cảm', tip: 'Đừng quáidealizing đối phương, hãy thực tế hơn' },
+                'Bạch Dương': { best: 'Sư Tử, Nhân Mã, Bảo Bình', trait: 'Nhiệt tình, mãnh liệt, thích chinh phục', tip: 'Kiềm chế cái tôi, học cách lắng nghe' },
+                'Kim Ngưu': { best: 'Xử Nữ, Ma Kết, Cự Giải', trait: 'Chung thủy, ổn định, yêu vẻ đẹp', tip: 'Đừng quácứng nhắc, linh hoạt hơn trong tình yêu' },
+                'Song Tử': { best: 'Thiên Bình, Bảo Bình, Nhân Mã', trait: 'Hài hước, thú vị, dễ chán', tip: 'Tìm kiếm người cùng sở thích để duy trì hứng thú' },
+                'Cự Giải': { best: 'Bọ Crape, Song Ngư, Kim Ngưu', trait: 'Bảo thủ, che chở,amily oriented', tip: 'Đừng quábám víu, để đối phương có không gian' },
+                'Sư Tử': { best: 'Bạch Dương, Nhân Mã, Thiên Bình', trait: 'Tự tin, hào phóng, thích được ngưỡng mộ', tip: 'Chia sẻ ánh sáng với đối phương, đừng chiếm spotlight' },
+                'Xử Nữ': { best: 'Kim Ngưu, Ma Kết, Cự Giải', trait: 'Tỉ mỉ, phân tích, haylo挑剔', tip: 'Chấp imperfection, tận hưởng tình yêu tự nhiên' },
+                'Thiên Bình': { best: 'Song Tử, Bảo Bình, Sư Tử', trait: 'Hòa nhã, fair, thích beauty', tip: 'Đừng quádo dự, hãy dũng cảm trong tình yêu' },
+                'Bọ Crape': { best: 'Cự Giải, Song Ngư, Ma Kết', trait: 'Đam mê, possessive, depths', tip: 'Học cách trust và buông bỏ kiểm soát' },
+                'Nhân Mã': { best: 'Bạch Dương, Sư Tử, Bảo Bình', trait: 'Tự do, phiêu lưu, honest', tip: 'Tìm người cùng đam mê khám phá thế giới' }
+            };
+            const d = loveData[sign] || { best: 'cùng nguyên tố', trait: 'đặc trưng cung', tip: 'hãy tin vào tình yêu' };
+            botSay(`<div class="reading-box"><div class="reading-title">💕 Tình Yêu ${sign}</div><div class="reading-text">
+        <b>💑 Cung hợp nhất:</b> ${d.best}<br>
+        <b>❤️ Tính cách yêu:</b> ${d.trait}<br>
+        <b>💡 Lời khuyên:</b> ${d.tip}<br><br>
+        <i>Nhập Gemini API key trong ⚙️ Cài đặt để phân tích chi tiết hơn.</i>
+    </div><div class="reading-stars">★★★★☆</div></div>`);
         }
 
         // ==================== TAROT ====================
@@ -1293,10 +1440,46 @@
                 if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💭 Giải Mã Giấc Mơ</div><div class="reading-text"><b>Mô tả:</b> "${input}"<br><br>${ai.replace(/\n/g, '<br>')}</div></div>`); }
                 else { hideTyping(); botSay('⚠️ Lỗi AI. Thử lại sau.'); }
             } else {
-                const dreams = { 'rắn': 'Chuyển hóa, chữa lành, sức mạnh nội tâm', 'rơi': 'Mất kiểm soát, lo lắng', 'bay': 'Tự do, thăng tiến', 'nước': 'Cảm xúc, tiềm thức', 'chết': 'Kết thúc giai đoạn, tái sinh', 'cưới': 'Cam kết, hợp nhất', 'mèo': 'Độc lập, trực giác', 'chó': 'Trung thành, tình bạn', 'mưa': 'Thanh tẩy, bắt đầu mới', 'ma': 'Nỗi sợ quá khứ', 'tiền': 'Giá trị bản thân', 'trẻ con': 'Ngây thơ, sáng tạo' };
+                const dreams = {
+                    'rắn': { meaning: 'Chuyển hóa, chữa lành, sức mạnh nội tâm', advice: 'Đây là điềm báo bạn đang trong quá trình thay đổi tích cực. Hãy đón nhận sự chuyển hóa này.' },
+                    'rơi': { meaning: 'Mất kiểm soát, lo lắng, sợ hãi', advice: 'Bạn đang quá lo lắng về điều gì đó. Hãy thả lỏng và tin tưởng vào quá trình.' },
+                    'bay': { meaning: 'Tự do, thăng tiến, khát vọng', advice: 'Ước mơ và hoài bão của bạn đang được hỗ trợ. Hãy tự tin theo đuổi.' },
+                    'nước': { meaning: 'Cảm xúc, tiềm thức, sự dồi dào', advice: 'Cảm xúc của bạn đang rất phong phú. Hãy lắng nghe tiếng nói bên trong.' },
+                    'chết': { meaning: 'Kết thúc giai đoạn, tái sinh, khởi đầu mới', advice: 'Một giai đoạn đang khép lại, mở ra điều mới mẻ. Đừng sợ hãi.' },
+                    'cưới': { meaning: 'Cam kết, hợp nhất, kết nối sâu sắc', advice: 'Bạn khao khát sự gắn kết. Có thể sắp có tin vui về tình cảm.' },
+                    'mèo': { meaning: 'Độc lập, trực giác, bí ẩn', advice: 'Hãy tin vào trực giác của bạn. Đôi khi cần một mình để suy ngẫm.' },
+                    'chó': { meaning: 'Trung thành, tình bạn, lòng tin', advice: 'Tình bạn và lòng trung thành sẽ giúp bạn vượt qua khó khăn.' },
+                    'mưa': { meaning: 'Thanh tẩy, bắt đầu mới, cleansing', advice: 'Đã đến lúc buông bỏ quá khứ và đón nhận điều mới.' },
+                    'ma': { meaning: 'Nỗi sợ quá khứ, hối hận, điều chưa giải quyết', advice: 'Hãy đối mặt với quá khứ để giải phóng bản thân.' },
+                    'tiền': { meaning: 'Giá trị bản thân, tài chính, tham vọng', advice: 'Bạn đang đánh giá lại giá trị của mình. Đừng quá lo lắng về vật chất.' },
+                    'trẻ con': { meaning: 'Ngây thơ, sáng tạo, khởi đầu', advice: 'Hãy giữ cho mình sự ngây thơ và sáng tạo như trẻ con.' },
+                    'rừng': { meaning: 'Khám phá bản thân, tiềm thức, sự hoang dã', advice: 'Bạn cần thời gian để khám phá sâu bên trong con người mình.' },
+                    'nhà': { meaning: 'An toàn, gia đình, sự ổn định', advice: 'Gia đình và sự an toàn đang là ưu tiên hàng đầu.' },
+                    'đường': { meaning: 'Hành trình cuộc đời, sự lựa chọn', advice: 'Bạn đang đứng trước ngã tư đường. Hãy chọn hướng đi phù hợp nhất.' },
+                    'hoa': { meaning: 'Sắc đẹp, tình yêu, sự phát triển', advice: 'Tình yêu và vẻ đẹp đang nở rộ trong cuộc sống bạn.' },
+                    'cửa': { meaning: 'Cơ hội, lựa chọn, chuyển tiếp', advice: 'Một cánh cửa mới đang mở ra. Hãy nắm bắt cơ hội.' },
+                    'đánh nhau': { meaning: 'Xung đột nội tâm, đối mặt thử thách', advice: 'Bạn đang phải đấu tranh với chính mình. Hãy bình tĩnh giải quyết.' },
+                    'chạy': { meaning: 'Trốn tránh, áp lực, khát vọng tiến lên', advice: 'Đừng chạy trốn đối mặt. Đối mặt sẽ giúp bạn tiến bộ.' },
+                    'ngã': { meaning: 'Thất bại, mất tự tin, sai lầm', advice: 'Mỗi lần ngã là bài học. Hãy đứng dậy mạnh mẽ hơn.' }
+                };
                 const lower = input.toLowerCase(); let found = false;
-                for (const [k, v] of Object.entries(dreams)) { if (lower.includes(k)) { found = true; botSay(`💭 Thấy <b>${k}</b>: ${v}`); break; } }
-                if (!found) botSay('💭 Giấc mơ này phản ánh suy nghĩ sâu thẳm trong tiềm thức. Cần API Gemini để phân tích chi tiết hơn.');
+                for (const [k, v] of Object.entries(dreams)) {
+                    if (lower.includes(k)) {
+                        found = true;
+                        botSay(`<div class="reading-box"><div class="reading-title">💭 Giải Mã Giấc Mơ - "${k}"</div><div class="reading-text">
+                    <b>🔍 Ý nghĩa:</b> ${v.meaning}<br><br>
+                    <b>💡 Lời khuyên:</b> ${v.advice}<br><br>
+                    <i>Để phân tích chi tiết hơn, hãy cung cấp Gemini API key trong ⚙️ Cài đặt.</i>
+                </div><div class="reading-stars">★★★★☆</div></div>`);
+                        break;
+                    }
+                }
+                if (!found) botSay(`<div class="reading-box"><div class="reading-title">💭 Giải Mã Giấc Mơ</div><div class="reading-text">
+            Giấc mơ "<b>${input}</b>" phản ánh suy nghĩ sâu thẳm trong tiềm thức.<br><br>
+            <b>💡 Ý nghĩa chung:</b> Mỗi giấc mơ mang thông điệp riêng từ tiềm thức.<br>
+            <b>📝 Lời khuyên:</b> Ghi lại giấc mơ ngay khi thức dậy để nhớ rõ chi tiết.<br><br>
+            <i>Nhập API Gemini trong ⚙️ Cài đặt để AI phân tích chi tiết hơn.</i>
+        </div><div class="reading-stars">★★★☆☆</div></div>`);
             }
             setTimeout(() => addMsg('bot', 'Bạn muốn giải mã thêm?', qa([{ l: '💭 Giấc mơ khác', a: "startChat('dream')" }, { l: '🔮 Tử vi', a: "startChat('tuvi')" }])), 2000);
         }
@@ -1319,15 +1502,62 @@
                     const ai = await callAI(`Bạn là nhà tử vi. Phân tích tình duyên, vận mệnh tình yêu cho người tuổi ${cc.can} ${cc.chi} (năm ${y}). Gợi ý đối tượng hợp. Tiếng Việt, 150 từ.`);
                     if (ai) { hideTyping(); addMsg('bot', `<div class="reading-box"><div class="reading-title">💕 Tình Duyên Tuổi ${cc.chi}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`); return; }
                 }
-                botSay(`💕 Tuổi ${cc.can} ${cc.chi}: Năm 2024 tình duyên thuận lợi, đặc biệt vào mùa xuân và thu.`);
+                const loveData = {
+                    'Tý': { season: 'mùa đông', best: 'Thìn, Thân, Sửu', tip: 'Cẩn thận trong giao tiếp, đừng quá lý trí' },
+                    'Sửu': { season: 'mùa hè', best: 'Tý, Tỵ, Dậu', tip: 'Kiên nhẫn chờ đợi, tình yêu sẽ đến' },
+                    'Dần': { season: 'mùa xuân', best: 'Ngọ, Tuất, Hợi', tip: 'Dũng cảm bày tỏ, đừng e ngại' },
+                    'Mão': { season: 'mùa thu', best: 'Mùi, Hợi, Tuất', tip: 'Tinh tế trong cảm xúc, biết lắng nghe' },
+                    'Thìn': { season: 'mùa xuân', best: 'Tý, Thân, Tỵ', tip: 'Kiềm chế ego, học cách compromise' },
+                    'Tỵ': { season: 'mùa hè', best: 'Sửu, Dậu, Thân', tip: 'Thẳng thắn hơn trong bày tỏ cảm xúc' },
+                    'Ngọ': { season: 'mùa thu', best: 'Dần, Tuất, Mão', tip: 'Tự do nhưng đừng bỏ qua đối phương' },
+                    'Mùi': { season: 'mùa đông', best: 'Mão, Hợi, Ngọ', tip: 'Lắng nghe trực giác, đừng phân tích quá' },
+                    'Thân': { season: 'mùa hè', best: 'Tý, Thìn, Tỵ', tip: 'Hài hước và lạc quan thu hút đối phương' },
+                    'Dậu': { season: 'mùa thu', best: 'Sửu, Tỵ, Thìn', tip: 'Chân thành, đừng đóng vai quá nhiều' },
+                    'Tuất': { season: 'mùa đông', best: 'Dần, Ngọ, Mão', tip: 'Trung thành và kiên định với tình yêu' },
+                    'Hợi': { season: 'mùa xuân', best: 'Mão, Mùi, Dần', tip: 'Hào phóng và tử tế sẽ được đáp lại' }
+                };
+                const lv = loveData[cc.chi] || { season: 'mùa xuân', best: 'cùng mệnh', tip: 'hãy tin vào tình yêu' };
+                const compatibleChi = { 'Tý': ['Thân', 'Thìn', 'Tỵ'], 'Sửu': ['Tỵ', 'Dậu', 'Tý'], 'Dần': ['Ngọ', 'Tuất', 'Hợi'], 'Mão': ['Mùi', 'Hợi', 'Tuất'], 'Thìn': ['Tý', 'Thân', 'Tỵ'], 'Tỵ': ['Sửu', 'Dậu', 'Thân'], 'Ngọ': ['Dần', 'Tuất', 'Mão'], 'Mùi': ['Mão', 'Hợi', 'Ngọ'], 'Thân': ['Tý', 'Thìn', 'Tỵ'], 'Dậu': ['Sửu', 'Tỵ', 'Thìn'], 'Tuất': ['Dần', 'Ngọ', 'Mão'], 'Hợi': ['Mão', 'Mùi', 'Dần'] };
+                const bestMatches = (compatibleChi[cc.chi] || []).join(', ');
+                addMsg('user', input);
+                botSay(`<div class="reading-box"><div class="reading-title">💕 Tình Duyên Tuổi ${cc.can} ${cc.chi}</div><div class="reading-text">
+            <b>🔮 Tử vi:</b> Tuổi ${cc.can} ${cc.chi} thuộc mệnh ${cc.element}<br><br>
+            <b>💕 Thời điểm tốt:</b> ${lv.season} - Đây là lúc tình cảm nở rộ nhất<br>
+            <b>💑 Tuổi hợp:</b> ${bestMatches}<br>
+            <b>💡 Lời khuyên:</b> ${lv.tip}<br><br>
+            <b>📅 Vận tình duyên 2025:</b><br>
+            • Mùa xuân: Gặp gỡ mới, mở lòng<br>
+            • Mùa hè: Củng cố mối quan hệ<br>
+            • Mùa thu: Thấu hiểu sâu sắc<br>
+            • Mùa đông: Bình yên, hạnh phúc
+        </div><div class="reading-stars">★★★★☆</div></div>`);
             } else if (state.step === 'love_compat') {
                 const years = input.split(/[,\s]+/).map(Number).filter(n => !isNaN(n));
                 if (years.length < 2) { botSay('⚠️ Nhập 2 năm (VD: 1995, 1997):'); return; }
                 const c1 = calcCanChi(years[0]), c2 = calcCanChi(years[1]);
-                const score = 60 + Math.floor(Math.random() * 35);
-                let html = `<div class="reading-box"><div class="reading-title">👫 ${c1.chi} (${years[0]}) & ${c2.chi} (${years[1]})</div><div class="reading-text">
+                const compatChart = {
+                    'Tý': { 'Thân': 95, 'Thìn': 90, 'Tỵ': 85, 'Sửu': 80, 'Dậu': 75, 'Ngọ': 70, 'Hợi': 65, 'Mão': 60, 'Mùi': 55, 'Tuất': 50, 'Dần': 45 },
+                    'Sửu': { 'Tỵ': 95, 'Dậu': 90, 'Tý': 85, 'Thân': 80, 'Thìn': 75, 'Hợi': 70, 'Mão': 65, 'Mùi': 60, 'Ngọ': 55, 'Tuất': 50, 'Dần': 45 },
+                    'Dần': { 'Ngọ': 95, 'Tuất': 90, 'Hợi': 85, 'Mão': 80, 'Mùi': 75, 'Tý': 70, 'Thân': 65, 'Thìn': 60, 'Tỵ': 55, 'Dậu': 50, 'Sửu': 45 },
+                    'Mão': { 'Mùi': 95, 'Hợi': 90, 'Tuất': 85, 'Dần': 80, 'Ngọ': 75, 'Tý': 70, 'Thân': 65, 'Thìn': 60, 'Tỵ': 55, 'Dậu': 50, 'Sửu': 45 },
+                    'Thìn': { 'Tý': 95, 'Thân': 90, 'Tỵ': 85, 'Sửu': 80, 'Dậu': 75, 'Ngọ': 70, 'Hợi': 65, 'Mão': 60, 'Mùi': 55, 'Tuất': 50, 'Dần': 45 },
+                    'Tỵ': { 'Sửu': 95, 'Dậu': 90, 'Thân': 85, 'Tý': 80, 'Thìn': 75, 'Hợi': 70, 'Mão': 65, 'Mùi': 60, 'Ngọ': 55, 'Tuất': 50, 'Dần': 45 },
+                    'Ngọ': { 'Dần': 95, 'Tuất': 90, 'Mão': 85, 'Hợi': 80, 'Mùi': 75, 'Tý': 70, 'Thân': 65, 'Thìn': 60, 'Tỵ': 55, 'Dậu': 50, 'Sửu': 45 },
+                    'Mùi': { 'Mão': 95, 'Hợi': 90, 'Ngọ': 85, 'Dần': 80, 'Tuất': 75, 'Tý': 70, 'Thân': 65, 'Thìn': 60, 'Tỵ': 55, 'Dậu': 50, 'Sửu': 45 },
+                    'Thân': { 'Tý': 95, 'Thìn': 90, 'Tỵ': 85, 'Sửu': 80, 'Dậu': 75, 'Ngọ': 70, 'Hợi': 65, 'Mão': 60, 'Mùi': 55, 'Tuất': 50, 'Dần': 45 },
+                    'Dậu': { 'Sửu': 95, 'Tỵ': 90, 'Thân': 85, 'Tý': 80, 'Thìn': 75, 'Hợi': 70, 'Mão': 65, 'Mùi': 60, 'Ngọ': 55, 'Tuất': 50, 'Dần': 45 },
+                    'Tuất': { 'Dần': 95, 'Ngọ': 90, 'Mão': 85, 'Hợi': 80, 'Mùi': 75, 'Tý': 70, 'Thân': 65, 'Thìn': 60, 'Tỵ': 55, 'Dậu': 50, 'Sửu': 45 },
+                    'Hợi': { 'Mão': 95, 'Mùi': 90, 'Dần': 85, 'Tuất': 80, 'Ngọ': 75, 'Tý': 70, 'Thân': 65, 'Thìn': 60, 'Tỵ': 55, 'Dậu': 50, 'Sửu': 45 }
+                };
+                const score = (compatChart[c1.chi] && compatChart[c1.chi][c2.chi]) || (50 + Math.floor(Math.random() * 40));
+                const verdict = score >= 90 ? 'Cực kỳ hợp nhau! Đôi uyên ương hoàn hảo' : score >= 75 ? 'Rất hợp nhau, bổ trợ lẫn nhau' : score >= 60 ? 'Khá hợp, cần thấu hiểu' : 'Cần nỗ lực nhiều hơn để hòa hợp';
+                let html = `<div class="reading-box"><div class="reading-title">👫 ${c1.can} ${c1.chi} (${years[0]}) & ${c2.can} ${c2.chi} (${years[1]})</div><div class="reading-text">
             <b>Điểm hợp:</b> <span class="reading-highlight">${score}/100</span><br>
-            <div class="reading-stars">${score >= 85 ? '★★★★★' : score >= 70 ? '★★★★☆' : score >= 55 ? '★★★☆☆' : '★★☆☆☆'}</div></div></div>`;
+            <div class="reading-stars">${score >= 85 ? '★★★★★' : score >= 70 ? '★★★★☆' : score >= 55 ? '★★★☆☆' : '★★☆☆☆'}</div><br>
+            <b>Kết luận:</b> ${verdict}<br><br>
+            <b>💡 Lời khuyên:</b><br>
+            ${score >= 80 ? 'Hai bạn rất hợp nhau, hãy珍惜 mối quan hệ này!' : 'Cùng nhau vun đắp, thấu hiểu và sẻ chia sẽ giúp tình yêu bền vững.'}
+        </div></div>`;
                 addMsg('user', input); botSay('⏳ Đang phân tích...', '', 0);
                 if (GEMINI_KEY) {
                     const ai = await callAI(`Phân tích sự hợp nhau giữa tuổi ${c1.can} ${c1.chi} (${years[0]}) và ${c2.can} ${c2.chi} (${years[1]}). Điểm: ${score}/100. Diễn giải chi tiết. Tiếng Việt, 150 từ.`);
@@ -1343,7 +1573,7 @@
             state = { step: 'gender' };
             botSay('✋ <b>Xem Chỉ Tay</b><br><br>Bạn là:', qa([{ l: '👨 Nam', a: "doPalm('male')" }, { l: '👩 Nữ', a: "doPalm('female')" }]));
         }
-        function doPalm(g) {
+        async function doPalm(g) {
             addMsg('user', g === 'male' ? '👨 Nam' : '👩 Nữ');
             const hand = g === 'male' ? 'tay trái' : 'tay phải';
             const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -1353,12 +1583,26 @@
                 head: ['Dài: Tư duy sâu sắc.', 'Cong: Sáng tạo, nghệ sĩ.', 'Thẳng: Logic, quyết đoán.'],
                 fate: ['Rõ ràng: Mục tiêu rõ ràng.', 'Không có: Tự tạo vận mệnh.', 'Đứt đoạn: Nhiều thay đổi.']
             };
-            botSay(`<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">
-        <b>📏 Đường Sinh Mệnh:</b> ${pick(readings.life)}<br>
-        <b>💕 Đường Tình Duyên:</b> ${pick(readings.heart)}<br>
-        <b>🧠 Đường Trí Não:</b> ${pick(readings.head)}<br>
-        <b>🎯 Đường Số Phận:</b> ${pick(readings.fate)}
-    </div><div class="reading-stars">★★★★☆</div></div>`, 1000);
+            const lifeR = pick(readings.life), heartR = pick(readings.heart), headR = pick(readings.head), fateR = pick(readings.fate);
+            let html = `<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">
+        <b>📏 Đường Sinh Mệnh:</b> ${lifeR}<br>
+        <b>💕 Đường Tình Duyên:</b> ${heartR}<br>
+        <b>🧠 Đường Trí Não:</b> ${headR}<br>
+        <b>🎯 Đường Số Phận:</b> ${fateR}
+    </div><div class="reading-stars">★★★★☆</div></div>`;
+
+            if (GEMINI_KEY) {
+                addMsg('bot', '⏳ AI đang phân tích chỉ tay...', '', 0);
+                const ai = await callAI(`Bạn là nhà chiêm tinh học chuyên về xem chỉ tay. Dựa trên thông tin sau, hãy diễn giải chi tiết về vận mệnh, tính cách, tình yêu, sự nghiệp của người xem. Trả lời tiếng Việt, khoảng 150 từ.
+                Tay: ${hand}
+                Đường Sinh Mệnh: ${lifeR}
+                Đường Tình Duyên: ${heartR}
+                Đường Trí Não: ${headR}
+                Đường Số Phận: ${fateR}`);
+                if (ai) html += `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`;
+            }
+
+            hideTyping(); addMsg('bot', html);
         }
 
         // ==================== PIAN ====================
@@ -1381,7 +1625,7 @@
                 default: handleGeneral(text);
             }
         }
-        function handleGeneral(text) {
+        async function handleGeneral(text) {
             const l = text.toLowerCase();
             if (l.includes('tử vi') || l.includes('tu vi')) startChat('tuvi');
             else if (l.includes('tarot') || l.includes('bói')) startChat('tarot');
@@ -1390,6 +1634,48 @@
             else if (l.includes('mơ') || l.includes('giấc mơ')) startChat('dream');
             else if (l.includes('tình') || l.includes('yêu')) startChat('love');
             else if (l.includes('chỉ tay')) startChat('palm');
+            else if (l.includes('xin chào') || l.includes('hello') || l.includes('chào')) {
+                if (GEMINI_KEY) {
+                    botSay('⏳ ...');
+                    const ai = await callAI(`Bạn là AI Tử Vi & Tarot thông minh, thân thiện. Người dùng chào bạn bằng "${text}". Hãy chào lại một cách tự nhiên, thân thiện bằng tiếng Việt. Giới thiệu ngắn gọn về các khả năng của bạn: xem tử vi, bói tarot, thần số học, giải mã giấc mơ, xem tình yêu, xem chỉ tay.`);
+                    if (ai) { hideTyping(); addMsg('bot', ai.replace(/\n/g, '<br>')); return; }
+                }
+                botSay('Xin chào! 👋 Tôi là AI Tử Vi & Tarot. Tôi có thể giúp bạn xem tử vi, bói tarot, thần số học, giải mã giấc mơ và nhiều hơn nữa!', qa([
+                    { l: '🐉 Xem tử vi', a: "startChat('tuvi')" }, { l: '♈ Cung hoàng đạo', a: "startChat('zodiac')" },
+                    { l: '🃏 Bói tarot', a: "startChat('tarot')" }, { l: '🔢 Thần số học', a: "startChat('numerology')" }
+                ]));
+            }
+            else if (l.includes('cảm ơn') || l.includes('thank')) {
+                if (GEMINI_KEY) {
+                    botSay('⏳ ...');
+                    const ai = await callAI(`Bạn là AI Tử Vi & Tarot. Người dùng cảm ơn bạn bằng "${text}". Hãy đáp lại một cách tự nhiên, thân thiện bằng tiếng Việt.`);
+                    if (ai) { hideTyping(); addMsg('bot', ai.replace(/\n/g, '<br>')); return; }
+                }
+                botSay('Không có gì! 😊 Nếu bạn cần xem thêm bất kỳ gì, hãy cho tôi biết nhé!', qa([
+                    { l: '🐉 Tử vi', a: "startChat('tuvi')" }, { l: '💕 Tình yêu', a: "startChat('love')" },
+                    { l: '💭 Giải mã giấc mơ', a: "startChat('dream')" }
+                ]));
+            }
+            else if (GEMINI_KEY) {
+                botSay('⏳ ...');
+                const ai = await callAI(`Bạn là AI Tử Vi & Tarot thông minh, am hiểu về tử vi, phong thủy, bói toán, tâm linh. Người dùng hỏi: "${text}". Hãy trả lời một cách chi tiết, thân thiện bằng tiếng Việt. Nếu câu hỏi liên quan đến tử vi/tarot/số học, hãy gợi ý người dùng chọn chức năng tương ứng.`);
+                if (ai) {
+                    hideTyping();
+                    let response = ai.replace(/\n/g, '<br>');
+                    response += '<br><br>' + qa([
+                        { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
+                        { l: '🃏 Tarot', a: "startChat('tarot')" }, { l: '🔢 Thần Số Học', a: "startChat('numerology')" },
+                        { l: '💭 Giấc Mơ', a: "startChat('dream')" }, { l: '💕 Tình Yêu', a: "startChat('love')" }
+                    ]);
+                    addMsg('bot', response);
+                    return;
+                }
+                botSay('Tôi có thể giúp bạn!', qa([
+                    { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
+                    { l: '🃏 Tarot', a: "startChat('tarot')" }, { l: '🔢 Thần Số Học', a: "startChat('numerology')" },
+                    { l: '💭 Giấc Mơ', a: "startChat('dream')" }, { l: '💕 Tình Yêu', a: "startChat('love')" }
+                ]));
+            }
             else botSay('Tôi có thể giúp bạn!', qa([
                 { l: '🐉 Tử Vi', a: "startChat('tuvi')" }, { l: '♈ Cung Hoàng Đạo', a: "startChat('zodiac')" },
                 { l: '🃏 Tarot', a: "startChat('tarot')" }, { l: '🔢 Thần Số Học', a: "startChat('numerology')" },
