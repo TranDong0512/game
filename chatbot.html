@@ -818,12 +818,12 @@
     </div>
     <script>
         // ==================== AI CONFIG ====================
-        let GEMINI_KEY = localStorage.getItem('gemini_key') || 'AIzaSyBjfcZIBOeRQcuY3TwYrJCJNiO_SPnfz4g';
+        let GEMINI_KEY = localStorage.getItem('gemini_key') || '';
 
         async function callAI(prompt) {
             if (!GEMINI_KEY) return null;
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -1282,7 +1282,7 @@
                 'Ma Kết': { love: 'Kim Ngưu, Xử Nữ, Bọ Cạp', career: 'Quản lý, tài chính, kiến trúc', health: 'Xương khớp, da, khớp gối', desc: 'Thực tế, kiên nhẫn, tham vọng, có trách nhiệm. Luôn đặt mục tiêu rõ ràng và theo đuổi đến cùng.' },
                 'Bảo Bình': { love: 'Song Tử, Thiên Bình, Nhân Mã', career: 'Công nghệ, khoa học, nhân đạo', health: 'Mắt cá chân, tuần hoàn máu', desc: 'Sáng tạo, độc lập, tư duy cấp tiến, yêu tự do. Luôn đi trước thời đại.' },
                 'Song Ngư': { love: 'Cự Giải, Bọ Crape, Kim Ngưu', career: 'Nghệ thuật, y tế, tâm linh', health: 'Bàn chân, hệ thần kinh', desc: 'Nhạy cảm, giàu trí tưởng tượng, từ bi, dễ đồng cảm. Sống trong thế giới cảm xúc phong phú.' },
-                'Bạch Dương': { love: 'Sư Tử, Nhân Mã, Bảo Bình', career: 'Khởi nghiệp, thể thao, quân đội', health: 'Đầu, cơ bắp, cháy bỏng', desc: 'Dũng cảm, tiên phong, đầy năng lượng, hay竞争. Luôn dẫn đầu và không sợ thử thách.' },
+                'Bạch Dương': { love: 'Sư Tử, Nhân Mã, Bảo Bình', career: 'Khởi nghiệp, thể thao, quân đội', health: 'Đầu, cơ bắp, cháy bỏng', desc: 'Dũng cảm, tiên phong, đầy năng lượng, hay cạnh tranh. Luôn dẫn đầu và không sợ thử thách.' },
                 'Kim Ngưu': { love: 'Xử Nữ, Ma Kết, Cự Giải', career: 'Tài chính, bất động sản, ẩm thực', health: 'Cổ họng, tuyến giáp, cổ', desc: 'Kiên định, thực tế, trung thành, yêu thích sự ổn định và vẻ đẹp.' },
                 'Song Tử': { love: 'Thiên Bình, Bảo Bình, Nhân Mã', career: 'Truyền thông, viết lách, marketing', health: 'Phổi, vai, cánh tay', desc: 'Thông minh, linh hoạt, hài hước, giỏi giao tiếp. Luôn tò mò và thích khám phá.' },
                 'Cự Giải': { love: 'Bọ Cạp, Song Ngư, Kim Ngưu', career: 'Dạy học, y tế, bất động sản', health: 'Dạ dày, ngực, tiêu hóa', desc: 'Tình cảm, bảo vệ gia đình, nhạy cảm, trực giác mạnh. Sống bằng cả trái tim.' },
@@ -1336,7 +1336,7 @@
                 'Song Tử': { best: 'Thiên Bình, Bảo Bình, Nhân Mã', trait: 'Hài hước, thú vị, dễ chán', tip: 'Tìm kiếm người cùng sở thích để duy trì hứng thú' },
                 'Cự Giải': { best: 'Bọ Crape, Song Ngư, Kim Ngưu', trait: 'Bảo thủ, che chở,amily oriented', tip: 'Đừng quábám víu, để đối phương có không gian' },
                 'Sư Tử': { best: 'Bạch Dương, Nhân Mã, Thiên Bình', trait: 'Tự tin, hào phóng, thích được ngưỡng mộ', tip: 'Chia sẻ ánh sáng với đối phương, đừng chiếm spotlight' },
-                'Xử Nữ': { best: 'Kim Ngưu, Ma Kết, Cự Giải', trait: 'Tỉ mỉ, phân tích, haylo挑剔', tip: 'Chấp imperfection, tận hưởng tình yêu tự nhiên' },
+                'Xử Nữ': { best: 'Kim Ngưu, Ma Kết, Cự Giải', trait: 'Tỉ mỉ, phân tích, hay khắt khe', tip: 'Chấp nhận imperfection, tận hưởng tình yêu tự nhiên' },
                 'Thiên Bình': { best: 'Song Tử, Bảo Bình, Sư Tử', trait: 'Hòa nhã, fair, thích beauty', tip: 'Đừng quádo dự, hãy dũng cảm trong tình yêu' },
                 'Bọ Crape': { best: 'Cự Giải, Song Ngư, Ma Kết', trait: 'Đam mê, possessive, depths', tip: 'Học cách trust và buông bỏ kiểm soát' },
                 'Nhân Mã': { best: 'Bạch Dương, Sư Tử, Bảo Bình', trait: 'Tự do, phiêu lưu, honest', tip: 'Tìm người cùng đam mê khám phá thế giới' }
@@ -1596,7 +1596,7 @@
             <div class="reading-stars">${score >= 85 ? '★★★★★' : score >= 70 ? '★★★★☆' : score >= 55 ? '★★★☆☆' : '★★☆☆☆'}</div><br>
             <b>Kết luận:</b> ${verdict}<br><br>
             <b>💡 Lời khuyên:</b><br>
-            ${score >= 80 ? 'Hai bạn rất hợp nhau, hãy珍惜 mối quan hệ này!' : 'Cùng nhau vun đắp, thấu hiểu và sẻ chia sẽ giúp tình yêu bền vững.'}
+            ${score >= 80 ? 'Hai bạn rất hợp nhau, hãy trân trọng mối quan hệ này!' : 'Cùng nhau vun đắp, thấu hiểu và sẻ chia sẽ giúp tình yêu bền vững.'}
         </div></div>`;
                 addMsg('user', input); botSay('⏳ Đang phân tích...', '', 0);
                 if (GEMINI_KEY) {
@@ -1609,40 +1609,207 @@
 
         // ==================== PALM ====================
         function startPalm() {
-            state = { step: 'gender' };
-            botSay('✋ <b>Xem Chỉ Tay</b><br><br>Bạn là:', qa([{ l: '👨 Nam', a: "doPalm('male')" }, { l: '👩 Nữ', a: "doPalm('female')" }]));
+            state = { step: 'hand' };
+            botSay('✋ <b>Xem Chỉ Tay</b><br><br>Để xem chính xác, tôi cần biết thêm thông tin.<br><br>Bạn thuận tay nào?', qa([
+                { l: '🤚 Tay thuận', a: "document.getElementById('inp').value='thuận';sendMsg()" },
+                { l: '🖐️ Tay không thuận', a: "document.getElementById('inp').value='không thuận';sendMsg()" }
+            ]));
         }
-        async function doPalm(g) {
-            addMsg('user', g === 'male' ? '👨 Nam' : '👩 Nữ');
-            const hand = g === 'male' ? 'tay trái' : 'tay phải';
+        function handlePalm(input) {
+            const l = input.toLowerCase();
+            if (state.step === 'hand') {
+                if (l.includes('thuận') || l.includes('trái') || l.includes('phải')) {
+                    state.hand = l.includes('trái') ? 'trái' : 'phải';
+                    if (l.includes('thuận')) {
+                        state.handType = 'thuận';
+                    } else {
+                        state.handType = 'không thuận';
+                    }
+                } else {
+                    state.hand = 'trái';
+                    state.handType = 'thuận';
+                }
+                state.step = 'gender';
+                botSay(`Tay ${state.hand} (${state.handType}).<br><br>Bạn là:`, qa([{ l: '👨 Nam', a: "document.getElementById('inp').value='nam';sendMsg()" }, { l: '👩 Nữ', a: "document.getElementById('inp').value='nữ';sendMsg()" }]));
+            } else if (state.step === 'gender') {
+                if (l.includes('nam') || l.includes('👨')) {
+                    state.gender = 'male';
+                } else {
+                    state.gender = 'female';
+                }
+                state.step = 'birth';
+                botSay(`${state.gender === 'male' ? '👨' : '👩'} Nam/Nữ.<br><br>Nhập <b>ngày sinh</b> (VD: 15/03/1995) để phân tích sâu hơn:`);
+            } else if (state.step === 'birth') {
+                const parts = input.replace(/[^\d\/]/g, '').split(/[\/\-\.]/);
+                if (parts.length < 3) {
+                    botSay('⚠️ Nhập ngày/tháng/năm (VD: 15/03/1995):');
+                    return;
+                }
+                state.day = parseInt(parts[0]);
+                state.month = parseInt(parts[1]);
+                state.year = parseInt(parts[2]);
+                if (isNaN(state.day) || isNaN(state.month) || isNaN(state.year)) {
+                    botSay('⚠️ Định dạng không hợp lệ:');
+                    return;
+                }
+                state.step = 'focus';
+                botSay(`Ngày sinh: <b>${state.day}/${state.month}/${state.year}</b><br><br>Bạn muốn tập trung xem vào vấn đề gì?`, qa([
+                    { l: '💕 Tình yêu', a: "document.getElementById('inp').value='tình yêu';sendMsg()" },
+                    { l: '💼 Sự nghiệp', a: "document.getElementById('inp').value='sự nghiệp';sendMsg()" },
+                    { l: '🏥 Sức khỏe', a: "document.getElementById('inp').value='sức khỏe';sendMsg()" },
+                    { l: '💰 Tài chính', a: "document.getElementById('inp').value='tài chính';sendMsg()" },
+                    { l: '🔮 Tổng quát', a: "document.getElementById('inp').value='tổng quát';sendMsg()" }
+                ]));
+            } else if (state.step === 'focus') {
+                let focus = 'tổng quát';
+                if (l.includes('tình') || l.includes('yêu') || l.includes('💕')) focus = 'tình yêu';
+                else if (l.includes('sự nghiệp') || l.includes('công việc') || l.includes('💼')) focus = 'sự nghiệp';
+                else if (l.includes('sức khỏe') || l.includes('🏥')) focus = 'sức khỏe';
+                else if (l.includes('tài chính') || l.includes('tiền') || l.includes('💰')) focus = 'tài chính';
+                state.focus = focus;
+                state.step = 'ready';
+                doPalmReading();
+            }
+        }
+
+        function genPalmLines() {
             const pick = a => a[Math.floor(Math.random() * a.length)];
-            const readings = {
-                life: ['Dài và sâu: Sức khỏe dồi dào, sống thọ.', 'Ngắn nhưng rõ: Sống chất lượng.', 'Có nhiều nhánh: Cuộc sống đa dạng.'],
-                heart: ['Cong lên: Lãng mạn, lạc quan.', 'Thẳng: Thực tế, lý trí.', 'Dài: Yêu sâu sắc, chung thủy.'],
-                head: ['Dài: Tư duy sâu sắc.', 'Cong: Sáng tạo, nghệ sĩ.', 'Thẳng: Logic, quyết đoán.'],
-                fate: ['Rõ ràng: Mục tiêu rõ ràng.', 'Không có: Tự tạo vận mệnh.', 'Đứt đoạn: Nhiều thay đổi.']
+            const lifeStyles = [
+                { name: 'Dài, sâu và liền mạch', score: 95, desc: 'Sức khỏe tuyệt vời, sống thọ, tràn đầy năng lượng. Người có đường sinh mệnh dài và sâu thường có sức đề kháng tốt, ít ốm đau.' },
+                { name: 'Dài nhưng có vết cắt nhỏ', score: 75, desc: 'Có giai đoạn sức khỏe suy yếu (thường ở giữa cuộc đời), nhưng phục hồi nhanh. Nên chú ý kiểm tra sức khỏe định kỳ.' },
+                { name: 'Ngắn và nông', score: 60, desc: 'Thể chất không mạnh, dễ mệt mỏi. Nên tập thể dục đều đặn và ăn uống lành mạnh để cải thiện.' },
+                { name: 'Có nhiều nhánh hướng lên', score: 85, desc: 'Cuộc sống đa dạng, nhiều trải nghiệm phong phú. Thường có sự thay đổi lớn trong sự nghiệp hoặc nơi ở.' },
+                { name: 'Nằm sâu trong thịt', score: 80, desc: 'Người thực tế, sống nội tâm, có sức khỏe tốt nhưng hay lo lắng. Cần học cách thả lỏng tinh thần.' }
+            ];
+            const heartStyles = [
+                { name: 'Cong đều và dài đến ngón trỏ', score: 90, desc: 'Lãng mạn, biết cách bày tỏ tình yêu. Được nhiều người yêu mến. Đường tình duyên thuận lợi, hôn nhân hạnh phúc.' },
+                { name: 'Thẳng và dài', score: 70, desc: 'Tính thực tế cao trong tình yêu. Có thể khó bày tỏ cảm xúc nhưng rất chung thủy. Tình yêu đến muộn nhưng bền vững.' },
+                { name: 'Nhiều đường nhỏ đan xen', score: 55, desc: 'Có nhiều mối tình phức tạp. Dễ dao động trong tình cảm. Nên tập trung vào một mối quan hệ nghiêm túc.' },
+                { name: 'Cắt ngang đường sinh mệnh', score: 65, desc: 'Từng trải qua đau khổ trong tình yêu. Nhưng chính những trải nghiệm đó giúp bạn trưởng thành và tìm được hạnh phúc thật sự.' },
+                { name: 'Hai đường song song', score: 85, desc: 'Có hai mối tình sâu sắc trong đời. Người thứ hai sẽ là bến đỗ cuối cùng. Tình yêu viên mãn.' }
+            ];
+            const headStyles = [
+                { name: 'Dài, sâu và cong nhẹ', score: 90, desc: 'Tư duy sắc bén, logic mạnh. Thành công trong học thuật và nghiên cứu. Có khả năng phân tích xuất sắc.' },
+                { name: 'Thẳng và ngắn', score: 65, desc: 'Hay quyết định nhanh, đôi khi hấp tấp. Nên suy nghĩ kỹ trước khi hành động. Điểm mạnh là hành động dứt khoát.' },
+                { name: 'Có nhiều nhánh hướng lên', score: 85, desc: 'Sáng tạo, đa năng, thích nghi tốt. Phù hợp nhiều lĩnh vực. Có tài năng về nghệ thuật hoặc ngôn ngữ.' },
+                { name: 'Song song với đường sinh mệnh', score: 80, desc: 'Cân bằng giữa lý trí và cảm xúc. Sống thực tế nhưng vẫn lãng mạn. Được bạn bè tin tưởng.' },
+                { name: 'Nhiều đường cắt ngang', score: 50, desc: 'Hay phân vân, khó tập trung. Nên học cách sắp xếp ưu tiên. Điểm mạnh là đa nhiệm, làm nhiều việc cùng lúc.' }
+            ];
+            const fateStyles = [
+                { name: 'Rõ ràng, liền mạch từ gốc đến gần ngón giữa', score: 95, desc: 'Mục tiêu rõ ràng, sự nghiệp thăng tiến. Thường thành công trước 35 tuổi. Được quý nhân phù trợ.' },
+                { name: 'Có nhiều đường nhỏ bao quanh', score: 80, desc: 'Nhiều cơ hội đến từ nhiều hướng. Cần chọn lọc kỹ để không bỏ lỡ cơ hội tốt.' },
+                { name: 'Đứt đoạn, nhiều lần ngắt quãng', score: 60, desc: 'Nhiều thay đổi trong sự nghiệp. Thỉnh thoảng mất phương hướng. Nhưng mỗi lần thay đổi là một bước tiến mới.' },
+                { name: 'Nằm nông, mờ nhạt', score: 50, desc: 'Chưa tìm được mục đích sống rõ ràng. Nên thử nghiệm nhiều lĩnh vực để tìm ra đam mê thật sự.' },
+                { name: 'Hai đường song song', score: 85, desc: 'Có hai con đường sự nghiệp song song. Thường có thu nhập từ nhiều nguồn. Phù hợp kinh doanh.' }
+            ];
+            const sunStyles = [
+                { name: 'Rõ ràng và sâu', score: 90, desc: 'Có khả năng lãnh đạo bẩm sinh. Thu hút sự chú ý và ngưỡng mộ từ người khác. Sẽ nổi tiếng hoặc có ảnh hưởng.' },
+                { name: 'Mờ nhạt hoặc không có', score: 55, desc: 'Không thích nổi bật, ưa sự bình yên. Cuộc sống ổn định, ít biến động. Hạnh phúc từ những điều giản dị.' },
+                { name: 'Nhiều đường cắt ngang', score: 65, desc: 'Nhiều thay đổi trong danh tiếng. Có thể trải qua giai đoạn khó khăn trước khi thành công.' }
+            ];
+            return {
+                life: pick(lifeStyles),
+                heart: pick(heartStyles),
+                head: pick(headStyles),
+                fate: pick(fateStyles),
+                sun: pick(sunStyles)
             };
-            const lifeR = pick(readings.life), heartR = pick(readings.heart), headR = pick(readings.head), fateR = pick(readings.fate);
+        }
+
+        async function doPalmReading() {
+            const { gender, hand, handType, year, month, day, focus } = state;
+            const cc = calcCanChi(year);
+            const nhamenh = calcNguHanhMenh(cc.element, cc.chiIdx);
+            const lines = genPalmLines();
+            const handLabel = `${hand} ${handType}`;
+            const handSide = (hand === 'trái') ? (gender === 'male' ? 'Tay trái (Tay chủ)' : 'Tay trái (Tay tâm)') : (gender === 'male' ? 'Tay phải (Tay tâm)' : 'Tay phải (Tay chủ)');
+
+            let overallScore = Math.round((lines.life.score + lines.heart.score + lines.head.score + lines.fate.score + lines.sun.score) / 5);
+            let stars = overallScore >= 85 ? '★★★★★' : overallScore >= 70 ? '★★★★☆' : overallScore >= 55 ? '★★★☆☆' : '★★☆☆☆';
+
+            let html = `<div class="reading-box"><div class="reading-title">✋ Bảng Chi Chỉ Tay ${gender === 'male' ? '👨' : '👩'}</div><div class="reading-text">
+        <b>🤚 Tay xem:</b> ${handSide}<br>
+        <b>🎂 Ngày sinh:</b> ${day}/${month}/${year} (${cc.can} ${cc.chi})<br>
+        <b>🔮 Ngũ Hành:</b> ${nhamenh}<br>
+        <b>🎯 Tập trung:</b> ${focus}<br>
+        <b>📊 Điểm tổng:</b> <span class="reading-highlight">${overallScore}/100</span>
+        </div><div class="reading-stars">${stars}</div></div>`;
+
+            html += `<div class="reading-box"><div class="reading-title">📏 Đường Sinh Mệnh</div><div class="reading-text">
+        <b>Đặc điểm:</b> ${lines.life.name}<br>
+        <b>Điểm:</b> ${lines.life.score}/100<br><br>
+        ${lines.life.desc}
+        </div></div>`;
+
+            html += `<div class="reading-box"><div class="reading-title">💕 Đường Tình Duyên</div><div class="reading-text">
+        <b>Đặc điểm:</b> ${lines.heart.name}<br>
+        <b>Điểm:</b> ${lines.heart.score}/100<br><br>
+        ${lines.heart.desc}
+        </div></div>`;
+
+            html += `<div class="reading-box"><div class="reading-title">🧠 Đường Trí Não</div><div class="reading-text">
+        <b>Đặc điểm:</b> ${lines.head.name}<br>
+        <b>Điểm:</b> ${lines.head.score}/100<br><br>
+        ${lines.head.desc}
+        </div></div>`;
+
+            html += `<div class="reading-box"><div class="reading-title">🎯 Đường Số Phận</div><div class="reading-text">
+        <b>Đặc điểm:</b> ${lines.fate.name}<br>
+        <b>Điểm:</b> ${lines.fate.score}/100<br><br>
+        ${lines.fate.desc}
+        </div></div>`;
+
+            html += `<div class="reading-box"><div class="reading-title">☀️ Đường Mặt Trời (Danh Vọng)</div><div class="reading-text">
+        <b>Đặc điểm:</b> ${lines.sun.name}<br>
+        <b>Điểm:</b> ${lines.sun.score}/100<br><br>
+        ${lines.sun.desc}
+        </div></div>`;
+
+            addMsg('bot', '⏳ Đang phân tích chỉ tay...', '', 0);
 
             if (GEMINI_KEY) {
-                const prompt = `Bạn là nhà chiêm tinh học chuyên về xem chỉ tay. Dựa trên thông tin sau, hãy diễn giải chi tiết về vận mệnh, tính cách, tình yêu, sự nghiệp của người xem. Trả lời tiếng Việt, khoảng 150 từ.
-                Tay: ${hand}
-                Đường Sinh Mệnh: ${lifeR}
-                Đường Tình Duyên: ${heartR}
-                Đường Trí Não: ${headR}
-                Đường Số Phận: ${fateR}`;
-                let html = '';
-                await askAI(prompt, ai => { html = `<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
-                hideTyping(); addMsg('bot', html);
-            } else {
-                const html = `<div class="reading-box"><div class="reading-title">✋ Chỉ Tay ${hand}</div><div class="reading-text">
-        <b>📏 Đường Sinh Mệnh:</b> ${lifeR}<br>
-        <b>💕 Đường Tình Duyên:</b> ${heartR}<br>
-        <b>🧠 Đường Trí Não:</b> ${headR}<br>
-        <b>🎯 Đường Số Phận:</b> ${fateR}
-    </div><div class="reading-stars">★★★★☆</div></div>`;
-                hideTyping(); addMsg('bot', html);
+                const focusMap = {
+                    'tình yêu': 'tình yêu, hôn nhân, mối quan hệ',
+                    'sự nghiệp': 'sự nghiệp, công việc, thăng tiến',
+                    'sức khỏe': 'sức khỏe, thể chất, tinh thần',
+                    'tài chính': 'tài chính, tiền bạc, đầu tư',
+                    'tổng quát': 'tổng quát về vận mệnh, tính cách, cuộc sống'
+                };
+                const prompt = `Bạn là nhà chiêm tinh học chuyên về xem chỉ tay (palmistry) với hơn 20 năm kinh nghiệm. Hãy diễn giải chi tiết về bàn tay sau:
+
+THÔNG TIN CÁ NHÂN:
+- Giới tính: ${gender === 'male' ? 'Nam' : 'Nữ'}
+- Ngày sinh: ${day}/${month}/${year} (${cc.can} ${cc.chi}, Ngũ Hành: ${nhamenh})
+- Tay xem: ${handSide}
+- Vấn đề quan tâm: ${focusMap[focus] || focus}
+
+KẾT QUẢ PHÂN TÍCH CHỈ TAY:
+1. Đường Sinh Mệnh: ${lines.life.name} (${lines.life.score}/100) - ${lines.life.desc}
+2. Đường Tình Duyên: ${lines.heart.name} (${lines.heart.score}/100) - ${lines.heart.desc}
+3. Đường Trí Não: ${lines.head.name} (${lines.head.score}/100) - ${lines.head.desc}
+4. Đường Số Phận: ${lines.fate.name} (${lines.fate.score}/100) - ${lines.fate.desc}
+5. Đường Mặt Trời: ${lines.sun.name} (${lines.sun.score}/100) - ${lines.sun.desc}
+
+YÊU CẦU:
+- Diễn giải tổng hợp và đưa ra nhận định sâu sắc
+- Tập trung phân tích chủ đề "${focusMap[focus] || focus}"
+- Kết hợp thông tin từ chỉ văn và ngũ hành Can Chi
+- Đưa ra lời khuyên cụ thể, khả thi
+- Trả lời tiếng Việt, khoảng 300 từ, giọng điệu huyền bí nhưng dễ hiểu`;
+
+                let aiHtml = '';
+                await askAI(prompt, ai => { aiHtml = `<div class="reading-box"><div class="reading-title">🤖 AI Diễn Giải ${focus}</div><div class="reading-text">${ai.replace(/\n/g, '<br>')}</div></div>`; });
+                if (aiHtml) html += aiHtml;
             }
+
+            hideTyping();
+            addMsg('bot', html);
+            setTimeout(() => addMsg('bot', 'Bạn muốn xem thêm gì?', qa([
+                { l: '✋ Xem lại', a: "startChat('palm')" },
+                { l: '🔮 Tử vi', a: "startChat('tuvi')" },
+                { l: '💕 Tình yêu', a: "startChat('love')" },
+                { l: '💭 Giải mã giấc mơ', a: "startChat('dream')" }
+            ])), 2000);
         }
 
         // ==================== PIAN ====================
@@ -1661,7 +1828,7 @@
                     break;
                 case 'dream': handleDream(text); break;
                 case 'love': handleLove(text); break;
-                case 'palm': botSay('Chọn giới tính ở trên.'); break;
+                case 'palm': handlePalm(text); break;
                 default: handleGeneral(text);
             }
         }
