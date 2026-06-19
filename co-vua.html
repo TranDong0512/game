@@ -531,21 +531,21 @@ function drawBoard() {
     for (let c=0;c<8;c++) {
       const x=c*CELL, y=r*CELL;
       const light=(r+c)%2===0;
-      ctx.fillStyle=light?'#f0d9b5':'#b58863';
+      ctx.fillStyle=light?'#f5e6c8':'#8b5a2b';
       ctx.fillRect(x,y,CELL,CELL);
     }
   }
 
   // Last move highlight
   if (lastMove) {
-    ctx.fillStyle='rgba(255,255,0,0.25)';
+    ctx.fillStyle='rgba(255,255,0,0.18)';
     ctx.fillRect(lastMove.fc*CELL,lastMove.fr*CELL,CELL,CELL);
     ctx.fillRect(lastMove.tc*CELL,lastMove.tr*CELL,CELL,CELL);
   }
 
   // Selected highlight
   if (selected) {
-    ctx.fillStyle='rgba(0,200,100,0.3)';
+    ctx.fillStyle='rgba(0,200,100,0.22)';
     ctx.fillRect(selected.c*CELL,selected.r*CELL,CELL,CELL);
   }
 
@@ -554,7 +554,7 @@ function drawBoard() {
     const cx=m.c*CELL+CELL/2, cy=m.r*CELL+CELL/2;
     if (board[m.r][m.c]) {
       // Capture: corner triangles
-      ctx.fillStyle='rgba(255,0,0,0.3)';
+      ctx.fillStyle='rgba(255,0,0,0.22)';
       const s=12;
       // top-left
       ctx.beginPath();ctx.moveTo(m.c*CELL,m.r*CELL);ctx.lineTo(m.c*CELL+s,m.r*CELL);ctx.lineTo(m.c*CELL,m.r*CELL+s);ctx.fill();
@@ -565,14 +565,14 @@ function drawBoard() {
       // bottom-right
       ctx.beginPath();ctx.moveTo((m.c+1)*CELL,(m.r+1)*CELL);ctx.lineTo((m.c+1)*CELL-s,(m.r+1)*CELL);ctx.lineTo((m.c+1)*CELL,(m.r+1)*CELL-s);ctx.fill();
     } else {
-      ctx.fillStyle='rgba(0,0,0,0.15)';
+      ctx.fillStyle='rgba(0,0,0,0.1)';
       ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);ctx.fill();
     }
   }
 
   // En passant highlight
   if (enPassant && selected) {
-    ctx.fillStyle='rgba(255,100,0,0.25)';
+    ctx.fillStyle='rgba(255,100,0,0.18)';
     ctx.fillRect(enPassant.c*CELL,enPassant.r*CELL,CELL,CELL);
   }
 
