@@ -378,7 +378,7 @@ button:active { transform: scale(0.95); }
       </button>
     </div>
     <br>
-    <button onclick="document.getElementById('diffScreen').classList.remove('show')" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">↩ Quay lại</button>
+    <button onclick="document.getElementById('diffScreen').classList.remove('show');document.getElementById('menuScreen').classList.remove('hidden')" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">↩ Quay lại</button>
   </div>
 </div>
 
@@ -399,7 +399,7 @@ button:active { transform: scale(0.95); }
       </button>
     </div>
     <br>
-    <button onclick="document.getElementById('timerScreen').classList.remove('show')" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">↩ Quay lại</button>
+    <button onclick="document.getElementById('timerScreen').classList.remove('show');document.getElementById('menuScreen').classList.remove('hidden')" style="background:linear-gradient(180deg,#555,#333);border-color:#777;color:#ddd;">↩ Quay lại</button>
   </div>
 </div>
 
@@ -532,9 +532,11 @@ const ctx = canvas.getContext('2d');
 
 // ==================== MENU ====================
 function showDiffSelect() {
+  document.getElementById('menuScreen').classList.add('hidden');
   document.getElementById('diffScreen').classList.add('show');
 }
 function showTimerSelect() {
+  document.getElementById('menuScreen').classList.add('hidden');
   document.getElementById('timerScreen').classList.add('show');
 }
 
@@ -1218,7 +1220,8 @@ canvas.addEventListener('click', (e) => {
   if (!isPvP && currentTurn!==RED) return;
 
   const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+  const x=(e.clientX-rect.left)*scaleX, y=(e.clientY-rect.top)*scaleY;
   const col=Math.round((x-PAD)/CELL), row=Math.round((y-PAD)/CELL);
   if (!isInBoard(row,col)) return;
 
