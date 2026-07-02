@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minh họa Video Segment Streaming</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 30px; font-size: 24px; }
+
+        /* Timeline */
+        .timeline-section { margin-bottom: 30px; }
+        .timeline-section h3 { margin-bottom: 12px; font-size: 16px; color: #aaa; }
+        .timeline {
+            position: relative;
+            height: 60px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .timeline-progress {
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            background: rgba(255, 68, 68, 0.3);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        .timeline-cursor {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 3px;
+            background: #ff4444;
+            box-shadow: 0 0 8px #ff4444;
+            left: 0%;
+            transition: left 0.1s linear;
+            z-index: 2;
+        }
+        .timeline-markers {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            z-index: 1;
+        }
+        .segment-marker {
+            flex: 1;
+            border-right: 2px dashed #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #555;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .segment-marker:last-child { border-right: none; }
+        .segment-marker:hover { background: rgba(255,255,255,0.05); }
+        .segment-marker.active { color: #fff; font-weight: bold; }
+        .segment-marker.downloaded { color: #4ade80; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-play { background: #4ade80; color: #000; }
+        .btn-play:hover { background: #22c55e; }
+        .btn-pause { background: #fbbf24; color: #000; }
+        .btn-pause:hover { background: #f59e0b; }
+        .btn-reset { background: #666; color: #fff; }
+        .btn-reset:hover { background: #888; }
+        .btn-seek { background: #60a5fa; color: #000; }
+        .btn-seek:hover { background: #3b82f6; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Segment Cards */
+        .segments-section { margin-bottom: 30px; }
+        .segments-section h3 { margin-bottom: 12px; font-size: 16px; color: #aaa; }
+        .segments-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .segment-card {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            border: 2px solid #333;
+            transition: all 0.3s;
+        }
+        .segment-card.buffering {
+            border-color: #fbbf24;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        .segment-card.playing {
+            border-color: #4ade80;
+            background: #1a2a1a;
+        }
+        .segment-card.played {
+            border-color: #333;
+            opacity: 0.5;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .segment-card .seg-id { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+        .segment-card .seg-time { font-size: 12px; color: #888; margin-bottom: 8px; }
+        .segment-card .seg-status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .seg-status.pending { background: #333; color: #888; }
+        .seg-status.buffering { background: #4a3a00; color: #fbbf24; }
+        .seg-status.ready { background: #0a3a0a; color: #4ade80; }
+        .seg-status.playing { background: #0a3a0a; color: #4ade80; }
+        .seg-status.played { background: #222; color: #666; }
+
+        .seg-progress {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .seg-progress .fill {
+            height: 100%;
+            background: #fbbf24;
+            width: 0%;
+            transition: width 0.2s;
+        }
+
+        /* Console Log */
+        .console-section { margin-bottom: 30px; }
+        .console-section h3 { margin-bottom: 12px; font-size: 16px; color: #aaa; }
+        .console {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 10px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            padding: 12px;
+        }
+        .log-entry { margin-bottom: 4px; line-height: 1.6; }
+        .log-time { color: #555; }
+        .log-action { font-weight: bold; }
+        .log-download { color: #60a5fa; }
+        .log-play { color: #4ade80; }
+        .log-buffer { color: #fbbf24; }
+        .log-seek { color: #c084fc; }
+        .log-info { color: #888; }
+
+        /* Info */
+        .info-box {
+            background: #1a1a2a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #aaa;
+        }
+        .info-box strong { color: #fff; }
+
+        /* Speed control */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .speed-control input[type=range] {
+            flex: 1;
+            accent-color: #ff4444;
+        }
+        .speed-value {
+            background: #333;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            min-width: 60px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Minh họa: Video Segment Streaming</h1>
+
+        <div class="info-box">
+            <strong>Cách hoạt động:</strong><br>
+            1. Khi bạn bấm <strong>Phát</strong>, browser bắt đầu <strong>tải segment 1</strong><br>
+            2. Khi segment 1 gần hết → browser tự động <strong>tải segment 2</strong> (pre-buffer)<br>
+            3. Nếu bạn <strong>nhảy đến giây 35</strong> → browser tính ra segment 4 → <strong>tải segment 4</strong> luôn<br>
+            4. Tốc độ tải giả lập có thể điều chỉnh để thấy rõ hơn
+        </div>
+
+        <div class="speed-control">
+            <span>Tốc độ tải:</span>
+            <input type="range" id="speedSlider" min="1" max="10" value="3">
+            <span class="speed-value" id="speedLabel">3x</span>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline-section">
+            <h3>Timeline (kéo để nhảy đến giây bất kỳ)</h3>
+            <div class="timeline" id="timeline">
+                <div class="timeline-progress" id="timelineProgress"></div>
+                <div class="timeline-cursor" id="timelineCursor"></div>
+                <div class="timeline-markers" id="timelineMarkers"></div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-play" id="btnPlay">▶ Phát</button>
+            <button class="btn btn-pause" id="btnPause" disabled>⏸ Tạm dừng</button>
+            <button class="btn btn-reset" id="btnReset">↺ Reset</button>
+            <button class="btn btn-seek" onclick="seekTo(5)">Nhảy 5s</button>
+            <button class="btn btn-seek" onclick="seekTo(15)">Nhảy 15s</button>
+            <button class="btn btn-seek" onclick="seekTo(25)">Nhảy 25s</button>
+            <button class="btn btn-seek" onclick="seekTo(35)">Nhảy 35s</button>
+            <button class="btn btn-seek" onclick="seekTo(45)">Nhảy 45s</button>
+            <button class="btn btn-seek" onclick="seekTo(55)">Nhảy 55s</button>
+        </div>
+
+        <!-- Segment Cards -->
+        <div class="segments-section">
+            <h3>6 Segment (mỗi segment = 10s)</h3>
+            <div class="segments-grid" id="segmentsGrid"></div>
+        </div>
+
+        <!-- Console -->
+        <div class="console-section">
+            <h3>Console (xem browser đang làm gì)</h3>
+            <div class="console" id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_DURATION = 60;
+        const SEGMENT_COUNT = 6;
+        const SEGMENT_DURATION = TOTAL_DURATION / SEGMENT_COUNT;
+
+        let playing = false;
+        let currentTime = 0;
+        let playInterval = null;
+        let segments = [];
+        let downloadTimers = {};
+
+        const consoleEl = document.getElementById('console');
+        const timeline = document.getElementById('timeline');
+        const timelineProgress = document.getElementById('timelineProgress');
+        const timelineCursor = document.getElementById('timelineCursor');
+        const segmentsGrid = document.getElementById('segmentsGrid');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabel = document.getElementById('speedLabel');
+
+        // Init segments
+        for (let i = 0; i < SEGMENT_COUNT; i++) {
+            segments.push({
+                id: i,
+                startTime: i * SEGMENT_DURATION,
+                endTime: (i + 1) * SEGMENT_DURATION,
+                status: 'pending',  // pending, buffering, ready, playing, played
+                progress: 0
+            });
+        }
+
+        // Build timeline markers
+        function buildTimeline() {
+            const markers = document.getElementById('timelineMarkers');
+            markers.innerHTML = '';
+            for (let i = 0; i < SEGMENT_COUNT; i++) {
+                const m = document.createElement('div');
+                m.className = 'segment-marker';
+                m.id = 'marker-' + i;
+                m.textContent = `${i * SEGMENT_DURATION}-${(i + 1) * SEGMENT_DURATION}s`;
+                m.onclick = (e) => {
+                    const rect = timeline.getBoundingClientRect();
+                    const pct = (e.clientX - rect.left) / rect.width;
+                    seekTo(pct * TOTAL_DURATION);
+                };
+                markers.appendChild(m);
+            }
+        }
+
+        // Build segment cards
+        function buildSegmentCards() {
+            segmentsGrid.innerHTML = '';
+            segments.forEach((seg, i) => {
+                const card = document.createElement('div');
+                card.className = 'segment-card';
+                card.id = 'seg-card-' + i;
+                card.innerHTML = `
+                    <div class="seg-id">Segment ${i + 1}</div>
+                    <div class="seg-time">${seg.startTime}s - ${seg.endTime}s</div>
+                    <div class="seg-status pending" id="seg-status-${i}">Chờ tải</div>
+                    <div class="seg-progress"><div class="fill" id="seg-fill-${i}"></div></div>
+                `;
+                card.onclick = () => seekTo(seg.startTime + 1);
+                segmentsGrid.appendChild(card);
+            });
+        }
+
+        // Logging
+        function log(action, text, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString('vi-VN');
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-action log-${type}">${action}</span> ${text}`;
+            consoleEl.prepend(entry);
+        }
+
+        // Get current segment index
+        function getCurrentSegmentIndex(time) {
+            return Math.floor(time / SEGMENT_DURATION);
+        }
+
+        // Download a segment (simulated)
+        function downloadSegment(index) {
+            if (index < 0 || index >= SEGMENT_COUNT) return;
+            const seg = segments[index];
+            if (seg.status === 'ready' || seg.status === 'playing' || seg.status === 'played') return;
+            if (seg.status === 'buffering') return;
+
+            seg.status = 'buffering';
+            seg.progress = 0;
+            updateSegmentUI(index);
+
+            log('TẢI', `Bắt đầu tải Segment ${index + 1} (${seg.startTime}s-${seg.endTime}s)`, 'download');
+
+            // Simulate download progress
+            const speed = parseInt(speedSlider.value);
+            const interval = 100 / (speed * 5);
+            let pct = 0;
+
+            if (downloadTimers[index]) clearInterval(downloadTimers[index]);
+
+            downloadTimers[index] = setInterval(() => {
+                pct += speed * 3 + Math.random() * 5;
+                if (pct >= 100) {
+                    pct = 100;
+                    clearInterval(downloadTimers[index]);
+                    seg.progress = 100;
+                    seg.status = 'ready';
+                    updateSegmentUI(index);
+                    log('SẴN SÀNG', `Segment ${index + 1} đã tải xong ✓`, 'buffer');
+                } else {
+                    seg.progress = pct;
+                    updateSegmentUI(index);
+                }
+            }, 80);
+        }
+
+        // Update segment card UI
+        function updateSegmentUI(index) {
+            const seg = segments[index];
+            const card = document.getElementById('seg-card-' + index);
+            const status = document.getElementById('seg-status-' + index);
+            const fill = document.getElementById('seg-fill-' + index);
+            const marker = document.getElementById('marker-' + index);
+
+            card.className = 'segment-card';
+            status.className = 'seg-status ' + seg.status;
+
+            const statusText = {
+                pending: 'Chờ tải',
+                buffering: 'Đang tải...',
+                ready: 'Sẵn sàng',
+                playing: 'Đang phát',
+                played: 'Đã phát xong'
+            };
+            status.textContent = statusText[seg.status] || seg.status;
+            fill.style.width = seg.progress + '%';
+
+            if (seg.status === 'buffering') card.classList.add('buffering');
+            else if (seg.status === 'playing') card.classList.add('playing');
+            else if (seg.status === 'played') card.classList.add('played');
+
+            marker.className = 'segment-marker';
+            if (seg.status === 'playing') marker.classList.add('active');
+            if (seg.status === 'ready' || seg.status === 'playing' || seg.status === 'played') marker.classList.add('downloaded');
+        }
+
+        // Update timeline
+        function updateTimeline() {
+            const pct = (currentTime / TOTAL_DURATION) * 100;
+            timelineProgress.style.width = pct + '%';
+            timelineCursor.style.left = pct + '%';
+        }
+
+        // Play
+        function play() {
+            if (playing) return;
+            if (currentTime >= TOTAL_DURATION) currentTime = 0;
+
+            playing = true;
+            document.getElementById('btnPlay').disabled = true;
+            document.getElementById('btnPause').disabled = false;
+
+            const segIdx = getCurrentSegmentIndex(currentTime);
+            log('PHÁT', `Bắt đầu phát từ giây ${currentTime.toFixed(1)} (Segment ${segIdx + 1})`, 'play');
+
+            // Ensure current segment is downloaded
+            downloadSegment(segIdx);
+            // Pre-buffer next segment
+            if (segIdx + 1 < SEGMENT_COUNT) downloadSegment(segIdx + 1);
+
+            // Mark current as playing
+            segments.forEach((s, i) => {
+                if (s.status === 'playing') {
+                    s.status = 'played';
+                    updateSegmentUI(i);
+                }
+            });
+            segments[segIdx].status = 'playing';
+            updateSegmentUI(segIdx);
+
+            playInterval = setInterval(() => {
+                currentTime += 0.1;
+                if (currentTime >= TOTAL_DURATION) {
+                    currentTime = TOTAL_DURATION;
+                    pause();
+                    log('HOÀN THÀNH', 'Phát xong toàn bộ video ✓', 'play');
+                    return;
+                }
+
+                updateTimeline();
+
+                const newSegIdx = getCurrentSegmentIndex(currentTime);
+                if (newSegIdx !== segIdx) {
+                    // Segment changed
+                    segments[segIdx].status = 'played';
+                    updateSegmentUI(segIdx);
+
+                    segments[newSegIdx].status = 'playing';
+                    updateSegmentUI(newSegIdx);
+
+                    log('CHUYỂN SEGMENT', `→ Segment ${newSegIdx + 1} (giây ${currentTime.toFixed(1)})`, 'play');
+
+                    // Pre-buffer next
+                    if (newSegIdx + 1 < SEGMENT_COUNT) {
+                        downloadSegment(newSegIdx + 1);
+                    }
+
+                    // Check if buffer needed
+                    downloadSegment(newSegIdx);
+                }
+            }, 100);
+        }
+
+        // Pause
+        function pause() {
+            playing = false;
+            clearInterval(playInterval);
+            document.getElementById('btnPlay').disabled = false;
+            document.getElementById('btnPause').disabled = true;
+            log('TẠM DỪNG', `Dừng tại giây ${currentTime.toFixed(1)}`, 'info');
+        }
+
+        // Seek
+        function seekTo(time) {
+            const wasPlaying = playing;
+            if (playing) pause();
+
+            const oldSeg = getCurrentSegmentIndex(currentTime);
+            currentTime = Math.max(0, Math.min(time, TOTAL_DURATION));
+            const newSeg = getCurrentSegmentIndex(currentTime);
+
+            log('SEEK', `Nhảy từ giây ${((oldSeg * SEGMENT_DURATION)).toFixed(0)} → giây ${currentTime.toFixed(1)} (Segment ${newSeg + 1})`, 'seek');
+
+            // Reset all segment statuses
+            segments.forEach((s, i) => {
+                if (s.status === 'playing' || s.status === 'played') {
+                    s.status = 'ready';
+                    updateSegmentUI(i);
+                }
+            });
+
+            // Download target segment
+            downloadSegment(newSeg);
+            // Pre-buffer next
+            if (newSeg + 1 < SEGMENT_COUNT) downloadSegment(newSeg + 1);
+
+            segments[newSeg].status = 'playing';
+            updateSegmentUI(newSeg);
+            updateTimeline();
+
+            if (wasPlaying) play();
+        }
+
+        // Reset
+        function resetAll() {
+            pause();
+            currentTime = 0;
+            Object.keys(downloadTimers).forEach(k => clearInterval(downloadTimers[k]));
+            downloadTimers = {};
+            segments.forEach((s, i) => {
+                s.status = 'pending';
+                s.progress = 0;
+                updateSegmentUI(i);
+            });
+            updateTimeline();
+            consoleEl.innerHTML = '';
+            log('RESET', 'Đã reset toàn bộ', 'info');
+        }
+
+        // Speed slider
+        speedSlider.oninput = () => {
+            speedLabel.textContent = speedSlider.value + 'x';
+        };
+
+        // Timeline click
+        timeline.onclick = (e) => {
+            const rect = timeline.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            seekTo(pct * TOTAL_DURATION);
+        };
+
+        // Buttons
+        document.getElementById('btnPlay').onclick = play;
+        document.getElementById('btnPause').onclick = pause;
+        document.getElementById('btnReset').onclick = resetAll;
+
+        // Init
+        buildTimeline();
+        buildSegmentCards();
+        updateTimeline();
+        log('KHỞI TẠO', 'Video 60s, chia 6 segment x 10s. Nhấn "Phát" để bắt đầu.', 'info');
+    </script>
+</body>
+</html>

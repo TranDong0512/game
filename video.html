@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload & Xem Video</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+        h1 { text-align: center; padding: 30px 0; font-size: 28px; }
+
+        /* API Console */
+        .api-console {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        .api-console-header {
+            background: #1a1a1a;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .api-console-header h3 { font-size: 14px; color: #aaa; }
+        .api-console-header span { font-size: 12px; color: #666; }
+        .api-console-body {
+            max-height: 250px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            padding: 12px 16px;
+        }
+        .api-log { margin-bottom: 6px; line-height: 1.5; }
+        .api-log .method {
+            font-weight: bold;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 6px;
+        }
+        .method-get { background: #1a3a1a; color: #4ade80; }
+        .method-post { background: #1a2a3a; color: #60a5fa; }
+        .method-delete { background: #3a1a1a; color: #f87171; }
+        .api-log .status { margin-left: 8px; font-size: 12px; }
+        .status-ok { color: #4ade80; }
+        .status-err { color: #f87171; }
+        .api-log .time { color: #555; font-size: 11px; margin-left: 6px; }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 3px dashed #555;
+            border-radius: 16px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #1a1a1a;
+            margin-bottom: 30px;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #ff4444;
+            background: #2a1a1a;
+        }
+        .upload-zone .icon { font-size: 64px; margin-bottom: 16px; }
+        .upload-zone p { font-size: 18px; color: #aaa; margin-bottom: 8px; }
+        .upload-zone span { font-size: 14px; color: #666; }
+        .upload-zone input { display: none; }
+
+        /* Video List */
+        .video-list { display: flex; flex-direction: column; gap: 20px; }
+
+        .video-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .video-card:hover { transform: translateY(-2px); }
+        .video-card video { width: 100%; max-height: 500px; background: #000; }
+        .video-info {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .video-name {
+            font-size: 16px; font-weight: 500;
+            overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; max-width: 70%;
+        }
+        .video-meta { font-size: 13px; color: #888; }
+        .video-id { font-size: 11px; color: #555; font-family: monospace; }
+
+        .btn-delete {
+            background: #ff4444; color: #fff; border: none;
+            padding: 8px 16px; border-radius: 8px;
+            cursor: pointer; font-size: 14px; transition: background 0.2s;
+        }
+        .btn-delete:hover { background: #cc0000; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #555; }
+        .empty-state .icon { font-size: 80px; margin-bottom: 16px; }
+
+        .progress-bar { width: 100%; height: 4px; background: #333; display: none; }
+        .progress-bar .fill {
+            height: 100%; background: #ff4444;
+            width: 0%; transition: width 0.3s;
+        }
+        .video-card.uploading .progress-bar { display: block; }
+        .video-card.uploading video { opacity: 0.5; }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .loading-overlay.active { display: flex; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #333; border-top-color: #ff4444;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Video Upload & Player</h1>
+
+        <!-- API Console -->
+        <div class="api-console">
+            <div class="api-console-header" onclick="toggleConsole()">
+                <h3>API Console (mô phỏng server)</h3>
+                <span>▼ click to toggle</span>
+            </div>
+            <div class="api-console-body" id="apiConsole"></div>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+            <div class="icon">🎬</div>
+            <p>Kéo thả video vào đây</p>
+            <span>hoặc nhấn để chọn file</span>
+            <input type="file" id="fileInput" accept="video/*" multiple>
+        </div>
+
+        <div class="video-list" id="videoList"></div>
+
+        <div class="empty-state" id="emptyState">
+            <div class="icon">🎥</div>
+            <p>Chưa có video nào. Hãy upload video để bắt đầu!</p>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+    // ========================
+    // MOCK SERVER (localStorage)
+    // ========================
+    const DB_KEY = 'video_server_db';
+
+    function dbGetAll() {
+        const raw = localStorage.getItem(DB_KEY);
+        return raw ? JSON.parse(raw) : [];
+    }
+
+    function dbSave(videos) {
+        localStorage.setItem(DB_KEY, JSON.stringify(videos));
+    }
+
+    function dbGenerateId() {
+        return 'vid_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    }
+
+    // Simulate network delay
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ========================
+    // MOCK API ENDPOINTS
+    // ========================
+    const VideoAPI = {
+        // POST /api/videos — upload video (store as base64 in localStorage)
+        async upload(file, onProgress) {
+            const startTime = performance.now();
+
+            // Validate
+            if (!file.type.startsWith('video/')) {
+                throw { status: 400, message: 'File không phải là video' };
+            }
+
+            const maxSize = 5 * 1024 * 1024; // 5MB limit for localStorage demo
+            if (file.size > maxSize) {
+                throw { status: 413, message: `File quá lớn (tối đa ${maxSize / 1024 / 1024}MB cho demo)` };
+            }
+
+            // Simulate upload progress
+            await new Promise((resolve) => {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 25 + 10;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        if (onProgress) onProgress(100);
+                        resolve();
+                    }
+                    if (onProgress) onProgress(Math.min(progress, 100));
+                }, 300);
+            });
+
+            // Convert file to base64
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            // Save to "database"
+            const video = {
+                id: dbGenerateId(),
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: base64,
+                createdAt: new Date().toISOString()
+            };
+
+            const videos = dbGetAll();
+            videos.push(video);
+            dbSave(videos);
+
+            const elapsed = (performance.now() - startTime).toFixed(0);
+            logAPI('POST', '/api/videos', 201, elapsed + 'ms');
+
+            return {
+                status: 201,
+                data: { id: video.id, name: video.name, size: video.size, type: video.type, createdAt: video.createdAt }
+            };
+        },
+
+        // GET /api/videos — list all videos
+        async list() {
+            await delay(300 + Math.random() * 400);
+            const videos = dbGetAll();
+            const elapsed = (300 + Math.random() * 400).toFixed(0);
+
+            logAPI('GET', '/api/videos', 200, elapsed + 'ms');
+
+            return {
+                status: 200,
+                data: videos.map(v => ({
+                    id: v.id,
+                    name: v.name,
+                    size: v.size,
+                    type: v.type,
+                    createdAt: v.createdAt
+                }))
+            };
+        },
+
+        // GET /api/videos/:id — get single video with data
+        async get(id) {
+            await delay(200 + Math.random() * 300);
+            const videos = dbGetAll();
+            const video = videos.find(v => v.id === id);
+
+            if (!video) {
+                logAPI('GET', `/api/videos/${id}`, 404, '0ms');
+                throw { status: 404, message: 'Không tìm thấy video' };
+            }
+
+            const elapsed = (200 + Math.random() * 300).toFixed(0);
+            logAPI('GET', `/api/videos/${id}`, 200, elapsed + 'ms');
+
+            return { status: 200, data: video };
+        },
+
+        // DELETE /api/videos/:id
+        async delete(id) {
+            await delay(200 + Math.random() * 200);
+            let videos = dbGetAll();
+            const before = videos.length;
+            videos = videos.filter(v => v.id !== id);
+
+            if (videos.length === before) {
+                logAPI('DELETE', `/api/videos/${id}`, 404, '0ms');
+                throw { status: 404, message: 'Không tìm thấy video' };
+            }
+
+            dbSave(videos);
+            const elapsed = (200 + Math.random() * 200).toFixed(0);
+            logAPI('DELETE', `/api/videos/${id}`, 200, elapsed + 'ms');
+
+            return { status: 200, message: 'Đã xóa video' };
+        }
+    };
+
+    // ========================
+    // UI LOGIC
+    // ========================
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const videoList = document.getElementById('videoList');
+    const emptyState = document.getElementById('emptyState');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const apiConsole = document.getElementById('apiConsole');
+
+    let currentVideos = [];
+
+    function toggleConsole() {
+        const body = apiConsole.nextElementSibling;
+        body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function logAPI(method, endpoint, status, time) {
+        const methodClass = method === 'GET' ? 'method-get' : method === 'POST' ? 'method-post' : 'method-delete';
+        const statusClass = status < 400 ? 'status-ok' : 'status-err';
+        const div = document.createElement('div');
+        div.className = 'api-log';
+        div.innerHTML = `
+            <span class="method ${methodClass}">${method}</span>
+            <span>${endpoint}</span>
+            <span class="status ${statusClass}">${status}</span>
+            <span class="time">${time}</span>
+        `;
+        apiConsole.prepend(div);
+    }
+
+    function showLoading() { loadingOverlay.classList.add('active'); }
+    function hideLoading() { loadingOverlay.classList.remove('active'); }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+        return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+
+    function formatTime(iso) {
+        return new Date(iso).toLocaleString('vi-VN');
+    }
+
+    function updateEmptyState() {
+        emptyState.style.display = currentVideos.length === 0 ? 'block' : 'none';
+    }
+
+    // Upload zone events
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); fileInput.value = ''; });
+
+    async function handleFiles(files) {
+        for (const file of files) {
+            if (!file.type.startsWith('video/')) continue;
+            await uploadVideo(file);
+        }
+    }
+
+    async function uploadVideo(file) {
+        const tempId = 'temp_' + Date.now();
+        const tempUrl = URL.createObjectURL(file);
+
+        // Show card with progress immediately
+        const card = document.createElement('div');
+        card.className = 'video-card uploading';
+        card.dataset.tempId = tempId;
+        card.innerHTML = `
+            <div class="progress-bar"><div class="fill"></div></div>
+            <video controls preload="metadata" src="${tempUrl}"></video>
+            <div class="video-info">
+                <div>
+                    <div class="video-name">${file.name}</div>
+                    <div class="video-meta">${formatSize(file.size)}</div>
+                </div>
+                <button class="btn-delete" disabled>Đang tải lên...</button>
+            </div>
+        `;
+        videoList.prepend(card);
+        updateEmptyState();
+
+        const fill = card.querySelector('.fill');
+        const btn = card.querySelector('.btn-delete');
+
+        try {
+            const res = await VideoAPI.upload(file, (pct) => {
+                fill.style.width = pct + '%';
+            });
+
+            URL.revokeObjectURL(tempUrl);
+
+            // Replace temp blob URL with real base64 from "server"
+            const videoRes = await VideoAPI.get(res.data.id);
+            const videoSrc = videoRes.data.data;
+
+            card.querySelector('video').src = videoSrc;
+            card.classList.remove('uploading');
+            card.dataset.id = res.data.id;
+            btn.disabled = false;
+            btn.textContent = 'Xóa';
+
+            currentVideos.unshift({
+                id: res.data.id,
+                name: res.data.name,
+                size: res.data.size,
+                type: res.data.type,
+                createdAt: res.data.createdAt,
+                src: videoSrc
+            });
+
+            btn.addEventListener('click', () => deleteVideo(res.data.id, card));
+        } catch (err) {
+            card.remove();
+            updateEmptyState();
+            alert('Lỗi upload: ' + (err.message || 'Không xác định'));
+        }
+    }
+
+    async function deleteVideo(id, card) {
+        if (!confirm('Xóa video này?')) return;
+
+        showLoading();
+        try {
+            await VideoAPI.delete(id);
+            currentVideos = currentVideos.filter(v => v.id !== id);
+            card.remove();
+            updateEmptyState();
+        } catch (err) {
+            alert('Lỗi xóa: ' + err.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function loadVideos() {
+        showLoading();
+        try {
+            const res = await VideoAPI.list();
+            videoList.innerHTML = '';
+            currentVideos = [];
+
+            for (const meta of res.data) {
+                const detail = await VideoAPI.get(meta.id);
+                currentVideos.push({ ...meta, src: detail.data.data });
+
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                card.dataset.id = meta.id;
+                card.innerHTML = `
+                    <video controls preload="metadata" src="${detail.data.data}"></video>
+                    <div class="video-info">
+                        <div>
+                            <div class="video-name">${meta.name}</div>
+                            <div class="video-meta">${formatSize(meta.size)} · ${formatTime(meta.createdAt)}</div>
+                            <div class="video-id">${meta.id}</div>
+                        </div>
+                        <button class="btn-delete">Xóa</button>
+                    </div>
+                `;
+                videoList.appendChild(card);
+                card.querySelector('.btn-delete').addEventListener('click', () => deleteVideo(meta.id, card));
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            hideLoading();
+            updateEmptyState();
+        }
+    }
+
+    // Load existing videos on page load
+    loadVideos();
+    </script>
+</body>
+</html>
