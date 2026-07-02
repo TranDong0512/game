@@ -536,7 +536,7 @@
                     <div class="room-id-value" id="displayRoomId">------</div>
                     <div class="room-size-info" id="waitingSizeInfo"></div>
                 </div>
-                <button class="btn btn-copy" onclick="copyRoomId()">📋 Copy Mã Phòng</button>
+                <button class="btn btn-copy" onclick="copyRoomId(this)">📋 Copy Mã Phòng</button>
                 <div class="spinner"></div>
                 <div class="waiting-text">Đang chờ đối thủ vào phòng...</div>
                 <div class="waiting-text" id="waitingHint">Gửi mã phòng cho bạn bè để họ join!</div>
@@ -787,7 +787,15 @@
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    { urls: 'stun:stun.ekiga.net' },
+                    { urls: 'stun:stun.ideasip.com' },
+                    { urls: 'stun:stun.schlund.de' },
+                    { urls: 'stun:stun.voiparound.com' },
+                    { urls: 'stun:stun.voipstunt.com' }
                 ]
             },
             debug: 0
@@ -854,7 +862,7 @@
                 return;
             }
 
-            roomId = input;
+            roomId = input.toUpperCase();
             isHost = false;
             mySymbol = 'O';
             connected = false;
@@ -867,34 +875,45 @@
                 showScreen('waiting');
                 document.getElementById('displayRoomId').textContent = roomId;
                 document.getElementById('waitingHint').textContent = 'Đang kết nối đến phòng...';
-
-                conn = peer.connect('caro-' + roomId, { reliable: true, timeout: 10000 });
-                setupConnection();
-
-                // Timeout nếu không kết nối được trong 15s
-                connectTimeout = setTimeout(() => {
-                    if (!connected) {
-                        showError('Không thể kết nối đến phòng. Phòng có thể không tồn tại hoặc đối thủ đã rời đi.');
-                        if (conn) conn.close();
-                        if (peer) peer.destroy();
-                        peer = null;
-                        conn = null;
-                        showScreen('lobby');
-                    }
-                }, 15000);
+                attemptConnect();
             });
 
             peer.on('error', (err) => {
                 console.error('Peer error:', err);
-                showError('Không thể kết nối: ' + err.type);
-                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+                if (!connected) {
+                    showError('Không thể kết nối: ' + err.type);
+                    if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+                }
             });
+        }
+
+        let connectAttempts = 0;
+        const MAX_CONNECT_ATTEMPTS = 3;
+
+        function attemptConnect() {
+            connectAttempts++;
+            document.getElementById('waitingHint').textContent = `Đang kết nối... (lần ${connectAttempts}/${MAX_CONNECT_ATTEMPTS})`;
+
+            const c = peer.connect('caro-' + roomId, { reliable: true });
+            conn = c;
+            setupConnection();
+
+            connectTimeout = setTimeout(() => {
+                if (!connected && connectAttempts < MAX_CONNECT_ATTEMPTS) {
+                    if (conn) conn.close();
+                    attemptConnect();
+                } else if (!connected) {
+                    showError('Không thể kết nối sau 3 lần thử. Phòng có thể không tồn tại hoặc đối thủ đã rời đi.');
+                    showScreen('lobby');
+                }
+            }, 10000);
         }
 
         // ==================== CONNECTION ====================
         function setupConnection() {
             conn.on('open', () => {
                 if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+                connectAttempts = 0;
                 connected = true;
                 showScreen('game');
                 document.getElementById('gameRoomId').textContent = roomId;
@@ -1052,9 +1071,8 @@
             $overlay.classList.remove('show');
         }
 
-        function copyRoomId() {
+        function copyRoomId(btn) {
             navigator.clipboard.writeText(roomId).then(() => {
-                const btn = event.target;
                 btn.textContent = '✅ Đã Copy!';
                 setTimeout(() => btn.textContent = '📋 Copy Mã Phòng', 1500);
             });
@@ -1062,6 +1080,7 @@
 
         function backToLobby() {
             if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+            connectAttempts = 0;
             if (conn) conn.close();
             if (peer) peer.destroy();
             peer = null;
