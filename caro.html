@@ -619,6 +619,8 @@
         let winLength = 3;
         let winCombos = [];
         let cells = [];
+        let connected = false;
+        let connectTimeout = null;
 
         // ==================== DOM ====================
         const $lobby = document.getElementById('lobby');
@@ -781,6 +783,16 @@
         }
 
         // ==================== LOBBY ====================
+        const PEER_CONFIG = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            },
+            debug: 0
+        };
+
         function generateId() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let id = '';
@@ -802,10 +814,12 @@
             roomId = generateId();
             isHost = true;
             mySymbol = 'X';
+            connected = false;
 
             winCombos = generateWinCombos();
 
-            peer = new Peer('caro-' + roomId);
+            if (peer) peer.destroy();
+            peer = new Peer('caro-' + roomId, PEER_CONFIG);
 
             peer.on('open', () => {
                 showScreen('waiting');
@@ -815,13 +829,14 @@
             });
 
             peer.on('connection', (connection) => {
+                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
                 conn = connection;
+                connected = true;
                 setupConnection();
-                showScreen('game');
-                startGame();
             });
 
             peer.on('error', (err) => {
+                console.error('Peer error:', err);
                 if (err.type === 'unavailable-id') {
                     showError('Phòng đã tồn tại, thử lại!');
                     peer.destroy();
@@ -842,31 +857,50 @@
             roomId = input;
             isHost = false;
             mySymbol = 'O';
+            connected = false;
 
+            if (peer) peer.destroy();
             const myId = 'caro-' + roomId + '-p2-' + Date.now();
-            peer = new Peer(myId);
+            peer = new Peer(myId, PEER_CONFIG);
 
             peer.on('open', () => {
                 showScreen('waiting');
                 document.getElementById('displayRoomId').textContent = roomId;
                 document.getElementById('waitingHint').textContent = 'Đang kết nối đến phòng...';
 
-                conn = peer.connect('caro-' + roomId, { reliable: true });
+                conn = peer.connect('caro-' + roomId, { reliable: true, timeout: 10000 });
                 setupConnection();
+
+                // Timeout nếu không kết nối được trong 15s
+                connectTimeout = setTimeout(() => {
+                    if (!connected) {
+                        showError('Không thể kết nối đến phòng. Phòng có thể không tồn tại hoặc đối thủ đã rời đi.');
+                        if (conn) conn.close();
+                        if (peer) peer.destroy();
+                        peer = null;
+                        conn = null;
+                        showScreen('lobby');
+                    }
+                }, 15000);
             });
 
             peer.on('error', (err) => {
+                console.error('Peer error:', err);
                 showError('Không thể kết nối: ' + err.type);
+                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
             });
         }
 
         // ==================== CONNECTION ====================
         function setupConnection() {
             conn.on('open', () => {
+                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+                connected = true;
                 showScreen('game');
                 document.getElementById('gameRoomId').textContent = roomId;
                 if (isHost) {
                     conn.send({ type: 'start', symbol: 'X', boardSize: boardSize, winLength: winLength });
+                    startGame();
                 }
                 updateUI();
             });
@@ -874,10 +908,18 @@
             conn.on('data', handleMessage);
 
             conn.on('close', () => {
+                connected = false;
                 if (gameActive) {
                     updateStatus('Đối thủ đã rời phòng!', 'lose');
                     gameActive = false;
+                    showOverlay(' disconnected', 'Đối thủ đã rời', 'Đối thủ đã ngắt kết nối!');
                 }
+            });
+
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
+                connected = false;
+                showError('Lỗi kết nối: ' + err);
             });
         }
 
@@ -888,6 +930,7 @@
                     boardSize = data.boardSize;
                     winLength = data.winLength;
                     winCombos = generateWinCombos();
+                    showScreen('game');
                     startGame();
                     break;
                 case 'move':
@@ -1018,6 +1061,7 @@
         }
 
         function backToLobby() {
+            if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
             if (conn) conn.close();
             if (peer) peer.destroy();
             peer = null;
@@ -1028,6 +1072,7 @@
             gameActive = false;
             roomId = '';
             isHost = false;
+            connected = false;
             scores = { X: 0, O: 0, draw: 0 };
             cells = [];
             document.getElementById('roomInput').value = '';
