@@ -513,6 +513,9 @@
                     <div class="size-preview" id="sizePreview">
                         Bàn <span>3×3</span> · Thắng khi xếp <span>3</span> quân liên tiếp
                     </div>
+                    <div class="size-preview" style="color: #f093fb; margin-top: 4px;">
+                        ⚡ Chặn 1 đầu → cần thêm 1 quân để thắng
+                    </div>
                 </div>
 
                 <button class="btn btn-create" onclick="createRoom()">🎮 Tạo Phòng Mới</button>
@@ -617,7 +620,6 @@
         let scores = { X: 0, O: 0, draw: 0 };
         let boardSize = 3;
         let winLength = 3;
-        let winCombos = [];
         let cells = [];
         let connected = false;
         let connectTimeout = null;
@@ -719,56 +721,68 @@
         }
 
         // ==================== WIN DETECTION ====================
-        function generateWinCombos() {
-            const combos = [];
-            const n = boardSize;
-            const w = winLength;
-
-            // Rows
-            for (let r = 0; r < n; r++) {
-                for (let c = 0; c <= n - w; c++) {
-                    combos.push(Array.from({ length: w }, (_, i) => r * n + c + i));
-                }
-            }
-            // Columns
-            for (let c = 0; c < n; c++) {
-                for (let r = 0; r <= n - w; r++) {
-                    combos.push(Array.from({ length: w }, (_, i) => (r + i) * n + c));
-                }
-            }
-            // Diagonal \
-            for (let r = 0; r <= n - w; r++) {
-                for (let c = 0; c <= n - w; c++) {
-                    combos.push(Array.from({ length: w }, (_, i) => (r + i) * n + c + i));
-                }
-            }
-            // Diagonal /
-            for (let r = 0; r <= n - w; r++) {
-                for (let c = w - 1; c < n; c++) {
-                    combos.push(Array.from({ length: w }, (_, i) => (r + i) * n + c - i));
-                }
-            }
-            return combos;
-        }
-
         function checkResult() {
-            for (const combo of winCombos) {
-                const first = board[combo[0]];
-                if (!first) continue;
-                if (combo.every(i => board[i] === first)) {
-                    const winner = first;
-                    gameActive = false;
-                    combo.forEach(i => cells[i].classList.add('win'));
-                    scores[winner]++;
-                    updateScores();
-                    if (winner === mySymbol) {
-                        updateStatus('🎉 Bạn thắng!', 'win');
-                        showOverlay('🏆', 'Bạn Thắng!', `${winner} thắng với ${winLength} quân liên tiếp!`);
-                    } else {
-                        updateStatus('😔 Bạn thua!', 'lose');
-                        showOverlay('😞', 'Bạn Thua!', `${winner} đã chiến thắng!`);
+            const n = boardSize;
+            const dirs = [
+                [0, 1],   // ngang
+                [1, 0],   // dọc
+                [1, 1],   // chéo \
+                [1, -1]   // chéo /
+            ];
+
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const idx = r * n + c;
+                    const player = board[idx];
+                    if (!player) continue;
+
+                    for (const [dr, dc] of dirs) {
+                        let count = 1;
+                        let winCells = [idx];
+
+                        let r1 = r + dr, c1 = c + dc;
+                        while (r1 >= 0 && r1 < n && c1 >= 0 && c1 < n && board[r1 * n + c1] === player) {
+                            count++;
+                            winCells.push(r1 * n + c1);
+                            r1 += dr;
+                            c1 += dc;
+                        }
+
+                        let r2 = r - dr, c2 = c - dc;
+                        while (r2 >= 0 && r2 < n && c2 >= 0 && c2 < n && board[r2 * n + c2] === player) {
+                            count++;
+                            winCells.push(r2 * n + c2);
+                            r2 -= dr;
+                            c2 -= dc;
+                        }
+
+                        let blockedEnds = 0;
+                        if (r1 < 0 || r1 >= n || c1 < 0 || c1 >= n || board[r1 * n + c1] !== '') {
+                            blockedEnds++;
+                        }
+                        if (r2 < 0 || r2 >= n || c2 < 0 || c2 >= n || board[r2 * n + c2] !== '') {
+                            blockedEnds++;
+                        }
+
+                        const required = winLength + blockedEnds;
+                        if (count >= required) {
+                            gameActive = false;
+                            winCells.forEach(i => cells[i].classList.add('win'));
+                            scores[player]++;
+                            updateScores();
+                            const blockMsg = blockedEnds > 0
+                                ? ` (${blockedEnds} đầu bị chặn, cần ${required} quân liên tiếp)`
+                                : '';
+                            if (player === mySymbol) {
+                                updateStatus('🎉 Bạn thắng!', 'win');
+                                showOverlay('🏆', 'Bạn Thắng!', `${player} thắng${blockMsg}!`);
+                            } else {
+                                updateStatus('😔 Bạn thua!', 'lose');
+                                showOverlay('😞', 'Bạn Thua!', `${player} đã chiến thắng${blockMsg}!`);
+                            }
+                            return;
+                        }
                     }
-                    return;
                 }
             }
 
@@ -823,8 +837,6 @@
             isHost = true;
             mySymbol = 'X';
             connected = false;
-
-            winCombos = generateWinCombos();
 
             if (peer) peer.destroy();
             peer = new Peer('caro-' + roomId, PEER_CONFIG);
@@ -948,7 +960,6 @@
                     mySymbol = 'O';
                     boardSize = data.boardSize;
                     winLength = data.winLength;
-                    winCombos = generateWinCombos();
                     showScreen('game');
                     startGame();
                     break;
