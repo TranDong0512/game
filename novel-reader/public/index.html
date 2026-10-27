@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Truyện Trung → Việt</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📖 Truyện Trung&nbsp;→&nbsp;Việt</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="translate">Dịch truyện</button>
+      <button class="tab" data-tab="library">Thư viện <span class="badge" id="libBadge">0</span></button>
+      <button class="tab" data-tab="queue">Hàng đợi (treo) <span class="badge" id="qBadge">0</span></button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ================= TAB DỊCH ================= -->
+    <section id="tab-translate" class="tabpage">
+      <div class="urlbar">
+        <input id="urlInput" type="url" spellcheck="false"
+               placeholder="Dán link chương truyện ngôn ngữ Trung Quốc, ví dụ https://..." />
+        <button id="loadBtn" class="btn primary">Tải chương</button>
+      </div>
+      <div id="msg" class="msg hidden"></div>
+
+      <div id="meta" class="meta hidden">
+        <div class="meta-row">
+          <span class="pill" id="metaBook">—</span>
+          <span class="pill accent" id="metaChapter">—</span>
+        </div>
+        <div class="actions">
+          <button id="translateBtn" class="btn primary">Dịch chương</button>
+          <button id="retranslateBtn" class="btn hidden">Dịch lại</button>
+          <button id="saveBtn" class="btn">Lưu chương ★</button>
+          <button id="readBtn" class="btn success" disabled>Đọc ngắt quãng ▶</button>
+        </div>
+        <div id="progressWrap" class="progress hidden">
+          <div class="progress-bar"><div id="progressFill"></div></div>
+          <span id="progressText">0%</span>
+        </div>
+      </div>
+
+      <div class="cols hidden" id="cols">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Bản gốc (Trung Quốc)</h3>
+            <span class="hint" id="zhStat"></span>
+          </div>
+          <div id="zhText" class="text"></div>
+          <div class="chapnav">
+            <button id="prevBtn" class="btn small">◀ Chương trước</button>
+            <select id="chapSelect" title="Chọn chương"></select>
+            <button id="nextBtn" class="btn small">Chương sau ▶</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Bản dịch (Việt)</h3>
+            <span class="hint" id="viStat"></span>
+          </div>
+          <div id="viText" class="text muted">Chưa có bản dịch. Bấm “Dịch chương”.</div>
+        </div>
+      </div>
+
+      <details id="chaplistBox" class="chaplist hidden">
+        <summary>Danh sách chương (<span id="chCount">0</span>)</summary>
+        <div id="chapters" class="chapters"></div>
+      </details>
+
+      <details id="settingsBox" class="chaplist">
+        <summary>Cài đặt (cookie fanqie — chương bị khóa)</summary>
+        <div class="settings-body">
+          <p class="hint2">
+            Chương mới trên fanqienovel.com bị khóa — web chỉ cho xem trước ~200 chữ.
+            Để đọc/dịch đủ, đăng nhập fanqienovel.com trên trình duyệt, mở DevTools (F12)
+            → Network → request bất kỳ → copy giá trị header <b>Cookie</b> rồi dán xuống đây.
+            Cookie chỉ lưu trong máy bạn (localStorage).
+          </p>
+          <div class="urlbar">
+            <input id="cookieInput" type="text" spellcheck="false" placeholder="sessionid=...; ttwid=...; tt_webid=..." />
+            <button id="cookieSaveBtn" class="btn">Lưu cookie</button>
+            <button id="cookieClearBtn" class="btn small danger">Xóa</button>
+          </div>
+          <p id="cookieStat" class="hint2"></p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ================= TAB THƯ VIỆN ================= -->
+    <section id="tab-library" class="tabpage hidden">
+      <div class="section-head">
+        <h2>Thư viện — chương đã lưu</h2>
+        <div>
+          <label class="inline"><input type="checkbox" id="libOnlySaved" checked /> Chỉ chương đã lưu ★</label>
+          <button id="clearLibBtn" class="btn small danger">Xóa bản dịch tạm</button>
+        </div>
+      </div>
+      <div id="libList" class="cards"></div>
+      <p id="libEmpty" class="empty hidden">Chưa có chương nào. Hãy tải một chương rồi bấm “Lưu chương ★”.</p>
+    </section>
+
+    <!-- ================= TAB HÀNG ĐỢI ================= -->
+    <section id="tab-queue" class="tabpage hidden">
+      <div class="section-head">
+        <h2>Hàng đợi dịch nền (“treo” chương)</h2>
+        <div class="qbtns">
+          <button id="qStartBtn" class="btn primary">▶ Bắt đầu</button>
+          <button id="qPauseBtn" class="btn" disabled>⏸ Tạm dừng</button>
+          <button id="qClearBtn" class="btn small">Xóa đã xong</button>
+        </div>
+      </div>
+      <p class="hint2">Thêm link chương vào hàng đợi — chương sẽ được tải và dịch lần lượt ở chế độ nền, lưu vào thư viện.</p>
+      <div class="urlbar">
+        <input id="qUrlInput" type="url" spellcheck="false" placeholder="Dán link chương cần treo dịch..." />
+        <button id="qAddBtn" class="btn">+ Thêm vào hàng đợi</button>
+      </div>
+      <div id="qList" class="qlist"></div>
+      <p id="qEmpty" class="empty">Hàng đợi trống.</p>
+    </section>
+  </main>
+
+  <!-- ================= READER ================= -->
+  <div id="reader" class="reader hidden">
+    <div class="reader-top">
+      <div class="reader-title">
+        <span id="readerBook"></span> — <strong id="readerChapter"></strong>
+      </div>
+      <div class="reader-top-actions">
+        <button id="fullBtn" class="btn small">Toàn văn</button>
+        <button id="readerClose" class="btn small">✕ Thoát (Esc)</button>
+      </div>
+    </div>
+
+    <div class="reader-body" id="readerBody">
+      <div class="sentence" id="readerSentence">…</div>
+      <div class="reader-full hidden" id="readerFull"></div>
+      <div class="reader-end hidden" id="readerEnd">
+        <div id="readerEndText">— Hết chương —</div>
+        <button id="nextChapBtn" class="btn primary">▶ Chương tiếp</button>
+      </div>
+    </div>
+
+    <div class="reader-bottom">
+      <div class="reader-progress"><div id="readerFill"></div></div>
+      <div class="reader-controls">
+        <span class="rpos" id="readerPos">0/0</span>
+        <button id="firstBtn" class="btn small" title="Về câu đầu">⏮</button>
+        <button id="prevSentBtn" class="btn small" title="Câu trước (←)">◀</button>
+        <button id="soundBtn" class="btn small" title="Bật/tắt đọc thành tiếng (M)">🔊</button>
+        <select id="voiceSel" title="Giọng đọc"></select>
+        <button id="autoBtn" class="btn primary" title="Tự động đọc (P)">▶ Tự động</button>
+        <button id="nextSentBtn" class="btn small" title="Câu tiếp (Space)">▶</button>
+        <label class="speed">Tốc độ
+          <input type="range" id="speedRange" min="0.5" max="8" step="0.5" value="3" />
+          <span id="speedVal">3s</span>
+        </label>
+        <label class="speed" title="Hết chương sẽ tự tải + dịch chương kế tiếp rồi phát ngay">
+          <input type="checkbox" id="autoNextChk" checked /> Tự động chuyển chương
+        </label>
+      </div>
+      <div class="hint2 keys">Phím: <b>Space</b> câu tiếp · <b>←</b> câu trước · <b>P</b> tự động · <b>M</b> tiếng · <b>Esc</b> thoát · bấm vào vùng đọc để sang câu</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/vendor/capacitor.js"></script>
+  <script src="/vendor/opentype.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+output/
+.env
+.keys/
+android/.gradle/
+android/.tmp/
+android/.avd/
+android/local.properties
+android/**/build/
+dist/

@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dịch Trang Web - URL Translator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4285f4, #1a73e8);
+      color: white;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .input-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .url-input {
+      flex: 1;
+      padding: 14px 18px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: #4285f4;
+    }
+
+    .url-input::placeholder {
+      color: #9e9e9e;
+    }
+
+    .btn-translate {
+      padding: 14px 32px;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-translate:hover {
+      background: #3367d6;
+    }
+
+    .btn-translate:disabled {
+      background: #9e9e9e;
+      cursor: not-allowed;
+    }
+
+    .btn-translate svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .text-input-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .text-input-section h2 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: #4285f4;
+      border-bottom-color: #4285f4;
+    }
+
+    .tab:hover {
+      color: #4285f4;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .text-input {
+      width: 100%;
+      min-height: 150px;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: #4285f4;
+    }
+
+    .btn-translate-text {
+      margin-top: 12px;
+      padding: 12px 24px;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-translate-text:hover {
+      background: #3367d6;
+    }
+
+    .results-section {
+      display: none;
+    }
+
+    .results-section.show {
+      display: block;
+    }
+
+    .result-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .result-header h2 {
+      font-size: 18px;
+      color: #333;
+    }
+
+    .btn-copy {
+      padding: 8px 16px;
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-copy:hover {
+      background: #d2e3fc;
+    }
+
+    .result-content {
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    .result-content p {
+      margin-bottom: 12px;
+    }
+
+    .original-text {
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #9aa0a6;
+      margin-bottom: 16px;
+    }
+
+    .translated-text {
+      background: #e8f0fe;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #4285f4;
+    }
+
+    .error-message {
+      background: #fce8e6;
+      color: #c5221f;
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #4285f4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: #666;
+      font-size: 13px;
+    }
+
+    @media (max-width: 600px) {
+      .input-group {
+        flex-direction: column;
+      }
+      
+      .header h1 {
+        font-size: 22px;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Dịch Trang Web</h1>
+    <p>Nhập URL hoặc dán text để dịch sang tiếng Việt</p>
+  </header>
+
+  <div class="container">
+    <!-- URL Input Section -->
+    <div class="input-section">
+      <div class="input-group">
+        <input type="url" id="urlInput" class="url-input" placeholder="Nhập URL trang web cần dịch (ví dụ: https://example.com)">
+        <button id="btnTranslateUrl" class="btn-translate">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z" fill="white"/>
+          </svg>
+          Dịch URL
+        </button>
+      </div>
+    </div>
+
+    <!-- Text Input Section -->
+    <div class="text-input-section">
+      <div class="tabs">
+        <button class="tab active" data-tab="direct">Dịch trực tiếp</button>
+        <button class="tab" data-tab="file">Dịch từ file</button>
+      </div>
+
+      <div id="tabDirect" class="tab-content active">
+        <textarea id="textInput" class="text-input" placeholder="Hoặc dán text cần dịch vào đây..."></textarea>
+        <button id="btnTranslateText" class="btn-translate-text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z" fill="white"/>
+          </svg>
+          Dịch sang tiếng Việt
+        </button>
+      </div>
+
+      <div id="tabFile" class="tab-content">
+        <input type="file" id="fileInput" accept=".txt,.md,.html,.htm" style="display: none;">
+        <div style="text-align: center; padding: 40px; border: 2px dashed #ccc; border-radius: 8px;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 12px;">
+            <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" fill="#9e9e9e"/>
+          </svg>
+          <p style="color: #666; margin-bottom: 12px;">Kéo thả file text vào đây hoặc</p>
+          <button onclick="document.getElementById('fileInput').click()" style="padding: 10px 20px; background: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer;">Chọn file</button>
+          <p style="color: #999; font-size: 12px; margin-top: 8px;">Hỗ trợ: .txt, .md, .html</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="results-section">
+      <div class="result-card">
+        <div class="result-header">
+          <h2>Kết quả dịch</h2>
+          <button id="btnCopy" class="btn-copy">Sao chép bản dịch</button>
+        </div>
+        <div id="resultContent" class="result-content"></div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="features">
+      <div class="feature-card">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z" fill="#4285f4"/>
+          </svg>
+          Dịch URL
+        </h3>
+        <p>Nhập URL trang web, hệ thống sẽ tự động lấy nội dung và dịch sang tiếng Việt.</p>
+      </div>
+      <div class="feature-card">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#4285f4"/>
+          </svg>
+          Dịch text
+        </h3>
+        <p>Dán trực tiếp văn bản cần dịch vào ô输入 hoặc kéo thả file text.</p>
+      </div>
+      <div class="feature-card">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="#4285f4"/>
+          </svg>
+          Đọc song song
+        </h3>
+        <p>Kết quả hiển thị song song nội gốc và bản dịch để dễ so sánh.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>Sử dụng Google Translate API miễn phí | Giới hạn: ~5000 ký tự/lần dịch</p>
+  </footer>
+
+  <script>
+    const GOOGLE_TRANSLATE_URL = 'https://translate.googleapis.com/translate_a/single';
+    
+    // Multiple CORS proxies with fallback
+    const CORS_PROXIES = [
+      { name: 'corsproxy.io', build: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` },
+      { name: 'allorigins', build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+      { name: 'codetabs', build: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
+    ];
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        tab.classList.add('active');
+        const tabId = tab.dataset.tab;
+        document.getElementById('tab' + tabId.charAt(0).toUpperCase() + tabId.slice(1)).classList.add('active');
+      });
+    });
+
+    // Translate text
+    async function translateText(text, targetLang = 'vi') {
+      if (!text.trim()) return '';
+      
+      // Split text into chunks if too long (API limit ~5000 chars)
+      const chunks = splitText(text, 4500);
+      const translatedChunks = [];
+
+      for (const chunk of chunks) {
+        const params = new URLSearchParams({
+          client: 'gtx',
+          sl: 'auto',
+          tl: targetLang,
+          dt: 't',
+          q: chunk
+        });
+
+        try {
+          const response = await fetch(`${GOOGLE_TRANSLATE_URL}?${params.toString()}`);
+          const data = await response.json();
+          
+          if (data && data[0]) {
+            translatedChunks.push(data[0].map(item => item[0]).join(''));
+          }
+        } catch (error) {
+          console.error('Translation error:', error);
+          throw new Error('Lỗi dịch. Vui lòng thử lại.');
+        }
+      }
+
+      return translatedChunks.join(' ');
+    }
+
+    // Split text into chunks
+    function splitText(text, maxLength) {
+      const chunks = [];
+      let remaining = text;
+
+      while (remaining.length > 0) {
+        if (remaining.length <= maxLength) {
+          chunks.push(remaining);
+          break;
+        }
+
+        // Try to split at sentence boundary
+        let splitIndex = remaining.lastIndexOf('. ', maxLength);
+        if (splitIndex === -1 || splitIndex < maxLength * 0.5) {
+          splitIndex = remaining.lastIndexOf(' ', maxLength);
+        }
+        if (splitIndex === -1 || splitIndex < maxLength * 0.3) {
+          splitIndex = maxLength;
+        } else {
+          splitIndex += 1;
+        }
+
+        chunks.push(remaining.substring(0, splitIndex));
+        remaining = remaining.substring(splitIndex);
+      }
+
+      return chunks;
+    }
+
+    // Fetch URL content via CORS proxy with fallback
+    async function fetchUrlContent(url) {
+      let lastError = null;
+      
+      for (const proxy of CORS_PROXIES) {
+        try {
+          console.log(`Trying proxy: ${proxy.name}`);
+          const proxyUrl = proxy.build(url);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          
+          const response = await fetch(proxyUrl, { signal: controller.signal });
+          clearTimeout(timeout);
+          
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          
+          const html = await response.text();
+          if (!html || html.length < 100) throw new Error('Empty response');
+          
+          return extractTextFromHtml(html);
+        } catch (error) {
+          console.warn(`Proxy ${proxy.name} failed:`, error.message);
+          lastError = error;
+          continue;
+        }
+      }
+      
+      throw new Error('Không thể truy cập URL. Tất cả proxy đều gặp lỗi. Vui lòng thử lại sau.');
+    }
+
+    // Extract text from HTML
+    function extractTextFromHtml(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Remove script, style, nav, header, footer, ads
+      const elementsToRemove = doc.querySelectorAll('script, style, nav, header, footer, .ad, .ads, .sidebar, [role="navigation"], [role="banner"]');
+      elementsToRemove.forEach(el => el.remove());
+      
+      // Get main content
+      const mainContent = doc.querySelector('main, article, .content, .post, .entry, #content, #main') || doc.body;
+      
+      // Extract text
+      let text = mainContent.innerText || mainContent.textContent;
+      
+      // Clean up text
+      text = text
+        .replace(/\s+/g, ' ')
+        .replace(/\n\s*\n/g, '\n\n')
+        .trim();
+      
+      return text;
+    }
+
+    // Show loading
+    function showLoading(elementId) {
+      document.getElementById(elementId).innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Đang dịch... Vui lòng đợi</p>
+        </div>
+      `;
+    }
+
+    // Show error
+    function showError(elementId, message) {
+      document.getElementById(elementId).innerHTML = `
+        <div class="error-message">
+          <p>${message}</p>
+        </div>
+      `;
+    }
+
+    // Show results
+    function showResults(original, translated) {
+      const section = document.getElementById('resultsSection');
+      const content = document.getElementById('resultContent');
+      
+      section.classList.add('show');
+      
+      // Format text with paragraphs
+      const formatText = (text) => text.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+      
+      content.innerHTML = `
+        <div class="original-text">
+          <strong>Nội dung gốc:</strong>
+          ${formatText(original)}
+        </div>
+        <div class="translated-text">
+          <strong>Bản dịch tiếng Việt:</strong>
+          ${formatText(translated)}
+        </div>
+      `;
+
+      // Store for copy
+      window.translatedText = translated;
+    }
+
+    // URL Translate
+    document.getElementById('btnTranslateUrl').addEventListener('click', async () => {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) {
+        alert('Vui lòng nhập URL');
+        return;
+      }
+
+      // Validate URL
+      try {
+        new URL(url);
+      } catch {
+        alert('URL không hợp lệ. Vui lòng nhập URL đầy đủ (ví dụ: https://example.com)');
+        return;
+      }
+
+      const btn = document.getElementById('btnTranslateUrl');
+      btn.disabled = true;
+      btn.innerHTML = `
+        <div style="width: 16px; height: 16px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        Đang xử lý...
+      `;
+
+      showLoading('resultContent');
+      document.getElementById('resultsSection').classList.add('show');
+
+      try {
+        const text = await fetchUrlContent(url);
+        if (!text || text.trim().length === 0) {
+          throw new Error('Không tìm thấy nội dung văn bản trên trang');
+        }
+        
+        const translated = await translateText(text);
+        showResults(text, translated);
+      } catch (error) {
+        showError('resultContent', error.message);
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z" fill="white"/>
+        </svg>
+        Dịch URL
+      `;
+    });
+
+    // Text Translate
+    document.getElementById('btnTranslateText').addEventListener('click', async () => {
+      const text = document.getElementById('textInput').value.trim();
+      if (!text) {
+        alert('Vui lòng nhập text cần dịch');
+        return;
+      }
+
+      const btn = document.getElementById('btnTranslateText');
+      btn.disabled = true;
+      btn.innerHTML = `
+        <div style="width: 14px; height: 14px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        Đang dịch...
+      `;
+
+      showLoading('resultContent');
+      document.getElementById('resultsSection').classList.add('show');
+
+      try {
+        const translated = await translateText(text);
+        showResults(text, translated);
+      } catch (error) {
+        showError('resultContent', error.message);
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z" fill="white"/>
+        </svg>
+        Dịch sang tiếng Việt
+      `;
+    });
+
+    // Ctrl+Enter to translate
+    document.getElementById('textInput').addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        document.getElementById('btnTranslateText').click();
+      }
+    });
+
+    // Enter to translate URL
+    document.getElementById('urlInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('btnTranslateUrl').click();
+      }
+    });
+
+    // Copy translated text
+    document.getElementById('btnCopy').addEventListener('click', () => {
+      if (window.translatedText) {
+        navigator.clipboard.writeText(window.translatedText).then(() => {
+          const btn = document.getElementById('btnCopy');
+          btn.textContent = 'Đã sao chép!';
+          setTimeout(() => {
+            btn.textContent = 'Sao chép bản dịch';
+          }, 2000);
+        });
+      }
+    });
+
+    // File input
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        document.getElementById('textInput').value = event.target.result;
+        // Switch to direct tab
+        document.querySelector('[data-tab="direct"]').click();
+      };
+      reader.readAsText(file);
+    });
+
+    // Drag and drop
+    const dropZone = document.querySelector('#tabFile > div');
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#4285f4';
+      dropZone.style.background = '#e8f0fe';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = '#ccc';
+      dropZone.style.background = 'white';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#ccc';
+      dropZone.style.background = 'white';
+      
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.getElementById('textInput').value = event.target.result;
+          document.querySelector('[data-tab="direct"]').click();
+        };
+        reader.readAsText(file);
+      }
+    });
+  </script>
+</body>
+</html>

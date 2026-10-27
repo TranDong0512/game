@@ -1,0 +1,36 @@
+#quick-translate-icon {
+  transition: all 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#quick-translate-icon:hover {
+  transform: scale(1.1);
+  background: #3367d6 !important;
+}
+
+#quick-translate-popup {
+  transition: opacity 0.2s ease;
+}
+
+#quick-translate-popup * {
+  box-sizing: border-box;
+}
+
+/* Scrollbar styling */
+#quick-translate-popup ::-webkit-scrollbar {
+  width: 6px;
+}
+
+#quick-translate-popup ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#quick-translate-popup ::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+#quick-translate-popup ::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

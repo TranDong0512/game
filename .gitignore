@@ -11,3 +11,25 @@ desktop.ini
 
 # Node (if any)
 node_modules/
+
+# SSH keys (KHÔNG BAO GIỜ commit key riêng tư!)
+duydong222*
+
+# Cài đặt cục bộ của công cụ
+.claude/settings.local.json
+.mimocode/
+
+# Bản build và dữ liệu tạo ra
+**/dist/
+**/.cache/
+**/.expo/
+telegram-sticker-downloader/stickers/
+telegram-sticker-downloader/tonghop/
+
+# Bí mật
+.env
+**/.env
+!**/.env.example
+*.jks
+*.keystore
+**/.keys/

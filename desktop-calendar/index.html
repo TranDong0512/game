@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Calendo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;600;700;800;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; overflow: hidden; user-select: none; background: transparent; }
+
+    .app {
+      width: 100vw; height: 100vh; background: #fff;
+      display: flex; flex-direction: column; border-radius: 10px; overflow: hidden;
+    }
+    .drag { height: 28px; -webkit-app-region: drag; flex-shrink: 0; }
+
+    /* ===== TOP SECTION ===== */
+    .top { display: flex; padding: 8px 12px 6px; gap: 10px; flex-shrink: 0; }
+
+    /* Month block */
+    .month-block {
+      width: 110px; flex-shrink: 0;
+      border: 2px solid #111; border-radius: 10px;
+      padding: 6px 8px; position: relative;
+    }
+    .mb-label { font-size: 8px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #111; display: flex; justify-content: space-between; align-items: center; }
+    .mb-num { font-family: 'Space Mono', monospace; font-size: 36px; font-weight: 700; color: #111; line-height: 1; text-align: center; margin: 2px 0; }
+    .mb-name { font-size: 11px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; color: #111; text-align: center; }
+    .mb-nav { display: flex; gap: 2px; }
+    .mb-nav button { width: 18px; height: 18px; border: none; border-radius: 3px; background: none; color: #111; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; -webkit-app-region: no-drag; }
+    .mb-nav button:hover { background: #eee; }
+
+    /* Habit tracker - Attendance */
+    .habit-block {
+      flex: 1; border: 2px solid #111; border-radius: 10px;
+      padding: 6px 8px; min-width: 0; overflow: hidden;
+    }
+    .hb-title { font-size: 8px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #111; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .hb-grid { display: flex; flex-direction: column; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+    .hb-row { display: flex; }
+    .hb-row + .hb-row { border-top: 1px solid #eee; }
+    .hb-label { width: 28px; flex-shrink: 0; font-size: 7px; font-weight: 700; color: #888; display: flex; align-items: center; justify-content: center; border-right: 1px solid #eee; background: #fafafa; }
+    .hb-cells { display: flex; flex: 1; }
+    .hb-cell {
+      flex: 1; min-width: 0; text-align: center; font-size: 7px; color: #999;
+      padding: 2px 0; border-right: 1px solid #f0f0f0;
+    }
+    .hb-cell:last-child { border-right: none; }
+    .hb-cell.hb-head { font-weight: 700; color: #111; font-size: 6px; background: #fafafa; }
+    .hb-check {
+      flex: 1; min-width: 0; height: 18px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.1s; border-right: 1px solid #f0f0f0;
+    }
+    .hb-check:last-child { border-right: none; }
+    .hb-check:hover { background: #f0f0f0; }
+    .hb-check.done { background: #111; }
+    .hb-check.done::after { content: '✓'; color: #fff; font-size: 9px; font-weight: 700; }
+
+    /* ===== MAIN CONTENT ===== */
+    .content { display: flex; flex: 1; padding: 0 12px 8px; gap: 10px; overflow: hidden; }
+
+    /* Left sidebar */
+    .left-panel {
+      width: 120px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0;
+      border: 2px solid #111; border-radius: 10px; overflow: hidden;
+    }
+    .clock-block {
+      flex: 45; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #111; color: #fff;
+    }
+    .clock-h, .clock-m, .clock-s {
+      font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700;
+      line-height: 1; letter-spacing: 1px;
+    }
+    .bottom-block {
+      flex: 55; display: flex; flex-direction: column;
+      border-top: 2px solid #111; overflow: hidden; position: relative;
+    }
+    .slideshow {
+      width: 100%; height: 100%; position: relative;
+    }
+    .slide {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0; transition: opacity 1s ease-in-out;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #fff; font-weight: 700; letter-spacing: 1px;
+    }
+    .slide.active { opacity: 1; }
+    .slide-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 8px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      font-size: 8px; color: #fff; font-weight: 600;
+    }
+
+    .cal-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .dayheads { display: grid; grid-template-columns: repeat(7,1fr); gap: 0; flex-shrink: 0; margin-bottom: 6px; }
+    .dayheads .dh {
+      text-align: center; font-size: 9px; font-weight: 800;
+      padding: 4px 0; border: 2px solid #111; border-radius: 6px;
+      text-transform: uppercase; letter-spacing: 1px; margin: 0 2px;
+    }
+    .dh.we { background: #111; color: #fff; }
+
+    /* Lunar toggle */
+    .lunar-toggle {
+      display: flex; justify-content: center; gap: 6px; margin-top: 6px;
+    }
+    .lunar-btn {
+      padding: 3px 10px; border-radius: 12px; border: 1px solid #ddd;
+      background: #fff; color: #666; font-size: 9px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .lunar-btn.active { background: #111; color: #fff; border-color: #111; }
+    .lunar-txt { font-size: 7px; color: #999; margin-top: 1px; }
+
+    /* Calendar grid */
+    .cal-grid {
+      flex: 1; display: grid; grid-template-columns: repeat(7,1fr); grid-template-rows: repeat(6,1fr);
+      border: 2px solid #111; border-radius: 8px; overflow: hidden; row-gap: 0;
+    }
+    .cg-cell {
+      border: 1px solid #ddd; padding: 3px 4px; position: relative;
+      cursor: pointer; transition: background 0.1s; min-height: 0;
+      display: flex; flex-direction: column;
+    }
+    .cg-cell:hover { background: #f5f5f5; }
+    .cg-cell.today { background: #111; }
+    .cg-cell.today .cg-num { color: #fff; }
+    .cg-cell.selected { background: #e8e8e8; box-shadow: inset 0 0 0 2px #111; }
+    .cg-cell.other { opacity: 0.15; }
+    .cg-cell.we .cg-num { color: #111; font-weight: 700; }
+    .cg-cell.hol .cg-num { color: var(--hol, #ff6b6b); }
+    .cg-cell.hol::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: var(--hol, #ff6b6b); border-radius: 50%; }
+    .cg-cell.evt::before { content: ''; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; background: #111; border-radius: 50%; }
+    .cg-num { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: #111; }
+    .cg-hol { font-size: 10px; color: var(--hol, #ff6b6b); position: absolute; top: 18px; left: 2px; right: 2px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+
+    /* Right panel */
+    .right-panel {
+      width: 180px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* Monthly planner */
+    .planner {
+      border: 2px solid #111; border-radius: 10px; padding: 6px 8px; flex: 1;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .pl-title { font-size: 8px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #111; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .pl-list { flex: 1; overflow-y: auto; }
+    .pl-list::-webkit-scrollbar { width: 3px; }
+    .pl-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+    .pl-item { display: flex; align-items: flex-start; gap: 6px; padding: 4px 0; border-bottom: 1px dashed #ddd; }
+    .pl-item:last-child { border-bottom: none; }
+    .pl-check { width: 12px; height: 12px; border: 2px solid #111; border-radius: 3px; flex-shrink: 0; margin-top: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .pl-check.done { background: #111; }
+    .pl-check.done::after { content: '✓'; color: #fff; font-size: 8px; font-weight: 700; }
+    .pl-text { flex: 1; font-size: 10px; color: #333; line-height: 1.3; }
+    .pl-text.done { text-decoration: line-through; opacity: 0.4; }
+    .pl-time { font-size: 8px; color: #999; }
+
+    .pl-add {
+      margin-top: 4px; padding: 4px; border: 1px dashed #ccc; border-radius: 4px;
+      background: none; color: #999; cursor: pointer; font-size: 8px; text-align: center;
+      transition: all 0.15s;
+    }
+    .pl-add:hover { border-color: #111; color: #111; }
+
+    /* Settings gear */
+    .gear-btn {
+      position: fixed; bottom: 16px; right: 16px;
+      width: 32px; height: 32px;
+      background: none; color: #111; border: none;
+      cursor: pointer; font-size: 18px; z-index: 50;
+      transition: all 0.2s;
+    }
+    .gear-btn:hover { transform: rotate(45deg); color: #333; }
+    .gear-btn.active { color: #000; }
+
+    /* ===== SETTINGS PANEL ===== */
+    .settings {
+      position: fixed; top: 0; right: 0; height: 100vh;
+      width: 0; overflow: hidden; background: #111;
+      display: flex; flex-direction: column;
+      transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+      z-index: 200; padding-top: 32px;
+    }
+    .settings.open { width: 220px; }
+    .s-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #333; flex-shrink: 0; }
+    .s-head span { color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .s-x { background: none; border: none; color: #666; font-size: 16px; cursor: pointer; }
+    .s-x:hover { color: #fff; }
+    .s-body { flex: 1; overflow-y: auto; padding: 12px; }
+    .s-body::-webkit-scrollbar { width: 3px; }
+    .s-body::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    .s-section { margin-bottom: 14px; }
+    .s-title { color: #666; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .s-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .s-label { color: #999; font-size: 11px; }
+    .s-color-wrap { display: flex; align-items: center; gap: 6px; }
+    .s-color { width: 28px; height: 22px; border: 2px solid #333; border-radius: 5px; cursor: pointer; padding: 0; background: none; }
+    .s-color::-webkit-color-swatch-wrapper { padding: 0; }
+    .s-color::-webkit-color-swatch { border: none; border-radius: 3px; }
+    .s-hex { color: #666; font-size: 9px; font-family: monospace; min-width: 55px; text-align: right; }
+    .s-reset { width: 100%; padding: 7px; background: transparent; border: 1px solid #444; color: #999; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 500; transition: all 0.15s; margin-top: 6px; }
+    .s-reset:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    /* ===== MODALS ===== */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    .overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 12px; width: 92%; max-width: 300px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: popIn 0.2s ease; border: 2px solid #111; }
+    @keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .m-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 2px solid #111; }
+    .m-head h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+    .m-x { background: none; border: none; font-size: 18px; cursor: pointer; color: #999; }
+    .m-x:hover { color: #111; }
+    .m-body { padding: 16px; }
+    .fg { margin-bottom: 12px; }
+    .fg label { display: block; font-size: 10px; color: #888; margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .fg input, .fg textarea { width: 100%; padding: 8px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 12px; transition: border-color 0.15s; background: #fafafa; font-family: 'Inter', sans-serif; }
+    .fg input:focus, .fg textarea:focus { outline: none; border-color: #111; background: #fff; }
+    .fg input[type="checkbox"] { width: auto; margin-right: 6px; accent-color: #111; }
+    .m-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 2px solid #111; }
+    .btn { padding: 7px 16px; border: 2px solid #111; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; }
+    .btn:active { transform: scale(0.97); }
+    .btn-s { background: #111; color: #fff; }
+    .btn-s:hover { background: #333; }
+    .btn-c { background: #fff; color: #111; }
+    .btn-c:hover { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="drag"></div>
+
+  <!-- TOP SECTION -->
+  <div class="top">
+    <div class="month-block" id="monthBlock">
+      <div class="mb-label">
+        <span>MONTH</span>
+        <div class="mb-nav"><button id="prevMb">◀</button><button id="nextMb">▶</button></div>
+      </div>
+      <div class="mb-num" id="mbNum"></div>
+      <div class="mb-name" id="mbName"></div>
+    </div>
+    <div class="habit-block">
+      <div class="hb-title">
+        <span>CHẤM CÔNG</span>
+        <div class="hb-dots"><span class="mb-dot"></span><span class="mb-dot"></span><span class="mb-dot"></span></div>
+      </div>
+      <div class="hb-grid" id="hbGrid"></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR + PLANNER -->
+  <div class="content">
+    <div class="left-panel">
+      <div class="clock-block">
+        <div class="clock-h" id="clockH">00</div>
+        <div class="clock-m" id="clockM">00</div>
+        <div class="clock-s" id="clockS">00</div>
+      </div>
+      <div class="bottom-block">
+        <div class="slideshow" id="slideshow"></div>
+      </div>
+    </div>
+    <div class="cal-area">
+      <div class="dayheads">
+        <div class="dh">MON</div><div class="dh">TUE</div><div class="dh">WED</div><div class="dh">THU</div><div class="dh">FRI</div>
+        <div class="dh we">SAT</div><div class="dh we">SUN</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="lunar-toggle">
+        <button class="lunar-btn active" id="btnSolar" onclick="setLunarMode(false)">Dương lịch</button>
+        <button class="lunar-btn" id="btnLunar" onclick="setLunarMode(true)">Âm lịch</button>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="planner">
+        <div class="pl-title">
+          <span>SỰ KIỆN NGÀY</span>
+          <div class="hb-dots"><span class="mb-dot"></span><span class="mb-dot"></span><span class="mb-dot"></span></div>
+        </div>
+        <div class="pl-list" id="plList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="gear-btn" id="gearBtn">⚙</button>
+
+<!-- Settings Panel -->
+<div class="settings" id="settings">
+  <div class="s-head"><span>CÀI ĐẶT</span><button class="s-x" id="sClose">×</button></div>
+  <div class="s-body">
+    <div class="s-section">
+      <div class="s-title">Màu sắc</div>
+      <div class="s-row"><span class="s-label">Nền</span><div class="s-color-wrap"><span class="s-hex" id="hBg">#ffffff</span><input type="color" class="s-color" id="cBg" value="#ffffff"></div></div>
+      <div class="s-row"><span class="s-label">Chữ</span><div class="s-color-wrap"><span class="s-hex" id="hTxt">#111111</span><input type="color" class="s-color" id="cTxt" value="#111111"></div></div>
+      <div class="s-row"><span class="s-label">Viền</span><div class="s-color-wrap"><span class="s-hex" id="hHdr">#111111</span><input type="color" class="s-color" id="cHdr" value="#111111"></div></div>
+      <div class="s-row"><span class="s-label">Ngày lễ</span><div class="s-color-wrap"><span class="s-hex" id="hHol">#ff6b6b</span><input type="color" class="s-color" id="cHol" value="#ff6b6b"></div></div>
+    </div>
+    <button class="s-reset" id="sReset">↺ Mặc định</button>
+  </div>
+</div>
+
+<!-- Event Modal -->
+<div class="overlay" id="eOverlay">
+  <div class="modal">
+    <div class="m-head"><h3 id="mTitle">Thêm sự kiện</h3><button class="m-x" id="mClose">×</button></div>
+    <div class="m-body">
+      <div class="fg"><label>Tiêu đề</label><input id="eTitle" placeholder="Nhập tiêu đề..."></div>
+      <div class="fg"><label>Ngày</label><input type="date" id="eDate"></div>
+      <div class="fg"><label>Giờ</label><input type="time" id="eTime"></div>
+      <div class="fg"><label>Ghi chú</label><textarea id="eDesc" rows="2" placeholder="Ghi chú..."></textarea></div>
+      <div class="fg"><label><input type="checkbox" id="eNotify" checked> Thông báo</label></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-c" id="mCancel">Hủy</button>
+      <button class="btn btn-s" id="mSave">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="lunar.js"></script>
+<script>
+(function(){
+  var MONTH_NAMES=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  var FH=[
+    {m:0,d:1,n:'Tết Dương lịch',desc:'Ngày đầu năm mới, nghỉ lễ 1 ngày'},
+    {m:1,d:14,n:"Valentine",desc:'Ngày lễ tình nhân, ngày của yêu thương'},
+    {m:2,d:8,n:"Quốc tế Phụ nữ",desc:'Ngày tôn vinh phụ nữ Việt Nam'},
+    {m:3,d:30,n:'Giải phóng MN',desc:'Ngày thống nhất đất nước, nghỉ lễ dài ngày'},
+    {m:4,d:1,n:'Quốc tế Lao động',desc:'Ngày nghỉ lễ dành cho người lao động'},
+    {m:4,d:7,n:'Điện Biên Phủ',desc:'Chiến thắng lịch sử Điện Biên Phủ 1954'},
+    {m:5,d:1,n:'QT Thiếu nhi',desc:'Ngày Quốc tế Thiếu nhi 1/6'},
+    {m:5,d:21,n:'Ngày của Cha',desc:'Ngày tôn vinh người cha'},
+    {m:7,d:28,n:'Thương binh LS',desc:'Ngày Thương binh Liệt sĩ 27/7'},
+    {m:8,d:2,n:'Quốc khánh',desc:'Ngày Quốc khánh nước CHXHCN Việt Nam 2/9'},
+    {m:9,d:20,n:'Phụ nữ VN',desc:'Ngày Phụ nữ Việt Nam 20/10'},
+    {m:9,d:21,n:'Tết Trung thu',desc:'Tết Trung thu - Tết thiếu nhi'},
+    {m:10,d:20,n:'Nhà giáo VN',desc:'Ngày Nhà giáo Việt Nam 20/11'},
+    {m:11,d:22,n:'QLNDVN',desc:'Ngày thành lập Quân đội Nhân dân Việt Nam'},
+    {m:11,d:24,n:'Đêm Giáng sinh',desc:'Đêm Giáng sinh - Christmas Eve'},
+    {m:11,d:25,n:'Giáng sinh',desc:'Ngày Giáng sinh - Merry Christmas'}
+  ];
+  var LT=[{y:2025,m:0,d:30,n:'Tet'},{y:2026,m:0,d:18,n:'Tet'},{y:2027,m:0,d:6,n:'Tet'},{y:2028,m:0,d:26,n:'Tet'}];
+
+  var cM=new Date().getMonth(), cY=new Date().getFullYear(), selDay=new Date().getDate();
+  var events=[], attendance={}, settings={bg:'#ffffff',txt:'#111111',hdr:'#111111',hol:'#ff6b6b'};
+  var editingEvent=null, settingsOpen=false, showLunar=false;
+  var $=function(id){return document.getElementById(id);};
+
+  function loadCfg(){try{var s=JSON.parse(localStorage.getItem('cs2'));if(s)settings=s;}catch(e){}}
+  function saveCfg(){localStorage.setItem('cs2',JSON.stringify(settings));}
+  function loadAtt(){try{attendance=JSON.parse(localStorage.getItem('att'+cY))||{};}catch(e){attendance={};}}
+  function saveAtt(){localStorage.setItem('att'+cY,JSON.stringify(attendance));}
+
+  function applyCSS(){
+    var a=document.querySelector('.app');
+    a.style.background=settings.bg;
+    a.style.color=settings.txt;
+    document.documentElement.style.setProperty('--hol',settings.hol);
+    $('cBg').value=settings.bg;$('cTxt').value=settings.txt;$('cHdr').value=settings.hdr;$('cHol').value=settings.hol;
+    $('hBg').textContent=settings.bg;$('hTxt').textContent=settings.txt;$('hHdr').textContent=settings.hdr;$('hHol').textContent=settings.hol;
+  }
+
+  function getHol(y,m){var h=[];FH.forEach(function(x){if(x.m===m)h.push({d:x.d,n:x.n,desc:x.desc});});LT.forEach(function(x){if(x.y===y&&x.m===m)h.push({d:x.d,n:x.n,desc:'Tết Nguyên Đán - Kỳ nghỉ lễ lớn nhất trong năm'});});return h;}
+
+  function loadEvts(){
+    try{
+      if(window.electronAPI){
+        window.electronAPI.loadEvents().then(function(e){events=e||[];render();});
+      } else {
+        events=JSON.parse(localStorage.getItem('ce2')||'[]');
+        render();
+      }
+    }catch(e){events=[];render();}
+  }
+  function saveEvts(){
+    try{
+      if(window.electronAPI) window.electronAPI.saveEvents(events);
+      else localStorage.setItem('ce2',JSON.stringify(events));
+    }catch(e){}
+  }
+
+  function render(){
+    $('mbNum').textContent=String(cM+1).padStart(2,'0');
+    $('mbName').textContent=MONTH_NAMES[cM];
+    loadAtt();renderHabit();renderGrid();renderPlanner();
+  }
+
+  function renderHabit(){
+    var g=$('hbGrid');g.innerHTML='';
+    var dim=new Date(cY,cM+1,0).getDate();
+
+    // Header row with day numbers
+    var headRow=document.createElement('div');headRow.className='hb-row';
+    var headLabel=document.createElement('div');headLabel.className='hb-label';headLabel.textContent='';
+    headRow.appendChild(headLabel);
+    var headCells=document.createElement('div');headCells.className='hb-cells';
+    for(var d=1;d<=dim;d++){
+      var c=document.createElement('div');c.className='hb-cell hb-head';
+      c.textContent=String(d).padStart(2,'0');
+      headCells.appendChild(c);
+    }
+    headRow.appendChild(headCells);
+    g.appendChild(headRow);
+
+    // Morning row
+    var amRow=document.createElement('div');amRow.className='hb-row';
+    var amLabel=document.createElement('div');amLabel.className='hb-label';amLabel.textContent='SÁNG';
+    amRow.appendChild(amLabel);
+    var amCells=document.createElement('div');amCells.className='hb-cells';
+    var today=new Date();
+    for(var d=1;d<=dim;d++){
+      var key=cY+'-'+String(cM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')+'-am';
+      var c=document.createElement('div');c.className='hb-check';
+      if(attendance[key])c.classList.add('done');
+      var isToday=(d===today.getDate()&&cM===today.getMonth()&&cY===today.getFullYear());
+      if(!isToday)c.style.cursor='default';
+      (function(k,allow){c.onclick=function(){if(!allow)return;attendance[k]=!attendance[k];saveAtt();renderHabit();};})(key,isToday);
+      amCells.appendChild(c);
+    }
+    amRow.appendChild(amCells);
+    g.appendChild(amRow);
+
+    // Afternoon row
+    var pmRow=document.createElement('div');pmRow.className='hb-row';
+    var pmLabel=document.createElement('div');pmLabel.className='hb-label';pmLabel.textContent='CHIỀU';
+    pmRow.appendChild(pmLabel);
+    var pmCells=document.createElement('div');pmCells.className='hb-cells';
+    for(var d=1;d<=dim;d++){
+      var key=cY+'-'+String(cM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')+'-pm';
+      var c=document.createElement('div');c.className='hb-check';
+      if(attendance[key])c.classList.add('done');
+      var isToday=(d===today.getDate()&&cM===today.getMonth()&&cY===today.getFullYear());
+      if(!isToday)c.style.cursor='default';
+      (function(k,allow){c.onclick=function(){if(!allow)return;attendance[k]=!attendance[k];saveAtt();renderHabit();};})(key,isToday);
+      pmCells.appendChild(c);
+    }
+    pmRow.appendChild(pmCells);
+    g.appendChild(pmRow);
+  }
+
+  function renderGrid(){
+    var g=$('calGrid');g.innerHTML='';
+    var fd=new Date(cY,cM,1).getDay();var dim=new Date(cY,cM+1,0).getDate();
+    var pml=new Date(cY,cM,0).getDate();
+    var st=fd===0?6:fd-1;
+    var now=new Date();var isCur=now.getMonth()===cM&&now.getFullYear()===cY;
+    var hol=getHol(cY,cM);
+
+    for(var i=st-1;i>=0;i--)g.appendChild(mkCell(pml-i,true,false,null));
+    for(var d=1;d<=dim;d++){
+      var dow=new Date(cY,cM,d).getDay();var we=dow===0||dow===6;
+      var h=null;for(var j=0;j<hol.length;j++){if(hol[j].d===d){h=hol[j].n;break;}}
+      var ev=false;for(var j=0;j<events.length;j++){var ed=new Date(events[j].date);if(ed.getDate()===d&&ed.getMonth()===cM&&ed.getFullYear()===cY){ev=true;break;}}
+      g.appendChild(mkCell(d,false,isCur&&d===now.getDate(),{we:we,hol:h,ev:ev}));
+    }
+    var tot=g.children.length;var rem=42-tot;
+    for(var i=1;i<=rem;i++)g.appendChild(mkCell(i,true,false,null));
+  }
+
+  function mkCell(d,other,today,o){
+    o=o||{};
+    var el=document.createElement('div');el.className='cg-cell';
+    if(other)el.classList.add('other');if(today)el.classList.add('today');
+    if(o.we)el.classList.add('we');if(o.hol)el.classList.add('hol');if(o.ev)el.classList.add('evt');
+    var lunar=solarToLunar(cY,cM+1,d);
+    var lunarStr=showLunar?(lunar.day===1?lunar.monthName:lunar.day):'';
+    el.innerHTML='<span class="cg-num">'+(other?'':d)+'</span>'+(showLunar&&!other?'<span class="lunar-txt">'+lunarStr+'</span>':(o.hol&&!other?'<span class="cg-hol">'+o.hol+'</span>':''));
+    if(!other){
+      (function(dd){
+        el.onclick=function(){
+          selDay=dd;
+          document.querySelectorAll('.cg-cell.selected').forEach(function(c){c.classList.remove('selected');});
+          el.classList.add('selected');
+          if(showLunar){
+            var lunar=solarToLunar(cY,cM+1,selDay);
+            $('mbNum').textContent=lunar.isLeap?'Nđ'+lunar.month:lunar.month;
+            $('mbName').textContent='THÁNG '+lunar.month+' ÂM LỊCH';
+          }
+          renderPlanner();
+        };
+        el.ondblclick=function(e){
+          e.preventDefault();
+          showModal(null,cY+'-'+String(cM+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
+        };
+      })(d);
+    }
+    return el;
+  }
+
+  function renderPlanner(){
+    var list=$('plList');list.innerHTML='';
+    var ds=cY+'-'+String(cM+1).padStart(2,'0')+'-'+String(selDay).padStart(2,'0');
+    var hol=getHol(cY,cM);
+    var h=null;for(var j=0;j<hol.length;j++){if(hol[j].d===selDay){h=hol[j];break;}}
+
+    // Update planner title for lunar mode
+    var titleEl=document.querySelector('.pl-title span');
+    if(titleEl){
+      if(showLunar){
+        var lunar=solarToLunar(cY,cM+1,selDay);
+        titleEl.textContent='NGÀY '+lunar.day+' '+lunar.monthName.toUpperCase()+' ÂM LỊCH';
+      } else {
+        titleEl.textContent='SỰ KIỆN NGÀY';
+      }
+    }
+
+    // Show holiday first
+    if(h){
+      var holItem=document.createElement('div');holItem.className='pl-item';
+      holItem.style.borderLeft='3px solid var(--hol,#ff6b6b)';
+      holItem.style.paddingLeft='8px';
+      holItem.innerHTML='<div class="ev-dot" style="background:var(--hol,#ff6b6b)"></div><div><div class="pl-text" style="font-weight:700">'+h.n+'</div><div class="pl-time" style="font-size:8px;color:#666;margin-top:2px">'+h.desc+'</div></div>';
+      list.appendChild(holItem);
+    }
+
+    // Show user events
+    var de=events.filter(function(e){return e.date===ds;}).sort(function(a,b){return(a.time||'').localeCompare(b.time||'');});
+    if(!de.length&&!h){list.innerHTML='<div style="text-align:center;color:#ccc;font-size:9px;padding:20px 0;">Không có sự kiện</div>';return;}
+    de.forEach(function(ev){
+      var item=document.createElement('div');item.className='pl-item';
+      item.innerHTML='<div class="pl-check'+(ev.done?' done':'')+'" data-id="'+ev.id+'"></div><div><div class="pl-text'+(ev.done?' done':'')+'">'+ev.title+'</div>'+(ev.time?'<div class="pl-time">'+ev.time+'</div>':'')+'</div>';
+      list.appendChild(item);
+      item.querySelector('.pl-check').onclick=function(e){
+        e.stopPropagation();
+        ev.done=!ev.done;saveEvts();renderPlanner();
+      };
+      item.onclick=function(){showModal(ev);};
+    });
+  }
+
+  function showModal(ev,dateStr){
+    editingEvent=ev||null;
+    $('mTitle').textContent=ev?'Sửa sự kiện':'Thêm sự kiện';
+    $('eTitle').value=ev?ev.title:'';
+    $('eDate').value=ev?ev.date:(dateStr||cY+'-'+String(cM+1).padStart(2,'0')+'-'+String(selDay).padStart(2,'0'));
+    $('eTime').value=ev?(ev.time||''):'';
+    $('eDesc').value=ev?(ev.description||''):'';
+    $('eNotify').checked=ev?ev.notify!==false:true;
+    $('eOverlay').classList.add('show');
+  }
+
+  function saveEvt(){
+    var t=$('eTitle').value.trim(),d=$('eDate').value;
+    if(!t||!d){alert('Nhập tiêu đề và ngày!');return;}
+    var data={title:t,date:d,time:$('eTime').value,description:$('eDesc').value.trim(),notify:$('eNotify').checked};
+    if(editingEvent){Object.assign(editingEvent,data);}
+    else{data.id=Date.now().toString();data.createdAt=new Date().toISOString();events.push(data);}
+    saveEvts();closeAll();render();
+  }
+
+  function closeAll(){$('eOverlay').classList.remove('show');editingEvent=null;}
+  function setLunarMode(on){
+    showLunar=on;
+    $('btnSolar').classList.toggle('active',!on);
+    $('btnLunar').classList.toggle('active',on);
+    if(on){
+      var lunar=solarToLunar(cY,cM+1,selDay);
+      $('mbNum').textContent=lunar.isLeap?'Nđ'+lunar.month:lunar.month;
+      $('mbName').textContent='THÁNG '+lunar.month+' ÂM LỊCH';
+    } else {
+      $('mbNum').textContent=String(cM+1).padStart(2,'0');
+      $('mbName').textContent=MONTH_NAMES[cM];
+    }
+    renderGrid();
+  }
+  window.setLunarMode = setLunarMode;
+
+  function toggleSettings(){settingsOpen=!settingsOpen;$('settings').classList.toggle('open',settingsOpen);$('gearBtn').classList.toggle('active',settingsOpen);}
+
+  function hookColor(id,key,hid){$(id).oninput=function(){settings[key]=this.value;$(hid).textContent=this.value;applyCSS();};}
+  hookColor('cBg','bg','hBg');hookColor('cTxt','txt','hTxt');hookColor('cHdr','hdr','hHdr');hookColor('cHol','hol','hHol');
+
+  $('gearBtn').onclick=toggleSettings;$('sClose').onclick=toggleSettings;
+  $('prevMb').onclick=function(){cM--;if(cM<0){cM=11;cY--;}selDay=1;render();if(showLunar)setLunarMode(true);};
+  $('nextMb').onclick=function(){cM++;if(cM>11){cM=0;cY++;}selDay=1;render();if(showLunar)setLunarMode(true);};
+  $('sReset').onclick=function(){settings={bg:'#ffffff',txt:'#111111',hdr:'#111111',hol:'#ff6b6b'};saveCfg();applyCSS();};
+  $('mClose').onclick=closeAll;$('mCancel').onclick=closeAll;$('mSave').onclick=saveEvt;
+  $('eOverlay').onclick=function(e){if(e.target===$('eOverlay'))closeAll();};
+  document.onkeydown=function(e){if(e.key==='Escape')closeAll();};
+
+  // Refresh events when window focused (in case main.js updated done status)
+  window.addEventListener('focus',function(){
+    if(window.electronAPI){
+      window.electronAPI.refreshEvents().then(function(e){events=e||[];render();});
+    }
+  });
+
+  // Clock
+  function updateClock(){
+    var now=new Date();
+    $('clockH').textContent=String(now.getHours()).padStart(2,'0');
+    $('clockM').textContent=String(now.getMinutes()).padStart(2,'0');
+    $('clockS').textContent=String(now.getSeconds()).padStart(2,'0');
+  }
+  setInterval(updateClock,1000);
+  updateClock();
+
+  // Slideshow
+  var slideData=[];
+  function initSlideshow(){
+    if(window.electronAPI){
+      window.electronAPI.loadSlides().then(function(data){
+        slideData=data;
+        showCurrentSlide();
+      });
+    }
+  }
+  function getCurrentSlideIndex(){
+    var now=new Date();
+    var nowMin=now.getHours()*60+now.getMinutes();
+    var best=0;
+    for(var i=0;i<slideData.length;i++){
+      var parts=slideData[i].time.split(':');
+      var slideMin=parseInt(parts[0])*60+parseInt(parts[1]);
+      if(nowMin>=slideMin) best=i;
+    }
+    return best;
+  }
+  function showCurrentSlide(){
+    var container=$('slideshow');
+    container.innerHTML='';
+    if(slideData.length===0)return;
+    var idx=getCurrentSlideIndex();
+    var div=document.createElement('div');
+    div.className='slide active';
+    div.style.background='url('+slideData[idx].url+') center/cover no-repeat';
+    container.appendChild(div);
+  }
+  function updateSlide(){
+    var container=$('slideshow');
+    var idx=getCurrentSlideIndex();
+    var current=container.querySelector('.slide');
+    if(current){
+      var newBg='url('+slideData[idx].url+') center/cover no-repeat';
+      if(current.style.background!==newBg){
+        current.style.background=newBg;
+      }
+    }
+  }
+  initSlideshow();
+  setInterval(updateSlide,30000);
+
+  loadCfg();loadEvts();
+})();
+</script>
+</body>
+</html>

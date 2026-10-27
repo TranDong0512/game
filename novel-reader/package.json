@@ -1,0 +1,19 @@
+{
+  "name": "novel-reader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Doc va dich truyen Trung Quoc sang Tieng Viet",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "fontkit": "^2.0.4"
+  },
+  "devDependencies": {
+    "opentype.js": "^2.0.0"
+  }
+}

@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image & Video Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin: 20px 0;
+            background: linear-gradient(90deg, #e94560, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .tab-btn {
+            padding: 12px 30px;
+            border: 2px solid #e94560;
+            background: transparent;
+            color: #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .tab-btn:hover, .tab-btn.active {
+            background: #e94560;
+            transform: scale(1.05);
+        }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .card:hover { transform: translateY(-5px); border-color: #e94560; }
+        .card.selected { border-color: #e94560; background: rgba(233,69,96,0.2); }
+        .card-icon { font-size: 3em; margin-bottom: 10px; }
+        .card-title { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; }
+        .card-desc { font-size: 0.9em; color: #aaa; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1em;
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+        .btn {
+            padding: 12px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-secondary { background: #533483; color: #fff; }
+        .btn-success { background: #00b894; color: #fff; }
+        .btn:hover { transform: scale(1.05); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .preview-area {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .preview-area img, .preview-area video, .preview-area canvas {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 10px;
+        }
+        .preview-placeholder {
+            color: #666;
+            text-align: center;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .loading.show { display: block; }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #333;
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .options-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .option-item {
+            flex: 1;
+            min-width: 150px;
+        }
+        .size-presets {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .size-preset {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .size-preset:hover { border-color: #e94560; }
+        .download-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        .status-bar {
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .color-swatch {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .color-swatch:hover, .color-swatch.selected {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+        .animation-preview {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image & Video Generator</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('image')">Images</button>
+            <button class="tab-btn" onclick="switchTab('video')">Videos</button>
+            <button class="tab-btn" onclick="switchTab('canvas')">Canvas Art</button>
+            <button class="tab-btn" onclick="switchTab('text')">Text Art</button>
+        </div>
+
+        <!-- IMAGE PANEL -->
+        <div id="image-panel" class="panel active">
+            <h2>Chọn phương pháp tạo ảnh:</h2>
+            <div class="grid">
+                <div class="card selected" onclick="selectImageMethod('svg')" data-method="svg">
+                    <div class="card-icon"> SVG</div>
+                    <div class="card-title">SVG Image</div>
+                    <div class="card-desc">Tạo ảnh vector SVG từ text</div>
+                </div>
+                <div class="card" onclick="selectImageMethod('gradient')" data-method="gradient">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Gradient</div>
+                    <div class="card-desc">Tạo ảnh gradient đẹp mắt</div>
+                </div>
+                <div class="card" onclick="selectImageMethod('pattern')" data-method="pattern">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Pattern</div>
+                    <div class="card-desc">Tạo ảnh lặp pattern</div>
+                </div>
+                <div class="card" onclick="selectImageMethod('avatar')" data-method="avatar">
+                    <div class="card-icon"> ‍ </div>
+                    <div class="card-title">Avatar</div>
+                    <div class="card-desc">Tạo avatar từ tên</div>
+                </div>
+                <div class="card" onclick="selectImageMethod('qrcode')" data-method="qrcode">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">QR Code</div>
+                    <div class="card-desc">Tạo mã QR code</div>
+                </div>
+                <div class="card" onclick="selectImageMethod('badge')" data-method="badge">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Badge</div>
+                    <div class="card-desc">Tạo huy hiệu badge</div>
+                </div>
+            </div>
+
+            <div id="image-options">
+                <div class="form-group">
+                    <label>Nhập nội dung:</label>
+                    <textarea id="imageText" placeholder="Nhập text để tạo ảnh..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Kích thước:</label>
+                    <div class="size-presets">
+                        <button class="size-preset" onclick="setSize(512,512)">512x512</button>
+                        <button class="size-preset" onclick="setSize(800,600)">800x600</button>
+                        <button class="size-preset" onclick="setSize(1200,630)">1200x630</button>
+                        <button class="size-preset" onclick="setSize(1920,1080)">1920x1080</button>
+                    </div>
+                    <div class="options-row" style="margin-top:10px">
+                        <div class="option-item">
+                            <input type="number" id="imgWidth" value="512" placeholder="Width">
+                        </div>
+                        <div class="option-item">
+                            <input type="number" id="imgHeight" value="512" placeholder="Height">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Màu sắc:</label>
+                    <div class="color-picker" id="colorPicker">
+                        <div class="color-swatch selected" style="background:#e94560" onclick="selectColor('#e94560')"></div>
+                        <div class="color-swatch" style="background:#0f3460" onclick="selectColor('#0f3460')"></div>
+                        <div class="color-swatch" style="background:#00b894" onclick="selectColor('#00b894')"></div>
+                        <div class="color-swatch" style="background:#fdcb6e" onclick="selectColor('#fdcb6e')"></div>
+                        <div class="color-swatch" style="background:#6c5ce7" onclick="selectColor('#6c5ce7')"></div>
+                        <div class="color-swatch" style="background:#00cec9" onclick="selectColor('#00cec9')"></div>
+                        <div class="color-swatch" style="background:#ff7675" onclick="selectColor('#ff7675')"></div>
+                        <div class="color-swatch" style="background:#2d3436" onclick="selectColor('#2d3436')"></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="generateImage()">Tạo ảnh</button>
+            </div>
+        </div>
+
+        <!-- VIDEO PANEL -->
+        <div id="video-panel" class="panel">
+            <h2>Chọn phương pháp tạo video:</h2>
+            <div class="grid">
+                <div class="card selected" onclick="selectVideoMethod('text-anim')" data-method="text-anim">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Text Animation</div>
+                    <div class="card-desc">Animation text xuất hiện</div>
+                </div>
+                <div class="card" onclick="selectVideoMethod('particle')" data-method="particle">
+                    <div class="card-icon">✨</div>
+                    <div class="card-title">Particle Effect</div>
+                    <div class="card-desc">Hiệu ứng hạt</div>
+                </div>
+                <div class="card" onclick="selectVideoMethod('wave')" data-method="wave">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Wave</div>
+                    <div class="card-desc">Sóng nước animation</div>
+                </div>
+                <div class="card" onclick="selectVideoMethod('matrix')" data-method="matrix">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Matrix Rain</div>
+                    <div class="card-desc">Hiệu ứng Matrix</div>
+                </div>
+                <div class="card" onclick="selectVideoMethod('clock')" data-method="clock">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Clock</div>
+                    <div class="card-desc">Đồng hồ chạy</div>
+                </div>
+                <div class="card" onclick="selectVideoMethod('morphing')" data-method="morphing">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Morphing</div>
+                    <div class="card-desc">Biến đổi hình dạng</div>
+                </div>
+            </div>
+
+            <div id="video-options">
+                <div class="form-group">
+                    <label>Nhập nội dung:</label>
+                    <textarea id="videoText" placeholder="Nhập text cho video..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Thời lượng (giây):</label>
+                    <input type="number" id="videoDuration" value="5" min="1" max="30">
+                </div>
+                <div class="form-group">
+                    <label>Tốc độ FPS:</label>
+                    <select id="videoFps">
+                        <option value="24">24 FPS</option>
+                        <option value="30" selected>30 FPS</option>
+                        <option value="60">60 FPS</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="generateVideo()">Tạo video</button>
+                <button class="btn btn-success" onclick="recordVideo()" id="recordBtn" disabled> </ Quay video</button>
+            </div>
+        </div>
+
+        <!-- CANVAS ART PANEL -->
+        <div id="canvas-panel" class="panel">
+            <h2>Canvas Art Generator:</h2>
+            <div class="grid">
+                <div class="card selected" onclick="selectCanvasArt('spiral')" data-method="spiral">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Spiral</div>
+                    <div class="card-desc">Xoắn ốc nhiều màu</div>
+                </div>
+                <div class="card" onclick="selectCanvasArt('fractal')" data-method="fractal">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Fractal</div>
+                    <div class="card-desc">Fractal pattern</div>
+                </div>
+                <div class="card" onclick="selectCanvasArt('circles')" data-method="circles">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Circles</div>
+                    <div class="card-desc">Vòng tròn lồng nhau</div>
+                </div>
+                <div class="card" onclick="selectCanvasArt('lines')" data-method="lines">
+                    <div class="card-icon"> ️</div>
+                    <div class="card-title">Lines</div>
+                    <div class="card-desc">Đường thẳng nghệ thuật</div>
+                </div>
+                <div class="card" onclick="selectCanvasArt('starburst')" data-method="starburst">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Starburst</div>
+                    <div class="card-desc">Nổ sao nhiều màu</div>
+                </div>
+                <div class="card" onclick="selectCanvasArt('noise')" data-method="noise">
+                    <div class="card-icon"> ️</div>
+                    <div class="card-title">Noise</div>
+                    <div class="card-desc">Noise pattern</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateCanvasArt()">Tạo Canvas Art</button>
+        </div>
+
+        <!-- TEXT ART PANEL -->
+        <div id="text-panel" class="panel">
+            <h2>Text Art Generator:</h2>
+            <div class="grid">
+                <div class="card selected" onclick="selectTextArt('ascii')" data-method="ascii">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">ASCII Art</div>
+                    <div class="card-desc">Tạo ASCII art từ text</div>
+                </div>
+                <div class="card" onclick="selectTextArt('figlet')" data-method="figlet">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">FIGlet</div>
+                    <div class="card-desc">Text lớn kiểu FIGlet</div>
+                </div>
+                <div class="card" onclick="selectTextArt('emoji')" data-method="emoji">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Emoji Art</div>
+                    <div class="card-desc">Tạo art bằng emoji</div>
+                </div>
+                <div class="card" onclick="selectTextArt('box')" data-method="box">
+                    <div class="card-icon"> </div>
+                    <div class="card-title">Box Drawing</div>
+                    <div class="card-desc">Vẽ box bằng ký tự</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nhập text:</label>
+                <input type="text" id="textArtInput" placeholder="Nhập text...">
+            </div>
+            <button class="btn btn-primary" onclick="generateTextArt()">Tạo Text Art</button>
+            <pre id="textArtOutput" style="background:rgba(0,0,0,0.3);padding:20px;border-radius:10px;margin-top:20px;overflow-x:auto;font-family:monospace"></pre>
+        </div>
+
+        <div class="preview-area" id="previewArea">
+            <div class="preview-placeholder">
+                <p>Kết quả sẽ hiển thị ở đây</p>
+            </div>
+        </div>
+
+        <div class="status-bar" id="statusBar">Sẵn sàng</div>
+    </div>
+
+    <button class="btn btn-success download-btn" id="downloadBtn" onclick="downloadResult()" style="display:none">
+         Download
+    </button>
+
+    <script>
+        let currentTab = 'image';
+        let currentImageMethod = 'svg';
+        let currentVideoMethod = 'text-anim';
+        let currentCanvasArt = 'spiral';
+        let currentTextArt = 'ascii';
+        let selectedColor = '#e94560';
+        let generatedBlob = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let animationId = null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-panel`).classList.add('active');
+            currentTab = tab;
+        }
+
+        function selectImageMethod(method) {
+            document.querySelectorAll('#image-panel .card').forEach(c => c.classList.remove('selected'));
+            event.target.closest('.card').classList.add('selected');
+            currentImageMethod = method;
+        }
+
+        function selectVideoMethod(method) {
+            document.querySelectorAll('#video-panel .card').forEach(c => c.classList.remove('selected'));
+            event.target.closest('.card').classList.add('selected');
+            currentVideoMethod = method;
+        }
+
+        function selectCanvasArt(method) {
+            document.querySelectorAll('#canvas-panel .card').forEach(c => c.classList.remove('selected'));
+            event.target.closest('.card').classList.add('selected');
+            currentCanvasArt = method;
+        }
+
+        function selectTextArt(method) {
+            document.querySelectorAll('#text-panel .card').forEach(c => c.classList.remove('selected'));
+            event.target.closest('.card').classList.add('selected');
+            currentTextArt = method;
+        }
+
+        function selectColor(color) {
+            document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+            event.target.classList.add('selected');
+            selectedColor = color;
+        }
+
+        function setSize(w, h) {
+            document.getElementById('imgWidth').value = w;
+            document.getElementById('imgHeight').value = h;
+        }
+
+        function setStatus(msg) {
+            document.getElementById('statusBar').textContent = msg;
+        }
+
+        // ==================== IMAGE GENERATORS ====================
+        function generateImage() {
+            const text = document.getElementById('imageText').value || 'Hello World';
+            const w = parseInt(document.getElementById('imgWidth').value) || 512;
+            const h = parseInt(document.getElementById('imgHeight').value) || 512;
+
+            setStatus('Đang tạo ảnh...');
+            const preview = document.getElementById('previewArea');
+
+            switch(currentImageMethod) {
+                case 'svg': generateSVG(text, w, h); break;
+                case 'gradient': generateGradient(w, h); break;
+                case 'pattern': generatePattern(w, h); break;
+                case 'avatar': generateAvatar(text, w, h); break;
+                case 'qrcode': generateQRCode(text, w, h); break;
+                case 'badge': generateBadge(text, w, h); break;
+            }
+        }
+
+        function generateSVG(text, w, h) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+                <defs>
+                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:${selectedColor};stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#0f3460;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grad)"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="32" font-family="Arial">${escapeHtml(text)}</text>
+            </svg>`;
+            
+            const blob = new Blob([svg], {type: 'image/svg+xml'});
+            generatedBlob = blob;
+            preview.innerHTML = svg;
+            document.getElementById('downloadBtn').style.display = 'block';
+            setStatus('Đã tạo SVG thành công!');
+        }
+
+        function generateGradient(w, h) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createLinearGradient(0, 0, w, h);
+            gradient.addColorStop(0, selectedColor);
+            gradient.addColorStop(0.5, '#6c5ce7');
+            gradient.addColorStop(1, '#0f3460');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+            
+            for(let i = 0; i < 50; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random()*w, Math.random()*h, Math.random()*50+10, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.3})`;
+                ctx.fill();
+            }
+            
+            canvas.toBlob(blob => {
+                generatedBlob = blob;
+                document.getElementById('previewArea').innerHTML = '';
+                document.getElementById('previewArea').appendChild(canvas);
+                document.getElementById('downloadBtn').style.display = 'block';
+            });
+            setStatus('Đã tạo gradient thành công!');
+        }
+
+        function generatePattern(w, h) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, w, h);
+            
+            const patternSize = 40;
+            for(let x = 0; x < w; x += patternSize) {
+                for(let y = 0; y < h; y += patternSize) {
+                    ctx.beginPath();
+                    ctx.arc(x + patternSize/2, y + patternSize/2, patternSize/3, 0, Math.PI*2);
+                    ctx.fillStyle = (x+y) % (patternSize*2) === 0 ? selectedColor : '#0f3460';
+                    ctx.fill();
+                }
+            }
+            
+            canvas.toBlob(blob => {
+                generatedBlob = blob;
+                document.getElementById('previewArea').innerHTML = '';
+                document.getElementById('previewArea').appendChild(canvas);
+                document.getElementById('downloadBtn').style.display = 'block';
+            });
+            setStatus('Đã tạo pattern thành công!');
+        }
+
+        function generateAvatar(text, w, h) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createLinearGradient(0, 0, w, h);
+            gradient.addColorStop(0, selectedColor);
+            gradient.addColorStop(1, '#6c5ce7');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+            
+            const initial = text.charAt(0).toUpperCase();
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${w/2}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(initial, w/2, h/2);
+            
+            canvas.toBlob(blob => {
+                generatedBlob = blob;
+                document.getElementById('previewArea').innerHTML = '';
+                document.getElementById('previewArea').appendChild(canvas);
+                document.getElementById('downloadBtn').style.display = 'block';
+            });
+            setStatus('Đã tạo avatar thành công!');
+        }
+
+        function generateQRCode(text, w, h) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, w, h);
+            
+            const size = 10;
+            const modules = Math.min(Math.floor(w/size), 25);
+            const offset = (w - modules*size) / 2;
+            
+            ctx.fillStyle = 'black';
+            for(let i = 0; i < modules; i++) {
+                for(let j = 0; j < modules; j++) {
+                    const isCorner = (i < 7 && j < 7) || (i < 7 && j >= modules-7) || (i >= modules-7 && j < 7);
+                    const fill = isCorner || Math.random() > 0.5;
+                    if(fill) {
+                        ctx.fillRect(offset + i*size, offset + j*size, size-1, size-1);
+                    }
+                }
+            }
+            
+            drawFinderPattern(ctx, offset, offset, size);
+            drawFinderPattern(ctx, offset + (modules-7)*size, offset, size);
+            drawFinderPattern(ctx, offset, offset + (modules-7)*size, size);
+            
+            canvas.toBlob(blob => {
+                generatedBlob = blob;
+                document.getElementById('previewArea').innerHTML = '';
+                document.getElementById('previewArea').appendChild(canvas);
+                document.getElementById('downloadBtn').style.display = 'block';
+            });
+            setStatus('Đã tạo QR code thành công!');
+        }
+
+        function drawFinderPattern(ctx, x, y, size) {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(x, y, 7*size, 7*size);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(x+size, y+size, 5*size, 5*size);
+            ctx.fillStyle = 'black';
+            ctx.fillRect(x+2*size, y+2*size, 3*size, 3*size);
+        }
+
+        function generateBadge(text, w, h) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+                <defs>
+                    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:${selectedColor}"/>
+                        <stop offset="100%" style="stop-color:#e94560"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="${w/2}" cy="${h/2}" r="${Math.min(w,h)/2-10}" fill="url(#bg)" stroke="white" stroke-width="4"/>
+                <circle cx="${w/2}" cy="${h/2}" r="${Math.min(w,h)/2-30}" fill="none" stroke="white" stroke-width="2" stroke-dasharray="10,5"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="24" font-weight="bold" font-family="Arial">${escapeHtml(text)}</text>
+            </svg>`;
+            
+            const blob = new Blob([svg], {type: 'image/svg+xml'});
+            generatedBlob = blob;
+            document.getElementById('previewArea').innerHTML = svg;
+            document.getElementById('downloadBtn').style.display = 'block';
+            setStatus('Đã tạo badge thành công!');
+        }
+
+        // ==================== VIDEO GENERATORS ====================
+        let videoCanvas, videoCtx;
+
+        function generateVideo() {
+            const text = document.getElementById('videoText').value || 'Hello Video';
+            const duration = parseInt(document.getElementById('videoDuration').value) || 5;
+            const fps = parseInt(document.getElementById('videoFps').value) || 30;
+            
+            if(animationId) cancelAnimationFrame(animationId);
+            
+            const preview = document.getElementById('previewArea');
+            preview.innerHTML = '';
+            
+            videoCanvas = document.createElement('canvas');
+            videoCanvas.width = 800;
+            videoCanvas.height = 450;
+            preview.appendChild(videoCanvas);
+            videoCtx = videoCanvas.getContext('2d');
+            
+            document.getElementById('recordBtn').disabled = false;
+            
+            setStatus(`Đang chạy video: ${currentVideoMethod} (${duration}s)`);
+            
+            const startTime = Date.now();
+            const totalFrames = duration * fps;
+            
+            function animate() {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const frame = Math.floor(elapsed * fps);
+                
+                if(elapsed >= duration) {
+                    setStatus('Video hoàn thành! Nhấn "Quay video" để lưu.');
+                    return;
+                }
+                
+                switch(currentVideoMethod) {
+                    case 'text-anim': drawTextAnim(videoCtx, videoCanvas, text, elapsed, duration); break;
+                    case 'particle': drawParticle(videoCtx, videoCanvas, elapsed, duration); break;
+                    case 'wave': drawWave(videoCtx, videoCanvas, elapsed); break;
+                    case 'matrix': drawMatrix(videoCtx, videoCanvas, elapsed); break;
+                    case 'clock': drawClock(videoCtx, videoCanvas, elapsed); break;
+                    case 'morphing': drawMorphing(videoCtx, videoCanvas, elapsed); break;
+                }
+                
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        function drawTextAnim(ctx, canvas, text, t, dur) {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const progress = Math.min(t / dur, 1);
+            const chars = Math.floor(text.length * progress);
+            
+            ctx.fillStyle = selectedColor;
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for(let i = 0; i < chars; i++) {
+                const x = (canvas.width/2 - text.length*12) + i*24;
+                const y = canvas.height/2 + Math.sin(t*3 + i*0.5) * 20;
+                ctx.globalAlpha = 0.5 + Math.sin(t*2 + i) * 0.5;
+                ctx.fillText(text[i], x, y);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        let particles = [];
+        function drawParticle(ctx, canvas, t) {
+            ctx.fillStyle = 'rgba(26,26,46,0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if(particles.length < 200) {
+                particles.push({
+                    x: canvas.width/2,
+                    y: canvas.height/2,
+                    vx: (Math.random()-0.5) * 10,
+                    vy: (Math.random()-0.5) * 10,
+                    life: 1,
+                    color: `hsl(${Math.random()*360}, 100%, 50%)`
+                });
+            }
+            
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.01;
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3 * p.life, 0, Math.PI*2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.fill();
+                
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawWave(ctx, canvas, t) {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for(let w = 0; w < 5; w++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height/2);
+                
+                for(let x = 0; x < canvas.width; x++) {
+                    const y = canvas.height/2 + 
+                        Math.sin(x*0.02 + t*2 + w) * (30 + w*10) +
+                        Math.sin(x*0.01 + t*1.5) * 20;
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.strokeStyle = `hsla(${200 + w*30}, 100%, 50%, 0.5)`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        let matrixChars = [];
+        function drawMatrix(ctx, canvas, t) {
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0f0';
+            ctx.font = '14px monospace';
+            
+            if(matrixChars.length < 50) {
+                matrixChars.push({
+                    x: Math.random() * canvas.width,
+                    y: 0,
+                    speed: 2 + Math.random() * 5,
+                    chars: []
+                });
+            }
+            
+            matrixChars.forEach((col, i) => {
+                col.y += col.speed;
+                const char = String.fromCharCode(0x30A0 + Math.random() * 96);
+                ctx.fillText(char, col.x, col.y);
+                
+                if(col.y > canvas.height) {
+                    matrixChars.splice(i, 1);
+                }
+            });
+        }
+
+        function drawClock(ctx, canvas, t) {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const cx = canvas.width/2;
+            const cy = canvas.height/2;
+            const r = Math.min(cx, cy) - 50;
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI*2);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            for(let i = 0; i < 12; i++) {
+                const angle = (i * Math.PI * 2 / 12) - Math.PI/2;
+                const x = cx + Math.cos(angle) * (r - 20);
+                const y = cy + Math.sin(angle) * (r - 20);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(i || 12, x, y);
+            }
+            
+            const seconds = t % 60;
+            const sAngle = (seconds / 60) * Math.PI * 2 - Math.PI/2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(sAngle) * (r-60), cy + Math.sin(sAngle) * (r-60));
+            ctx.strokeStyle = '#e94560';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            const minutes = (t / 60) % 60;
+            const mAngle = (minutes / 60) * Math.PI * 2 - Math.PI/2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(mAngle) * (r-40), cy + Math.sin(mAngle) * (r-40));
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+
+        function drawMorphing(ctx, canvas, t) {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const cx = canvas.width/2;
+            const cy = canvas.height/2;
+            const sides = 3 + Math.floor((Math.sin(t) + 1) * 3);
+            const r = 100 + Math.sin(t*2) * 30;
+            
+            ctx.beginPath();
+            for(let i = 0; i <= sides; i++) {
+                const angle = (i / sides) * Math.PI * 2 - Math.PI/2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if(i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = selectedColor;
+            ctx.globalAlpha = 0.7;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${sides} sides`, cx, cy + r + 50);
+        }
+
+        // ==================== CANVAS ART ====================
+        function generateCanvasArt() {
+            const preview = document.getElementById('previewArea');
+            preview.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 600;
+            preview.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            switch(currentCanvasArt) {
+                case 'spiral': drawSpiral(ctx, canvas); break;
+                case 'fractal': drawFractal(ctx, canvas); break;
+                case 'circles': drawCircles(ctx, canvas); break;
+                case 'lines': drawLines(ctx, canvas); break;
+                case 'starburst': drawStarburst(ctx, canvas); break;
+                case 'noise': drawNoise(ctx, canvas); break;
+            }
+            
+            canvas.toBlob(blob => {
+                generatedBlob = blob;
+                document.getElementById('downloadBtn').style.display = 'block';
+            });
+            setStatus('Đã tạo Canvas Art thành công!');
+        }
+
+        function drawSpiral(ctx, canvas) {
+            const cx = canvas.width/2;
+            const cy = canvas.height/2;
+            let angle = 0;
+            let radius = 0;
+            
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            while(radius < 250) {
+                const x = cx + Math.cos(angle) * radius;
+                const y = cy + Math.sin(angle) * radius;
+                ctx.strokeStyle = `hsl(${angle * 10 % 360}, 100%, 50%)`;
+                ctx.lineTo(x, y);
+                angle += 0.1;
+                radius += 0.5;
+            }
+            ctx.stroke();
+        }
+
+        function drawFractal(ctx, canvas) {
+            function branch(x, y, len, angle, depth) {
+                if(depth === 0 || len < 2) return;
+                
+                const x2 = x + Math.cos(angle) * len;
+                const y2 = y + Math.sin(angle) * len;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = `hsl(${depth * 40}, 100%, 50%)`;
+                ctx.lineWidth = depth;
+                ctx.stroke();
+                
+                branch(x2, y2, len * 0.7, angle - 0.5, depth - 1);
+                branch(x2, y2, len * 0.7, angle + 0.5, depth - 1);
+            }
+            
+            branch(canvas.width/2, canvas.height, 100, -Math.PI/2, 10);
+        }
+
+        function drawCircles(ctx, canvas) {
+            const cx = canvas.width/2;
+            const cy = canvas.height/2;
+            
+            for(let i = 0; i < 20; i++) {
+                const r = 20 + i * 15;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsl(${i * 18}, 100%, 50%)`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        function drawLines(ctx, canvas) {
+            for(let i = 0; i < 50; i++) {
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                ctx.lineWidth = Math.random() * 5 + 1;
+                ctx.stroke();
+            }
+        }
+
+        function drawStarburst(ctx, canvas) {
+            const cx = canvas.width/2;
+            const cy = canvas.height/2;
+            
+            for(let i = 0; i < 36; i++) {
+                const angle = (i / 36) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(angle) * 300, cy + Math.sin(angle) * 300);
+                ctx.strokeStyle = `hsl(${i * 10}, 100%, 50%)`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        function drawNoise(ctx, canvas) {
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            for(let i = 0; i < imageData.data.length; i += 4) {
+                const v = Math.random() * 255;
+                imageData.data[i] = v * 0.5;
+                imageData.data[i+1] = v * 0.3;
+                imageData.data[i+2] = v;
+                imageData.data[i+3] = 255;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // ==================== TEXT ART ====================
+        function generateTextArt() {
+            const text = document.getElementById('textArtInput').value || 'Hello';
+            const output = document.getElementById('textArtOutput');
+            
+            switch(currentTextArt) {
+                case 'ascii': output.textContent = toAsciiArt(text); break;
+                case 'figlet': output.textContent = toFiglet(text); break;
+                case 'emoji': output.textContent = toEmojiArt(text); break;
+                case 'box': output.textContent = toBoxArt(text); break;
+            }
+            setStatus('Đã tạo Text Art thành công!');
+        }
+
+        function toAsciiArt(text) {
+            const chars = ['@','#','$','%','=','*','+','-',':','.'];
+            let art = '';
+            for(let i = 0; i < 7; i++) {
+                for(let c of text) {
+                    const code = c.charCodeAt(0);
+                    const row = code * 7 + i;
+                    art += chars[row % chars.length];
+                    art += chars[(row + 3) % chars.length];
+                }
+                art += '\n';
+            }
+            return art;
+        }
+
+        function toFiglet(text) {
+            const top = ' _ ' .repeat(text.length);
+            const mid = text.split('').map(c => `|${c.padStart(2)}|`).join('');
+            const bot = '|_' .repeat(text.length) + '_|';
+            return `${top}\n${mid}\n${bot}`;
+        }
+
+        function toEmojiArt(text) {
+            const emojis = [' ️',' ',' ',' ',' ',' ',' ',' '];
+            let art = '';
+            for(let c of text.toUpperCase()) {
+                const idx = c.charCodeAt(0) - 65;
+                if(idx >= 0 && idx < emojis.length) {
+                    art += emojis[idx] + ' ';
+                }
+            }
+            return art || ' ️   ';
+        }
+
+        function toBoxArt(text) {
+            const line = '─'.repeat(text.length + 4);
+            return `┌${line}┐\n│  ${text}  │\n└${line}┘`;
+        }
+
+        // ==================== UTILITIES ====================
+        function escapeHtml(text) {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function downloadResult() {
+            if(!generatedBlob) {
+                const canvas = document.querySelector('#previewArea canvas');
+                if(canvas) {
+                    canvas.toBlob(blob => {
+                        downloadBlob(blob);
+                    });
+                }
+                return;
+            }
+            downloadBlob(generatedBlob);
+        }
+
+        function downloadBlob(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `generated_${Date.now()}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+            setStatus('Đã tải file thành công!');
+        }
+
+        function recordVideo() {
+            const canvas = document.querySelector('#previewArea canvas');
+            if(!canvas) return;
+            
+            recordedChunks = [];
+            const stream = canvas.captureStream(30);
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if(e.data.size > 0) recordedChunks.push(e.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `video_${Date.now()}.webm`;
+                a.click();
+                setStatus('Đã quay video thành công!');
+            };
+            
+            mediaRecorder.start();
+            setStatus('Đang quay video...');
+            
+            const duration = parseInt(document.getElementById('videoDuration').value) * 1000;
+            setTimeout(() => {
+                mediaRecorder.stop();
+            }, duration);
+        }
+    </script>
+</body>
+</html>

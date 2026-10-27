@@ -1,0 +1,6 @@
+[
+  { "url": "slides/morning.jpg", "time": "06:00" },
+  { "url": "slides/noon.jpg", "time": "12:00" },
+  { "url": "slides/evening.jpg", "time": "18:00" },
+  { "url": "slides/night.jpg", "time": "22:00" }
+]
