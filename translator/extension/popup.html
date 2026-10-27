@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Translate</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" fill="white"/>
+        </svg>
+        <span>Quick Translate</span>
+      </div>
+      <div class="badge">v1.1</div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="translate">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z"/></svg>
+        Dịch
+      </button>
+      <button class="tab" data-tab="vocabulary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/></svg>
+        Từ vựng
+      </button>
+      <button class="tab" data-tab="history">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        Lịch sử
+      </button>
+    </div>
+
+    <!-- Translate Tab -->
+    <div id="tabTranslate" class="tab-content active">
+      <div class="translate-section">
+        <textarea id="inputText" placeholder="Nhập text cần dịch..."></textarea>
+        <button id="translateBtn" class="btn-translate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04z" fill="white"/>
+          </svg>
+          Dịch sang tiếng Việt
+        </button>
+        <div id="result" class="result"></div>
+      </div>
+    </div>
+
+    <!-- Vocabulary Tab -->
+    <div id="tabVocabulary" class="tab-content">
+      <div class="vocab-section">
+        <div class="section-header">
+          <h3>Từ vựng đã lưu</h3>
+          <div class="vocab-actions">
+            <button id="exportVocab" class="btn-export" title="Xuất file CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </button>
+            <button id="clearVocab" class="btn-clear">Xóa</button>
+          </div>
+        </div>
+        <div id="vocabList" class="vocab-list">
+          <div class="empty-state">Chưa có từ vựng nào được lưu</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div id="tabHistory" class="tab-content">
+      <div class="history-section">
+        <div class="section-header">
+          <h3>Lịch sử dịch</h3>
+          <button id="clearHistory" class="btn-clear">Xóa</button>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="empty-state">Chưa có lịch sử dịch</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="shortcut">💡 Bôi đen text → Click icon để dịch hoặc lưu từ</div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "appId": "com.duydon.truyen",
+  "appName": "Truyen Trung-Viet",
+  "webDir": "public",
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

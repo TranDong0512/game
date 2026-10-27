@@ -1,0 +1,73 @@
+VIDEO SUBTITLE TOOL — BÁO CÁO RÀ SOÁT
+Ngày: 19/10/2026
+
+KẾT QUẢ
+- Node.js: 11/11 test đạt, gồm FFmpeg/ffprobe thật với video tổng hợp.
+- Android JVM: 9/9 test đạt.
+- Android instrumentation: 6/6 test đạt trên giả lập Android 17 x86_64, trang nhớ 16 KB.
+- Android Lint: 0 lỗi, 11 cảnh báo (phiên bản dependency/target SDK, i18n và cấu hình backup cũ).
+- npm audit sau cập nhật: 0 lỗ hổng đã biết trong dependency Node.js.
+- Release APK: build thành công, chữ ký APK v2 hợp lệ, cài và mở thành công trên giả lập.
+- Đã xem ảnh màn hình phần đầu/cuối giao diện release; chữ tiếng Việt và các nút hiển thị đúng.
+
+LỖI ĐÃ TÁI HIỆN VÀ SỬA TRONG CLI
+1. Đọc HF_API_KEY khi import trước dotenv: chuyển sang đọc lúc gửi request.
+2. Payload nhận dạng sai: gửi base64 JSON và yêu cầu return_timestamps.
+3. ASR không có timestamps vẫn tạo cue 0->0: báo lỗi rõ ràng, kiểm tra mốc thời gian.
+4. Dịch đọc generated_text thay vì translation_text: đọc đúng kết quả translation API.
+5. Làm tròn SRT thành 59,1000: làm tròn tổng milliseconds trước khi tách giờ/phút/giây.
+6. Song ngữ trùng hai dòng khi bỏ dịch: loại dòng trùng.
+7. Không kiểm tra mode/thời gian cue: bổ sung kiểm tra và test.
+8. Mode original vẫn gọi dịch: bỏ qua dịch khi chỉ yêu cầu bản gốc.
+9. File trung gian bị ghi đè giữa các lần chạy: dùng thư mục job riêng.
+10. Gỡ tùy chọn vô hiệu hóa kiểm tra chứng chỉ khi tải; không tải cả playlist.
+11. Cập nhật Axios lên ^1.20.0 để xử lý các advisory npm audit phát hiện.
+12. Chuyển URL Hugging Face từ api-inference sang router; cho phép HF_ASR_URL tùy chỉnh.
+
+ANDROID
+- Viết ứng dụng native, chạy trực tiếp trên điện thoại, không cần máy tính/server riêng.
+- Chọn file video/âm thanh qua trình chọn file hệ thống hoặc nhập URL HTTP(S).
+- Tải audio qua yt-dlp; giải mã bằng MediaExtractor/MediaCodec, WAV mono 16 kHz.
+- Chia đoạn 5 phút, ghi nhận thời gian bắt đầu thực của đoạn; gọi Groq Whisper verbose_json.
+- Dịch theo nhóm, kiểm tra số câu và kiểu dữ liệu trả về; xuất SRT gốc/dịch/song ngữ.
+- Xử lý nền, thông báo, hủy tác vụ, retry API 429/5xx có giới hạn.
+- Khi lỗi dịch, cho phép xuất bản gốc đã nhận dạng; dọn file tạm.
+- API key nhập trên máy, mã hóa AES-GCM với Android Keystore, không nhúng key trong APK.
+- Xuất SRT qua Storage Access Framework, không xin quyền truy cập toàn bộ bộ nhớ.
+
+LỖI PHÁT HIỆN KHI TEST ANDROID
+- Thử nghiệm ban đầu dùng FFmpeg bị thiếu đường dẫn libc++: đã xác định và sửa đường dẫn.
+- Test tiếp phát hiện các thư viện WebP trong FFmpeg 0.18.1 không tương thích trang nhớ 16 KB.
+  Chế độ pageSizeCompat không sửa được tiến trình FFmpeg con.
+- Bản cuối đã LOẠI dependency FFmpeg, dùng bộ giải mã Android; test WAV và AAC thật đều đạt.
+  Không giữ lại APK FFmpeg lỗi trong dist.
+  Tham khảo: https://github.com/yausername/youtubedl-android/issues/365
+
+GIỚI HẠN ĐÃ BIẾT / CHƯA KIỂM THỬ
+- Chưa gọi API nhận dạng/dịch với key thật; chưa đánh giá chất lượng phụ đề trên video thực.
+- Chưa test tải video từ từng website hoặc các URL cần đăng nhập/CAPTCHA/DRM.
+- Chưa test trên điện thoại ARM thật; APK chứa ARM64/ARMv7/x86_64, minSdk 26 (Android 8).
+- Bản Android cần Internet và GROQ API key (khác với HF_API_KEY của CLI).
+  Dữ liệu âm thanh/văn bản gửi trực tiếp tới Groq, hạn mức và chi phí tùy tài khoản/model.
+- CLI Hugging Face phụ thuộc provider có phục vụ model tại thời điểm chạy; router mới không
+  bảo đảm các model cấu hình sẵn luôn khả dụng. Có thể cấu hình endpoint ASR riêng.
+- Định dạng Android hỗ trợ phụ thuộc codec của điện thoại. Codec lạ có thể không giải mã được.
+- APK xuất file SRT riêng; chưa ghép phụ đề vào video và không lưu bản video tải từ URL.
+- Giới hạn file local 2 GB; URL giới hạn 500 MB khi công cụ tải biết kích thước.
+- Hệ điều hành có thể dừng tác vụ dài khi thiếu tài nguyên; chưa có resume sau process death.
+- Resampling WAV hiện dùng lấy mẫu đơn giản; không phải bộ chuyển đổi âm thanh chất lượng studio.
+
+FILE BÀN GIAO
+dist/video-subtitle-personal.apk
+Kích thước: 48,344,486 bytes (~46.1 MiB)
+SHA-256: 6EF4D2B086097F781445E766F72726873755B85AD9339786790823E84CD3CFA0
+Application ID: vn.personal.subtitle
+Version: 1.0.0 (1), targetSdk 35, compileSdk 36, release không debuggable.
+Giữ .keys/personal.jks để ký bản cập nhật sau này.
+
+TÀI LIỆU ĐỐI CHIẾU
+https://console.groq.com/docs/speech-to-text
+https://console.groq.com/docs/models
+https://huggingface.co/docs/inference-providers/en/tasks/automatic-speech-recognition
+https://huggingface.co/docs/inference-providers/en/tasks/translation
+https://github.com/yausername/youtubedl-android

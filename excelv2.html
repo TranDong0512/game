@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Pro - JavaScript</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 10px;
+            background-color: #f0f2f5;
+            font-size: 14px;
+        }
+
+        .excel-container {
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #fafafa;
+            border-bottom: 1px solid #ccc;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            background: white;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .btn:hover {
+            background: #eef4ff;
+            border-color: #1a73e8;
+            color: #1a73e8;
+        }
+
+        .separator {
+            width: 1px;
+            height: 24px;
+            background: #ccc;
+            margin: 0 5px;
+        }
+
+        select.btn {
+            height: 30px;
+        }
+
+        /* Formula Bar */
+        .formula-bar {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+            gap: 10px;
+        }
+
+        .cell-selector {
+            font-weight: bold;
+            padding: 5px 10px;
+            background: #e1e1e1;
+            border-radius: 3px;
+            width: 60px;
+            text-align: center;
+        }
+
+        .formula-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        /* Grid */
+        .grid-wrapper {
+            overflow: auto;
+            height: 600px;
+            position: relative;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #d0d0d0;
+            min-width: 100px;
+            height: 30px;
+        }
+
+        th {
+            background: #f5f5f5;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            min-width: 50px;
+        }
+
+        td {
+            background: white;
+            padding: 0;
+            position: relative;
+        }
+
+        td.selected {
+            border: 2px solid #1a73e8;
+            z-index: 2;
+            outline: none;
+        }
+
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            padding: 5px;
+            background: transparent;
+            font-size: inherit;
+        }
+
+        .corner-cell {
+            background: #e1e1e1;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 3;
+        }
+
+        .row-header {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: #f5f5f5;
+            text-align: center;
+            min-width: 40px;
+        }
+
+        .col-header {
+            cursor: pointer;
+        }
+
+        .col-header:hover {
+            background: #e1e1e1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="excel-container">
+        <!-- Toolbar Định dạng & Chèn -->
+        <div class="toolbar">
+            <button class="btn" id="btn-bold"><b>B</b></button>
+            <button class="btn" id="btn-italic"><i>I</i></button>
+            <button class="btn" id="btn-underline"><u>U</u></button>
+
+            <div class="separator"></div>
+
+            <select class="btn" id="select-fontsize">
+                <option value="14px">14px</option>
+                <option value="16px">16px</option>
+                <option value="18px">18px</option>
+                <option value="20px">20px</option>
+                <option value="24px">24px</option>
+            </select>
+
+            <input type="color" class="btn" id="color-text" value="#000000" title="Màu chữ">
+            <input type="color" class="btn" id="color-bg" value="#ffffff" title="Màu nền">
+
+            <div class="separator"></div>
+
+            <button class="btn" id="btn-add-row">+ Thêm Hàng</button>
+            <button class="btn" id="btn-add-col">+ Thêm Cột</button>
+            <button class="btn" id="btn-insert-row">Chèn Hàng (Trên)</button>
+            <button class="btn" id="btn-insert-col">Chèn Cột (Trái)</button>
+            <button class="btn" id="btn-del-row" style="color:red;">Xóa Hàng</button>
+            <button class="btn" id="btn-del-col" style="color:red;">Xóa Cột</button>
+        </div>
+
+        <!-- Thanh công thức -->
+        <div class="formula-bar">
+            <div class="cell-selector" id="active-cell-name">A1</div>
+            <input type="text" class="formula-input" id="formula-input"
+                placeholder="Nhập giá trị hoặc công thức (vd: =SUM(A1:A3), =AVERAGE(B1:B3))">
+        </div>
+
+        <!-- Bảng tính -->
+        <div class="grid-wrapper">
+            <table id="spreadsheet"></table>
+        </div>
+    </div>
+
+    <script>
+        // Quản lý dữ liệu dạng mảng 2 chiều: sheetData[row][col] = { value, formula, style }
+        var sheetData = [];
+        var ROWS = 20;
+        var COLS = 10;
+        var selectedCell = { r: 0, c: 0 };
+
+        var spreadsheet = document.getElementById('spreadsheet');
+        var formulaInput = document.getElementById('formula-input');
+        var activeCellName = document.getElementById('active-cell-name');
+
+        // --- HÀM TIỆN ÍCH ---
+        function getColName(index) {
+            var colName = "";
+            while (index >= 0) {
+                colName = String.fromCharCode(65 + (index % 26)) + colName;
+                index = Math.floor(index / 26) - 1;
+            }
+            return colName;
+        }
+
+        function getCellName(r, c) {
+            return getColName(c) + (r + 1);
+        }
+
+        // Khởi tạo dữ liệu rỗng
+        function initData() {
+            sheetData = [];
+            for (var r = 0; r < ROWS; r++) {
+                var row = [];
+                for (var c = 0; c < COLS; c++) {
+                    row.push({ value: "", formula: "", style: {} });
+                }
+                sheetData.push(row);
+            }
+        }
+
+        // Vẽ lại toàn bộ bảng
+        function renderSheet() {
+            var html = '<tr><th class="corner-cell"></th>';
+            for (var c = 0; c < COLS; c++) {
+                html += '<th class="col-header" onclick="selectCol(' + c + ')">' + getColName(c) + '</th>';
+            }
+            html += '</tr>';
+
+            for (var r = 0; r < ROWS; r++) {
+                html += '<tr><td class="row-header" onclick="selectRow(' + r + ')">' + (r + 1) + '</td>';
+                for (var c = 0; c < COLS; c++) {
+                    var cellData = sheetData[r][c];
+                    var styleStr = "";
+                    for (var key in cellData.style) {
+                        styleStr += key + ":" + cellData.style[key] + ";";
+                    }
+
+                    var displayValue = cellData.value;
+                    if (typeof displayValue === 'string') {
+                        displayValue = displayValue.replace(/"/g, '&quot;');
+                    }
+
+                    html += '<td data-r="' + r + '" data-c="' + c + '" style="' + styleStr + '">';
+                    html += '<input type="text" class="cell-input" value="' + displayValue + '" style="' + styleStr + '" data-r="' + r + '" data-c="' + c + '">';
+                    html += '</td>';
+                }
+                html += '</tr>';
+            }
+            spreadsheet.innerHTML = html;
+            recalculateAllFormulas();
+            addEventListenersToCells();
+        }
+
+        // --- XỬ LÝ SỰ KIỆN Ô ---
+        function addEventListenersToCells() {
+            var inputs = document.querySelectorAll('.cell-input');
+            for (var i = 0; i < inputs.length; i++) {
+                inputs[i].addEventListener('focus', function (e) {
+                    var r = parseInt(e.target.dataset.r);
+                    var c = parseInt(e.target.dataset.c);
+                    selectCell(r, c);
+                });
+
+                inputs[i].addEventListener('input', function (e) {
+                    var r = parseInt(e.target.dataset.r);
+                    var c = parseInt(e.target.dataset.c);
+                    sheetData[r][c].value = e.target.value;
+                    sheetData[r][c].formula = ""; // Xóa công thức nếu gõ tay
+                    recalculateAllFormulas();
+                });
+
+                inputs[i].addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyFormulaFromBar(e.target.value, parseInt(e.target.dataset.r), parseInt(e.target.dataset.c));
+                        e.target.blur();
+                    }
+                });
+            }
+        }
+
+        function selectCell(r, c) {
+            selectedCell = { r: r, c: c };
+            activeCellName.textContent = getCellName(r, c);
+
+            // Đánh dấu ô chọn
+            var selectedTds = document.querySelectorAll('td.selected');
+            for (var i = 0; i < selectedTds.length; i++) selectedTds[i].classList.remove('selected');
+
+            var td = document.querySelector('td[data-r="' + r + '"][data-c="' + c + '"]');
+            if (td) td.classList.add('selected');
+
+            // Đẩy dữ liệu lên thanh công thức
+            var cellData = sheetData[r][c];
+            formulaInput.value = cellData.formula ? cellData.formula : cellData.value;
+
+            // Đồng bộ định dạng hiện tại lên toolbar
+            var style = cellData.style;
+            document.getElementById('select-fontsize').value = style.fontSize || '14px';
+            document.getElementById('color-text').value = style.color || '#000000';
+            document.getElementById('color-bg').value = style.backgroundColor || '#ffffff';
+        }
+
+        // --- XỬ LÝ THANH CÔNG THỨC ---
+        formulaInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                applyFormulaFromBar(formulaInput.value, selectedCell.r, selectedCell.c);
+                formulaInput.blur();
+                renderSheet(); // Vẽ lại để cập nhật
+                selectCell(selectedCell.r, selectedCell.c);
+            }
+        });
+
+        function applyFormulaFromBar(val, r, c) {
+            sheetData[r][c].value = val;
+            if (val.startsWith('=')) {
+                sheetData[r][c].formula = val;
+            } else {
+                sheetData[r][c].formula = "";
+            }
+            recalculateAllFormulas();
+        }
+
+        // --- TÍNH TOÁN CÔNG THỨC ---
+        function recalculateAllFormulas() {
+            for (var r = 0; r < ROWS; r++) {
+                for (var c = 0; c < COLS; c++) {
+                    if (sheetData[r][c].formula) {
+                        var result = calculateFormula(sheetData[r][c].formula);
+                        sheetData[r][c].value = result;
+
+                        // Cập nhật DOM trực tiếp để không phải render lại toàn bộ
+                        var inputEl = document.querySelector('input[data-r="' + r + '"][data-c="' + c + '"]');
+                        if (inputEl) inputEl.value = result;
+                    }
+                }
+            }
+        }
+
+        function calculateFormula(formula) {
+            try {
+                var expr = formula.substring(1).toUpperCase(); // Bỏ dấu '='
+
+                // Hàm xử lý: SUM, AVERAGE, MIN, MAX, COUNT
+                var funcMatch = expr.match(/(SUM|AVERAGE|MIN|MAX|COUNT)\(([^)]+)\)/);
+                if (funcMatch) {
+                    var funcName = funcMatch[1];
+                    var args = funcMatch[2].split(',');
+                    var values = [];
+
+                    for (var i = 0; i < args.length; i++) {
+                        var arg = args[i].trim();
+                        if (arg.indexOf(':') !== -1) {
+                            var parts = arg.split(':');
+                            var rangeVals = getRangeValues(parts[0], parts[1]);
+                            values = values.concat(rangeVals);
+                        } else {
+                            values.push(getCellValueByName(arg));
+                        }
+                    }
+
+                    switch (funcName) {
+                        case 'SUM':
+                            var sum = 0; for (var v of values) sum += v; return sum;
+                        case 'AVERAGE':
+                            var sum = 0; for (var v of values) sum += v;
+                            return values.length > 0 ? sum / values.length : 0;
+                        case 'MIN':
+                            return Math.min.apply(null, values);
+                        case 'MAX':
+                            return Math.max.apply(null, values);
+                        case 'COUNT':
+                            var count = 0; for (var v of values) if (!isNaN(v) && v !== 0) count++; return count;
+                    }
+                }
+
+                // Xử lý phép tính cơ bản (+, -, *, /)
+                var evalExpr = expr.replace(/([A-Z]+[0-9]+)/g, function (match) {
+                    var val = getCellValueByName(match);
+                    return isNaN(val) ? 0 : val;
+                });
+
+                return new Function('return ' + evalExpr)();
+            } catch (e) {
+                return "#ERROR!";
+            }
+        }
+
+        function getRangeValues(start, end) {
+            var startMatch = start.match(/([A-Z]+)([0-9]+)/);
+            var endMatch = end.match(/([A-Z]+)([0-9]+)/);
+
+            var startCol = startMatch[1], startRow = parseInt(startMatch[2]) - 1;
+            var endCol = endMatch[1], endRow = parseInt(endMatch[2]) - 1;
+
+            var values = [];
+            var startC = colNameToIndex(startCol);
+            var endC = colNameToIndex(endCol);
+
+            for (var r = startRow; r <= endRow; r++) {
+                for (var c = startC; c <= endC; c++) {
+                    if (sheetData[r] && sheetData[r][c]) {
+                        var val = parseFloat(sheetData[r][c].value) || 0;
+                        values.push(val);
+                    }
+                }
+            }
+            return values;
+        }
+
+        function getCellValueByName(name) {
+            var match = name.match(/([A-Z]+)([0-9]+)/);
+            var col = match[1];
+            var row = parseInt(match[2]) - 1;
+            var c = colNameToIndex(col);
+
+            if (sheetData[row] && sheetData[row][c]) {
+                return parseFloat(sheetData[row][c].value) || 0;
+            }
+            return 0;
+        }
+
+        function colNameToIndex(name) {
+            var index = 0;
+            for (var i = 0; i < name.length; i++) {
+                index = index * 26 + (name.charCodeAt(i) - 64);
+            }
+            return index - 1;
+        }
+
+        // --- XỬ LÝ ĐỊNH DẠNG (FORMAT) ---
+        function applyStyle(prop, val) {
+            var cell = sheetData[selectedCell.r][selectedCell.c];
+            if (!cell.style) cell.style = {};
+            if (val === false || val === null) {
+                delete cell.style[prop];
+            } else {
+                cell.style[prop] = val;
+            }
+            renderSheet();
+            selectCell(selectedCell.r, selectedCell.c);
+        }
+
+        document.getElementById('btn-bold').addEventListener('click', function () {
+            var isBold = sheetData[selectedCell.r][selectedCell.c].style.fontWeight === 'bold';
+            applyStyle('fontWeight', isBold ? 'normal' : 'bold');
+        });
+        document.getElementById('btn-italic').addEventListener('click', function () {
+            var isItalic = sheetData[selectedCell.r][selectedCell.c].style.fontStyle === 'italic';
+            applyStyle('fontStyle', isItalic ? 'normal' : 'italic');
+        });
+        document.getElementById('btn-underline').addEventListener('click', function () {
+            var isUnderline = sheetData[selectedCell.r][selectedCell.c].style.textDecoration === 'underline';
+            applyStyle('textDecoration', isUnderline ? 'none' : 'underline');
+        });
+        document.getElementById('select-fontsize').addEventListener('change', function (e) {
+            applyStyle('fontSize', e.target.value);
+        });
+        document.getElementById('color-text').addEventListener('input', function (e) {
+            applyStyle('color', e.target.value);
+        });
+        document.getElementById('color-bg').addEventListener('input', function (e) {
+            applyStyle('backgroundColor', e.target.value);
+        });
+
+        // --- XỬ LÝ THÊM/XÓA/CHÈN HÀNG CỘT ---
+        document.getElementById('btn-add-row').addEventListener('click', function () {
+            ROWS++;
+            var newRow = [];
+            for (var i = 0; i < COLS; i++) newRow.push({ value: "", formula: "", style: {} });
+            sheetData.push(newRow);
+            renderSheet();
+        });
+
+        document.getElementById('btn-add-col').addEventListener('click', function () {
+            COLS++;
+            for (var i = 0; i < ROWS; i++) sheetData[i].push({ value: "", formula: "", style: {} });
+            renderSheet();
+        });
+
+        document.getElementById('btn-insert-row').addEventListener('click', function () {
+            ROWS++;
+            var newRow = [];
+            for (var i = 0; i < COLS; i++) newRow.push({ value: "", formula: "", style: {} });
+            sheetData.splice(selectedCell.r, 0, newRow);
+            renderSheet();
+        });
+
+        document.getElementById('btn-insert-col').addEventListener('click', function () {
+            COLS++;
+            for (var i = 0; i < ROWS; i++) {
+                sheetData[i].splice(selectedCell.c, 0, { value: "", formula: "", style: {} });
+            }
+            renderSheet();
+        });
+
+        document.getElementById('btn-del-row').addEventListener('click', function () {
+            if (ROWS > 1) {
+                ROWS--;
+                sheetData.splice(selectedCell.r, 1);
+                renderSheet();
+            }
+        });
+
+        document.getElementById('btn-del-col').addEventListener('click', function () {
+            if (COLS > 1) {
+                COLS--;
+                for (var i = 0; i < ROWS; i++) sheetData[i].splice(selectedCell.c, 1);
+                renderSheet();
+            }
+        });
+
+        // Chọn cả hàng/cột
+        window.selectRow = function (r) {
+            selectedCell = { r: r, c: 0 };
+            activeCellName.textContent = "Hàng " + (r + 1);
+        };
+        window.selectCol = function (c) {
+            selectedCell = { r: 0, c: c };
+            activeCellName.textContent = "Cột " + getColName(c);
+        };
+
+        // --- KHỞI CHẠY ---
+        initData();
+        renderSheet();
+    </script>
+</body>
+
+</html>
