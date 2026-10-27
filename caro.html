@@ -554,12 +554,12 @@
             <div class="game-wrapper">
                 <div class="game-info">
                     <div class="player-card" id="playerXCard">
-                        <div class="player-label">Player 1</div>
+                        <div class="player-label">Chủ phòng</div>
                         <div class="player-symbol x" id="playerXSymbol">X</div>
                         <div class="player-status" id="playerXStatus"></div>
                     </div>
                     <div class="player-card" id="playerOCard">
-                        <div class="player-label">Player 2</div>
+                        <div class="player-label">Khách</div>
                         <div class="player-symbol o" id="playerOSymbol">O</div>
                         <div class="player-status" id="playerOStatus"></div>
                     </div>
@@ -575,7 +575,7 @@
                     <div class="score-board">
                         <div class="score-item">
                             <div class="score-num x-score" id="scoreX">0</div>
-                            <div class="score-label">X thắng</div>
+                            <div class="score-label" id="scoreXLabel">Chủ phòng thắng</div>
                         </div>
                         <div class="score-item">
                             <div class="score-num draw-score" id="scoreDraw">0</div>
@@ -583,7 +583,7 @@
                         </div>
                         <div class="score-item">
                             <div class="score-num o-score" id="scoreO">0</div>
-                            <div class="score-label">O thắng</div>
+                            <div class="score-label" id="scoreOLabel">Khách thắng</div>
                         </div>
                     </div>
                     <button class="btn btn-restart" onclick="requestRestart()">🔄 Chơi Lại</button>
@@ -620,7 +620,25 @@
         let gameActive = false;
         let roomId = '';
         let isHost = false;
-        let scores = { X: 0, O: 0, draw: 0 };
+        let scores = { host: 0, guest: 0, draw: 0 };
+        let round = 0;  // ván chẵn: chủ phòng cầm X; ván lẻ: chủ phòng cầm O (X luôn đi trước)
+        function hostSymbol() { return round % 2 === 0 ? 'X' : 'O'; }
+        function otherSymbol(s) { return s === 'X' ? 'O' : 'X'; }
+        function setSymbols() {
+            mySymbol = isHost ? hostSymbol() : otherSymbol(hostSymbol());
+            updateCards();
+        }
+        function updateCards() {
+            const hs = hostSymbol(), gs = otherSymbol(hs);
+            [['playerX', hs, isHost], ['playerO', gs, !isHost]].forEach(([id, sym, me]) => {
+                const el = document.getElementById(id + 'Symbol');
+                el.textContent = sym;
+                el.className = 'player-symbol ' + sym.toLowerCase();
+                document.getElementById(id + 'Status').textContent = me ? '(Bạn)' + (sym === 'X' ? ' · đi trước' : '') : (sym === 'X' ? 'đi trước' : '');
+            });
+            document.getElementById('scoreXLabel').textContent = isHost ? 'Bạn thắng' : 'Đối thủ thắng';
+            document.getElementById('scoreOLabel').textContent = isHost ? 'Đối thủ thắng' : 'Bạn thắng';
+        }
         let boardSize = 3;
         let winLength = 3;
         let cells = [];
@@ -759,27 +777,31 @@
                             c2 -= dc;
                         }
 
-                        if (count < winLength) continue;
-
-                        // Luật chặn 2 đầu (chỉ áp dụng khi cần từ 5 quân trở lên):
-                        // hàng bị quân ĐỐI THỦ chặn cả 2 đầu thì không tính thắng. Mép bàn cờ không tính là bị chặn.
-                        if (winLength >= 5) {
-                            const opp = player === 'X' ? 'O' : 'X';
-                            const end1 = (r1 >= 0 && r1 < n && c1 >= 0 && c1 < n) ? board[r1 * n + c1] : '';
-                            const end2 = (r2 >= 0 && r2 < n && c2 >= 0 && c2 < n) ? board[r2 * n + c2] : '';
-                            if (end1 === opp && end2 === opp) continue;
-                        }
+                        // Luật chặn đầu: mỗi đầu bị quân ĐỐI THỦ chặn thì cần thêm 1 quân.
+                        // Không bị chặn: cần N quân. Chặn 1 đầu: cần N+1. Chặn 2 đầu: cần N+2.
+                        // Mép bàn cờ không tính là bị chặn.
+                        const opp = player === 'X' ? 'O' : 'X';
+                        const end1 = (r1 >= 0 && r1 < n && c1 >= 0 && c1 < n) ? board[r1 * n + c1] : '';
+                        const end2 = (r2 >= 0 && r2 < n && c2 >= 0 && c2 < n) ? board[r2 * n + c2] : '';
+                        const blocked = (end1 === opp ? 1 : 0) + (end2 === opp ? 1 : 0);
+                        const required = winLength + blocked;
+                        if (count < required) continue;
 
                         gameActive = false;
                         winCells.forEach(i => cells[i].classList.add('win'));
-                        scores[player]++;
+                        const winnerRole = player === hostSymbol() ? 'host' : 'guest';
+                        scores[winnerRole]++;
                         updateScores();
+                        const why = blocked > 0
+                            ? `${player} có ${count} quân liên tiếp (bị chặn ${blocked} đầu nên cần ${required})!`
+                            : `${player} có ${count} quân liên tiếp!`;
+                        const next = ` Ván sau bạn cầm ${otherSymbol(mySymbol)}.`;
                         if (player === mySymbol) {
                             updateStatus('🎉 Bạn thắng!', 'win');
-                            showOverlay('🏆', 'Bạn Thắng!', `${player} có ${count} quân liên tiếp!`);
+                            showOverlay('🏆', 'Bạn Thắng!', why + next);
                         } else {
                             updateStatus('😔 Bạn thua!', 'lose');
-                            showOverlay('😞', 'Bạn Thua!', `${player} có ${count} quân liên tiếp!`);
+                            showOverlay('😞', 'Bạn Thua!', why + next);
                         }
                         return;
                     }
@@ -791,7 +813,7 @@
                 scores.draw++;
                 updateScores();
                 updateStatus('🤝 Hòa!', 'draw');
-                showOverlay('🤝', 'Hòa!', 'Không ai thắng ván này!');
+                showOverlay('🤝', 'Hòa!', `Không ai thắng ván này! Ván sau bạn cầm ${otherSymbol(mySymbol)}.`);
                 return;
             }
         }
@@ -918,7 +940,7 @@
             showScreen('game');
             document.getElementById('gameRoomId').textContent = roomId;
             if (isHost) {
-                sendMsg({ type: 'start', symbol: 'X', boardSize: boardSize, winLength: winLength });
+                sendMsg({ type: 'start', boardSize: boardSize, winLength: winLength, round: round, scores: scores });
                 startGame();
             }
             // Máy khách chào chủ phòng để chủ phòng chắc chắn biết đã kết nối và gửi ván cờ
@@ -977,6 +999,7 @@
             hideError();
             roomId = generateId();
             isHost = true;
+            round = 0;
             mySymbol = 'X';
             connected = false;
             transport = null;
@@ -984,7 +1007,7 @@
 
             showScreen('waiting');
             document.getElementById('displayRoomId').textContent = roomId;
-            document.getElementById('waitingSizeInfo').textContent = `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân${winLength >= 5 ? ' · chặn 2 đầu không tính' : ''}`;
+            document.getElementById('waitingSizeInfo').textContent = `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân · bị chặn 1 đầu cần ${winLength + 1}`;
             document.getElementById('btnCopyLink').style.display = '';
             setHint('Gửi mã phòng hoặc link mời cho bạn bè. Giữ trang này mở; nếu chuyển sang app khác, game sẽ tự kết nối lại khi quay lại.');
 
@@ -1048,6 +1071,7 @@
 
             roomId = input;
             isHost = false;
+            round = 0;
             mySymbol = 'O';
             connected = false;
             transport = null;
@@ -1128,12 +1152,13 @@
         }
 
         function gameSnapshot() {
-            return { boardSize, winLength, board: board.slice(), currentTurn, gameActive, scores: Object.assign({}, scores) };
+            return { boardSize, winLength, round, board: board.slice(), currentTurn, gameActive, scores: Object.assign({}, scores) };
         }
 
         function applySync(st) {
             boardSize = st.boardSize;
             winLength = st.winLength;
+            round = st.round || 0;
             startGame();
             if (Array.isArray(st.board) && st.board.length === boardSize * boardSize) {
                 board = st.board.slice();
@@ -1141,7 +1166,7 @@
             }
             currentTurn = st.currentTurn || 'X';
             gameActive = st.gameActive !== false;
-            if (st.scores) { scores = st.scores; updateScores(); }
+            if (st.scores && 'host' in st.scores) { scores = st.scores; updateScores(); }
             updateUI();
         }
 
@@ -1192,9 +1217,10 @@
         function handleMessage(data) {
             switch (data.type) {
                 case 'start':
-                    mySymbol = 'O';
                     boardSize = data.boardSize;
                     winLength = data.winLength;
+                    round = data.round || 0;
+                    if (data.scores && 'host' in data.scores) { scores = data.scores; updateScores(); }
                     showScreen('game');
                     startGame();
                     break;
@@ -1218,10 +1244,12 @@
                     checkResult();
                     updateUI();
                     break;
-                case 'restart':
-                    resetBoard();
-                    updateUI();
+                case 'restart': {
+                    // Kèm số ván để hai bên không lệch nếu cùng bấm "Chơi lại"
+                    const r = typeof data.round === 'number' ? data.round : round + 1;
+                    if (r > round) { round = r; resetBoard(); }
                     break;
+                }
                 case 'full':
                     failJoin('Phòng ' + roomId + ' đã đủ 2 người chơi.');
                     break;
@@ -1230,6 +1258,7 @@
 
         // ==================== GAME LOGIC ====================
         function startGame() {
+            setSymbols();
             gameActive = true;
             currentTurn = 'X';
             board = Array(boardSize * boardSize).fill('');
@@ -1237,9 +1266,9 @@
             updateUI();
             document.getElementById('gameRoomId').textContent = roomId;
             document.getElementById('gameSizeInfo').textContent =
-                `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân${winLength >= 5 ? ' · chặn 2 đầu không tính' : ''}`;
-            document.getElementById('playerXStatus').textContent = isHost ? '(Bạn)' : '';
-            document.getElementById('playerOStatus').textContent = !isHost ? '(Bạn)' : '';
+                `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân · bị chặn 1 đầu cần ${winLength + 1}`;
+            updateCards();
+            updateScores();
         }
 
         function makeMove(index) {
@@ -1262,14 +1291,15 @@
             });
             currentTurn = 'X';
             gameActive = true;
+            setSymbols();
             hideOverlay();
             updateUI();
         }
 
         function requestRestart() {
-            if (connected) sendMsg({ type: 'restart' });
+            round++;  // đổi bên: ván trước cầm X thì ván này cầm O
+            if (connected) sendMsg({ type: 'restart', round });
             resetBoard();
-            updateUI();
         }
 
         // ==================== UI ====================
@@ -1288,8 +1318,8 @@
         function updateUI() {
             if (!mySymbol) return;
 
-            document.getElementById('playerXCard').classList.toggle('active', currentTurn === 'X');
-            document.getElementById('playerOCard').classList.toggle('active', currentTurn === 'O');
+            document.getElementById('playerXCard').classList.toggle('active', currentTurn === hostSymbol());
+            document.getElementById('playerOCard').classList.toggle('active', currentTurn !== hostSymbol());
 
             const turnText = document.getElementById('turnText');
             if (gameActive) {
@@ -1317,8 +1347,8 @@
         }
 
         function updateScores() {
-            document.getElementById('scoreX').textContent = scores.X;
-            document.getElementById('scoreO').textContent = scores.O;
+            document.getElementById('scoreX').textContent = scores.host;
+            document.getElementById('scoreO').textContent = scores.guest;
             document.getElementById('scoreDraw').textContent = scores.draw;
         }
 
@@ -1378,7 +1408,8 @@
             roomId = '';
             isHost = false;
             connected = false;
-            scores = { X: 0, O: 0, draw: 0 };
+            scores = { host: 0, guest: 0, draw: 0 };
+            round = 0;
             cells = [];
             document.getElementById('roomInput').value = '';
             document.getElementById('waitingHint').textContent = 'Gửi mã phòng cho bạn bè để họ join!';
