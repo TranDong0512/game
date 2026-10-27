@@ -540,6 +540,7 @@
                     <div class="room-size-info" id="waitingSizeInfo"></div>
                 </div>
                 <button class="btn btn-copy" onclick="copyRoomId(this)">📋 Copy Mã Phòng</button>
+                <button class="btn btn-copy" id="btnCopyLink" onclick="copyInviteLink(this)" style="margin-top:8px">🔗 Copy Link Mời</button>
                 <div class="spinner"></div>
                 <div class="waiting-text">Đang chờ đối thủ vào phòng...</div>
                 <div class="waiting-text" id="waitingHint">Gửi mã phòng cho bạn bè để họ join!</div>
@@ -796,24 +797,40 @@
             }
         }
 
-        // ==================== LOBBY ====================
-        const PEER_CONFIG = {
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                    { urls: 'stun:stun.ekiga.net' },
-                    { urls: 'stun:stun.ideasip.com' },
-                    { urls: 'stun:stun.schlund.de' },
-                    { urls: 'stun:stun.voiparound.com' },
-                    { urls: 'stun:stun.voipstunt.com' }
-                ]
-            },
-            debug: 0
-        };
+        // ==================== KẾT NỐI ====================
+        // Máy chủ TURN giúp 2 máy kết nối được khi ở 2 mạng khác nhau (4G, wifi công ty, ...).
+        // Nếu bạn bè vẫn không vào được phòng, hãy đăng ký TURN riêng (ví dụ metered.ca có gói miễn phí)
+        // rồi điền link API vào TURN_CREDENTIALS_URL, hoặc điền thẳng vào TURN_SERVERS.
+        const TURN_CREDENTIALS_URL = '';
+        const TURN_SERVERS = [
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ];
+        const STUN_SERVERS = [
+            { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+            { urls: 'stun:stun.cloudflare.com:3478' }
+        ];
+        const CONNECT_TIMEOUT = 15000;
+        const MAX_CONNECT_ATTEMPTS = 3;
+        let connectAttempts = 0;
+        let iceServersCache = null;
+
+        async function getPeerConfig() {
+            if (!iceServersCache) {
+                let turn = TURN_SERVERS;
+                if (TURN_CREDENTIALS_URL) {
+                    try {
+                        const r = await fetch(TURN_CREDENTIALS_URL);
+                        const j = await r.json();
+                        const list = Array.isArray(j) ? j : j.iceServers;
+                        if (Array.isArray(list) && list.length) turn = list;
+                    } catch (e) { console.warn('Không lấy được TURN:', e); }
+                }
+                iceServersCache = [...STUN_SERVERS, ...turn];
+            }
+            return Object.assign({ config: { iceServers: iceServersCache }, debug: 1 }, window.CARO_PEER_OPTS || {});
+        }
 
         function generateId() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -831,7 +848,47 @@
             $error.style.display = 'none';
         }
 
-        function createRoom() {
+        function setHint(msg) {
+            document.getElementById('waitingHint').textContent = msg;
+        }
+
+        function friendlyError(err) {
+            switch (err.type) {
+                case 'network': case 'server-error': case 'socket-error': case 'socket-closed':
+                    return 'Không kết nối được máy chủ ghép phòng. Kiểm tra mạng rồi thử lại.';
+                case 'browser-incompatible':
+                    return 'Trình duyệt không hỗ trợ chơi online. Hãy dùng Chrome, Edge, Safari hoặc Firefox bản mới.';
+                case 'webrtc':
+                    return 'Hai máy không kết nối trực tiếp được với nhau (mạng chặn). Thử đổi sang mạng khác.';
+                default:
+                    return 'Lỗi kết nối: ' + err.type;
+            }
+        }
+
+        // Điện thoại thường ngắt kết nối khi chuyển sang app khác (Zalo, Messenger...) để gửi mã.
+        // Tự kết nối lại để phòng không bị mất.
+        function watchPeer(p) {
+            p.on('disconnected', () => {
+                if (peer !== p || p.destroyed) return;
+                if (!connected) setHint('Mất kết nối máy chủ, đang kết nối lại...');
+                setTimeout(() => {
+                    if (peer === p && !p.destroyed && p.disconnected) {
+                        try { p.reconnect(); } catch (e) { console.warn(e); }
+                    }
+                }, 1000);
+            });
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && peer && !peer.destroyed && peer.disconnected) {
+                try { peer.reconnect(); } catch (e) { console.warn(e); }
+            }
+        });
+
+        function hostHint() {
+            setHint('Gửi mã phòng hoặc link mời cho bạn bè. Giữ trang này mở; nếu bạn chuyển sang app khác, game sẽ tự kết nối lại khi quay lại.');
+        }
+
+        async function createRoom(retry = 0) {
             hideError();
             roomId = generateId();
             isHost = true;
@@ -839,118 +896,165 @@
             connected = false;
 
             if (peer) peer.destroy();
-            peer = new Peer('caro-' + roomId, PEER_CONFIG);
+            const cfg = await getPeerConfig();
+            const p = new Peer('caro-' + roomId, cfg);
+            peer = p;
+            watchPeer(p);
 
-            peer.on('open', () => {
+            p.on('open', () => {
+                if (peer !== p) return;
                 showScreen('waiting');
                 document.getElementById('displayRoomId').textContent = roomId;
                 document.getElementById('waitingSizeInfo').textContent =
                     `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân`;
+                document.getElementById('btnCopyLink').style.display = '';
+                hostHint();
             });
 
-            peer.on('connection', (connection) => {
-                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
-                conn = connection;
-                connected = true;
-                setupConnection();
+            p.on('connection', (c) => {
+                if (peer !== p) return;
+                // Phòng đã có người chơi: từ chối người thứ 3
+                if (conn && conn !== c && conn.open && connected) {
+                    c.on('open', () => { c.send({ type: 'full' }); setTimeout(() => c.close(), 500); });
+                    return;
+                }
+                if (conn && conn !== c) { try { conn.close(); } catch (e) {} }
+                conn = c;
+                setupConnection(c);
             });
 
-            peer.on('error', (err) => {
+            p.on('error', (err) => {
+                if (peer !== p) return;
                 console.error('Peer error:', err);
-                if (err.type === 'unavailable-id') {
-                    showError('Phòng đã tồn tại, thử lại!');
-                    peer.destroy();
+                if (err.type === 'unavailable-id' && retry < 3) {
+                    createRoom(retry + 1); // trùng mã, tạo mã khác
+                } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+                    if (!p.disconnected || p.destroyed) showError(friendlyError(err));
+                    else setHint('Mất kết nối máy chủ, đang kết nối lại...');
                 } else {
-                    showError('Lỗi kết nối: ' + err.type);
+                    showError(friendlyError(err));
                 }
             });
         }
 
-        function joinRoom() {
+        async function joinRoom() {
             hideError();
-            const input = document.getElementById('roomInput').value.trim();
+            const input = document.getElementById('roomInput').value.trim().toUpperCase();
             if (!input || input.length !== 6) {
                 showError('Vui lòng nhập mã phòng 6 ký tự!');
                 return;
             }
 
-            roomId = input.toUpperCase();
+            roomId = input;
             isHost = false;
             mySymbol = 'O';
             connected = false;
+            connectAttempts = 0;
 
             if (peer) peer.destroy();
-            const myId = 'caro-' + roomId + '-p2-' + Date.now();
-            peer = new Peer(myId, PEER_CONFIG);
+            const cfg = await getPeerConfig();
+            const p = new Peer(cfg); // để máy chủ tự cấp ID
+            peer = p;
+            watchPeer(p);
+            document.getElementById('btnCopyLink').style.display = 'none';
 
-            peer.on('open', () => {
+            p.on('open', () => {
+                if (peer !== p) return;
+                if (connected || (conn && conn.open)) return; // mở lại sau khi kết nối lại máy chủ
                 showScreen('waiting');
                 document.getElementById('displayRoomId').textContent = roomId;
-                document.getElementById('waitingHint').textContent = 'Đang kết nối đến phòng...';
+                document.getElementById('waitingSizeInfo').textContent = '';
                 attemptConnect();
             });
 
-            peer.on('error', (err) => {
+            p.on('error', (err) => {
+                if (peer !== p) return;
                 console.error('Peer error:', err);
-                if (!connected) {
-                    showError('Không thể kết nối: ' + err.type);
+                if (connected) return;
+                if (err.type === 'peer-unavailable') {
+                    // Chủ phòng có thể đang kết nối lại (vừa chuyển app), thử lại vài lần
                     if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+                    if (connectAttempts < MAX_CONNECT_ATTEMPTS) {
+                        setHint(`Chưa thấy phòng ${roomId}, đang thử lại...`);
+                        connectTimeout = setTimeout(attemptConnect, 2500);
+                    } else {
+                        failJoin(`Không tìm thấy phòng ${roomId}. Kiểm tra lại mã, hoặc nhờ chủ phòng mở lại trang game (đừng tắt màn hình).`);
+                    }
+                } else {
+                    failJoin(friendlyError(err));
                 }
             });
         }
 
-        let connectAttempts = 0;
-        const MAX_CONNECT_ATTEMPTS = 3;
+        function failJoin(msg) {
+            if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+            const keepCode = roomId;
+            backToLobby();
+            document.getElementById('roomInput').value = keepCode;
+            showError(msg);
+        }
 
         function attemptConnect() {
+            if (!peer || peer.destroyed || connected) return;
             connectAttempts++;
-            document.getElementById('waitingHint').textContent = `Đang kết nối... (lần ${connectAttempts}/${MAX_CONNECT_ATTEMPTS})`;
+            setHint(`Đang kết nối tới phòng... (lần ${connectAttempts}/${MAX_CONNECT_ATTEMPTS})`);
 
-            const c = peer.connect('caro-' + roomId, { reliable: true });
+            const c = peer.connect('caro-' + roomId, { reliable: true, serialization: 'json' });
+            if (!c) { failJoin('Không tạo được kết nối. Hãy tải lại trang và thử lại.'); return; }
             conn = c;
-            setupConnection();
+            setupConnection(c);
 
+            if (connectTimeout) clearTimeout(connectTimeout);
             connectTimeout = setTimeout(() => {
-                if (!connected && connectAttempts < MAX_CONNECT_ATTEMPTS) {
-                    if (conn) conn.close();
-                    attemptConnect();
-                } else if (!connected) {
-                    showError('Không thể kết nối sau 3 lần thử. Phòng có thể không tồn tại hoặc đối thủ đã rời đi.');
-                    showScreen('lobby');
-                }
-            }, 10000);
+                if (connected || conn !== c) return;
+                try { c.close(); } catch (e) {}
+                if (connectAttempts < MAX_CONNECT_ATTEMPTS) attemptConnect();
+                else failJoin('Đã tìm thấy phòng nhưng hai máy không kết nối được với nhau (mạng chặn kết nối trực tiếp). Thử đổi mạng, ví dụ cùng dùng wifi hoặc 4G.');
+            }, CONNECT_TIMEOUT);
         }
 
         // ==================== CONNECTION ====================
-        function setupConnection() {
-            conn.on('open', () => {
+        function setupConnection(c) {
+            c.on('open', () => {
+                if (conn !== c) return;
                 if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
                 connectAttempts = 0;
                 connected = true;
+                hideError();
+                hideOverlay();
                 showScreen('game');
                 document.getElementById('gameRoomId').textContent = roomId;
                 if (isHost) {
-                    conn.send({ type: 'start', symbol: 'X', boardSize: boardSize, winLength: winLength });
+                    c.send({ type: 'start', symbol: 'X', boardSize: boardSize, winLength: winLength });
                     startGame();
                 }
                 updateUI();
             });
 
-            conn.on('data', handleMessage);
+            c.on('data', (data) => { if (conn === c) handleMessage(data); });
 
-            conn.on('close', () => {
-                connected = false;
-                if (gameActive) {
-                    updateStatus('Đối thủ đã rời phòng!', 'lose');
-                    gameActive = false;
-                    showOverlay(' disconnected', 'Đối thủ đã rời', 'Đối thủ đã ngắt kết nối!');
+            c.on('iceStateChanged', (state) => {
+                if (conn === c && !connected && state === 'failed') {
+                    setHint('Không kết nối trực tiếp được, đang thử lại...');
                 }
             });
 
-            conn.on('error', (err) => {
-                console.error('Connection error:', err);
+            c.on('close', () => {
+                if (conn !== c) return;
+                const wasConnected = connected;
                 connected = false;
-                showError('Lỗi kết nối: ' + err);
+                if (wasConnected) {
+                    gameActive = false;
+                    updateStatus('Đối thủ đã rời phòng!', 'lose');
+                    showOverlay('🔌', 'Đối thủ đã rời', isHost
+                        ? 'Đối thủ đã ngắt kết nối. Bạn có thể chờ họ vào lại bằng cùng mã phòng.'
+                        : 'Chủ phòng đã ngắt kết nối!');
+                    if (isHost) { conn = null; }
+                }
+            });
+
+            c.on('error', (err) => {
+                console.error('Connection error:', err);
             });
         }
 
@@ -973,6 +1077,9 @@
                 case 'restart':
                     resetBoard();
                     updateUI();
+                    break;
+                case 'full':
+                    failJoin('Phòng ' + roomId + ' đã đủ 2 người chơi.');
                     break;
             }
         }
@@ -1082,11 +1189,25 @@
             $overlay.classList.remove('show');
         }
 
-        function copyRoomId(btn) {
-            navigator.clipboard.writeText(roomId).then(() => {
-                btn.textContent = '✅ Đã Copy!';
-                setTimeout(() => btn.textContent = '📋 Copy Mã Phòng', 1500);
-            });
+        function copyText(text, btn, label) {
+            const done = () => { btn.textContent = '✅ Đã Copy!'; setTimeout(() => btn.textContent = label, 1500); };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+            } else fallbackCopy(text, done);
+        }
+        function fallbackCopy(text, done) {
+            const t = document.createElement('textarea');
+            t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+            document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); done(); } catch (e) { prompt('Copy:', text); }
+            t.remove();
+        }
+        function copyRoomId(btn) { copyText(roomId, btn, '📋 Copy Mã Phòng'); }
+        function inviteLink() { return location.origin + location.pathname + '?room=' + roomId; }
+        function copyInviteLink(btn) {
+            if (navigator.share && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                navigator.share({ title: 'Chơi Caro với mình', text: 'Vào phòng ' + roomId, url: inviteLink() }).catch(() => {});
+            } else copyText(inviteLink(), btn, '🔗 Copy Link Mời');
         }
 
         function backToLobby() {
@@ -1107,6 +1228,7 @@
             cells = [];
             document.getElementById('roomInput').value = '';
             document.getElementById('waitingHint').textContent = 'Gửi mã phòng cho bạn bè để họ join!';
+            if (location.search.includes('room=')) history.replaceState(null, '', location.pathname);
             hideOverlay();
             hideError();
             showScreen('lobby');
@@ -1138,6 +1260,13 @@
 
         // ==================== INIT ====================
         showScreen('lobby');
+
+        // Mở bằng link mời (?room=MÃPHÒNG) thì tự vào phòng
+        const urlRoom = new URLSearchParams(location.search).get('room');
+        if (urlRoom && /^[A-Za-z0-9]{6}$/.test(urlRoom)) {
+            document.getElementById('roomInput').value = urlRoom.toUpperCase();
+            joinRoom();
+        }
     </script>
 </body>
 </html>
