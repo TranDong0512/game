@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎮 Caro Online - Chơi Caro Với Bạn Bè</title>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/mqtt@5.15.2/dist/mqtt.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -569,6 +570,7 @@
                         <div class="room-info-label">Phòng</div>
                         <div class="room-info-id" id="gameRoomId">------</div>
                         <div class="room-info-size" id="gameSizeInfo"></div>
+                        <div class="room-info-size" id="connMode"></div>
                     </div>
                     <div class="score-board">
                         <div class="score-item">
@@ -757,32 +759,29 @@
                             c2 -= dc;
                         }
 
-                        let blockedEnds = 0;
-                        if (r1 < 0 || r1 >= n || c1 < 0 || c1 >= n || board[r1 * n + c1] !== '') {
-                            blockedEnds++;
-                        }
-                        if (r2 < 0 || r2 >= n || c2 < 0 || c2 >= n || board[r2 * n + c2] !== '') {
-                            blockedEnds++;
+                        if (count < winLength) continue;
+
+                        // Luật chặn 2 đầu (chỉ áp dụng khi cần từ 5 quân trở lên):
+                        // hàng bị quân ĐỐI THỦ chặn cả 2 đầu thì không tính thắng. Mép bàn cờ không tính là bị chặn.
+                        if (winLength >= 5) {
+                            const opp = player === 'X' ? 'O' : 'X';
+                            const end1 = (r1 >= 0 && r1 < n && c1 >= 0 && c1 < n) ? board[r1 * n + c1] : '';
+                            const end2 = (r2 >= 0 && r2 < n && c2 >= 0 && c2 < n) ? board[r2 * n + c2] : '';
+                            if (end1 === opp && end2 === opp) continue;
                         }
 
-                        const required = winLength + blockedEnds;
-                        if (count >= required) {
-                            gameActive = false;
-                            winCells.forEach(i => cells[i].classList.add('win'));
-                            scores[player]++;
-                            updateScores();
-                            const blockMsg = blockedEnds > 0
-                                ? ` (${blockedEnds} đầu bị chặn, cần ${required} quân liên tiếp)`
-                                : '';
-                            if (player === mySymbol) {
-                                updateStatus('🎉 Bạn thắng!', 'win');
-                                showOverlay('🏆', 'Bạn Thắng!', `${player} thắng${blockMsg}!`);
-                            } else {
-                                updateStatus('😔 Bạn thua!', 'lose');
-                                showOverlay('😞', 'Bạn Thua!', `${player} đã chiến thắng${blockMsg}!`);
-                            }
-                            return;
+                        gameActive = false;
+                        winCells.forEach(i => cells[i].classList.add('win'));
+                        scores[player]++;
+                        updateScores();
+                        if (player === mySymbol) {
+                            updateStatus('🎉 Bạn thắng!', 'win');
+                            showOverlay('🏆', 'Bạn Thắng!', `${player} có ${count} quân liên tiếp!`);
+                        } else {
+                            updateStatus('😔 Bạn thua!', 'lose');
+                            showOverlay('😞', 'Bạn Thua!', `${player} có ${count} quân liên tiếp!`);
                         }
+                        return;
                     }
                 }
             }
@@ -798,23 +797,35 @@
         }
 
         // ==================== KẾT NỐI ====================
-        // Máy chủ TURN giúp 2 máy kết nối được khi ở 2 mạng khác nhau (4G, wifi công ty, ...).
-        // Nếu bạn bè vẫn không vào được phòng, hãy đăng ký TURN riêng (ví dụ metered.ca có gói miễn phí)
-        // rồi điền link API vào TURN_CREDENTIALS_URL, hoặc điền thẳng vào TURN_SERVERS.
+        // Cách 1 (ưu tiên): nối thẳng 2 máy bằng WebRTC (PeerJS) — nhanh nhất.
+        // Cách 2 (dự phòng): nếu 2 máy ở 2 mạng chặn nối thẳng (4G, wifi công ty...),
+        //   nước đi được chuyển qua máy chủ MQTT công cộng (EMQX + HiveMQ, gửi song song cả hai).
+        // Nếu có máy chủ TURN riêng thì điền TURN_CREDENTIALS_URL hoặc TURN_SERVERS.
         const TURN_CREDENTIALS_URL = '';
-        const TURN_SERVERS = [
-            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-        ];
+        const TURN_SERVERS = [];
         const STUN_SERVERS = [
             { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
             { urls: 'stun:stun.cloudflare.com:3478' }
         ];
-        const CONNECT_TIMEOUT = 15000;
+        const RELAY_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
+        const RELAY_PREFIX = 'caro-online-v1/';
+        const CONNECT_TIMEOUT = 12000;   // chờ mỗi lần nối thẳng
+        const WEBRTC_WAIT = 6000;        // sau thời gian này bắt đầu thử kênh chuyển tiếp
+        const JOIN_DEADLINE = 40000;     // quá thời gian này mà chưa vào được thì báo lỗi
+        const RELAY_TIMEOUT = 45000;     // không nhận được tin từ đối thủ quá lâu thì coi như rời phòng
         const MAX_CONNECT_ATTEMPTS = 3;
+
         let connectAttempts = 0;
         let iceServersCache = null;
+        let transport = null;            // 'p2p' | 'relay'
+        let relays = [];
+        let relayHandler = null;
+        let relayPeerSid = null;
+        let relaySeen = new Set();
+        let msgCounter = 0;
+        let lastRelaySeen = 0;
+        let relayHeartbeat = null, helloTimer = null, joinDeadline = null, helloStarter = null;
+        const mySid = Math.random().toString(36).slice(2, 10);
 
         async function getPeerConfig() {
             if (!iceServersCache) {
@@ -839,38 +850,115 @@
             return id;
         }
 
-        function showError(msg) {
-            $error.textContent = msg;
-            $error.style.display = 'block';
+        function showError(msg) { $error.textContent = msg; $error.style.display = 'block'; }
+        function hideError() { $error.style.display = 'none'; }
+        function setHint(msg) { document.getElementById('waitingHint').textContent = msg; }
+        function clearTimer(t) { if (t) { clearTimeout(t); clearInterval(t); } return null; }
+
+        // ---------- Kênh chuyển tiếp MQTT ----------
+        function relayTopic(role, room) { return RELAY_PREFIX + (room || roomId) + '/' + role; }
+
+        function startRelay(role, onMsg) {
+            stopRelay();
+            if (typeof mqtt === 'undefined') { console.warn('Chưa tải được thư viện MQTT'); return; }
+            relayHandler = onMsg;
+            const urls = window.CARO_RELAY_BROKERS || RELAY_BROKERS;
+            const topic = relayTopic(role);
+            urls.forEach(url => {
+                let c;
+                try {
+                    c = mqtt.connect(url, { clientId: 'caro_' + mySid + '_' + Math.random().toString(16).slice(2, 6),
+                        clean: true, reconnectPeriod: 2000, connectTimeout: 10000, keepalive: 30 });
+                } catch (e) { console.warn('relay', e); return; }
+                c.on('connect', () => c.subscribe(topic, { qos: 1 }));
+                c.on('message', (t, payload) => {
+                    if (!relays.includes(c) || !relayHandler) return;
+                    let m;
+                    try { m = JSON.parse(payload.toString()); } catch (e) { return; }
+                    if (!m || m.from === mySid || relaySeen.has(m.mid)) return;
+                    relaySeen.add(m.mid);
+                    if (relaySeen.size > 1000) relaySeen = new Set();
+                    relayHandler(m);
+                });
+                c.on('error', e => console.warn('relay', url, e && e.message));
+                relays.push(c);
+            });
         }
 
-        function hideError() {
-            $error.style.display = 'none';
+        function relaySend(toRole, obj) {
+            const m = Object.assign({ from: mySid, mid: mySid + '-' + (++msgCounter) }, obj);
+            const s = JSON.stringify(m);
+            relays.forEach(c => { try { c.publish(relayTopic(toRole), s, { qos: 1 }); } catch (e) {} });
         }
 
-        function setHint(msg) {
-            document.getElementById('waitingHint').textContent = msg;
+        function stopRelay() {
+            relays.forEach(c => { try { c.end(true); } catch (e) {} });
+            relays = [];
+            relayHandler = null;
+            relayHeartbeat = clearTimer(relayHeartbeat);
+            helloTimer = clearTimer(helloTimer);
         }
 
-        function friendlyError(err) {
-            switch (err.type) {
-                case 'network': case 'server-error': case 'socket-error': case 'socket-closed':
-                    return 'Không kết nối được máy chủ ghép phòng. Kiểm tra mạng rồi thử lại.';
-                case 'browser-incompatible':
-                    return 'Trình duyệt không hỗ trợ chơi online. Hãy dùng Chrome, Edge, Safari hoặc Firefox bản mới.';
-                case 'webrtc':
-                    return 'Hai máy không kết nối trực tiếp được với nhau (mạng chặn). Thử đổi sang mạng khác.';
-                default:
-                    return 'Lỗi kết nối: ' + err.type;
+        // ---------- Gửi tin chung cho cả 2 cách ----------
+        function sendMsg(obj) {
+            if (transport === 'p2p' && conn && conn.open) conn.send(obj);
+            else if (transport === 'relay') relaySend(isHost ? 'guest' : 'host', Object.assign({ to: relayPeerSid }, obj));
+        }
+
+        function onLinked(mode) {
+            transport = mode;
+            connectTimeout = clearTimer(connectTimeout);
+            helloTimer = clearTimer(helloTimer);
+            helloStarter = clearTimer(helloStarter);
+            joinDeadline = clearTimer(joinDeadline);
+            connectAttempts = 0;
+            connected = true;
+            hideError();
+            hideOverlay();
+            showScreen('game');
+            document.getElementById('gameRoomId').textContent = roomId;
+            if (isHost) {
+                sendMsg({ type: 'start', symbol: 'X', boardSize: boardSize, winLength: winLength });
+                startGame();
             }
+            // Máy khách chào chủ phòng để chủ phòng chắc chắn biết đã kết nối và gửi ván cờ
+            if (!isHost && mode === 'p2p') sendMsg({ type: 'hello' });
+            if (!isHost) setTimeout(() => { if (connected && !cells.length) sendMsg({ type: 'syncreq' }); }, 3000);
+            if (mode === 'relay') {
+                lastRelaySeen = Date.now();
+                relayHeartbeat = clearTimer(relayHeartbeat);
+                relayHeartbeat = setInterval(() => {
+                    sendMsg({ type: 'ping' });
+                    if (Date.now() - lastRelaySeen > RELAY_TIMEOUT) onUnlinked();
+                }, 5000);
+            }
+            updateConnInfo();
+            updateUI();
         }
 
-        // Điện thoại thường ngắt kết nối khi chuyển sang app khác (Zalo, Messenger...) để gửi mã.
-        // Tự kết nối lại để phòng không bị mất.
+        function onUnlinked() {
+            const was = connected;
+            connected = false;
+            relayHeartbeat = clearTimer(relayHeartbeat);
+            if (!was) return;
+            gameActive = false;
+            updateStatus('Đối thủ đã rời phòng!', 'lose');
+            showOverlay('🔌', 'Đối thủ đã rời', isHost
+                ? 'Đối thủ đã ngắt kết nối. Bạn có thể chờ họ vào lại bằng cùng mã phòng.'
+                : 'Chủ phòng đã ngắt kết nối!');
+            if (isHost) { conn = null; transport = null; relayPeerSid = null; }
+        }
+
+        function updateConnInfo() {
+            const el = document.getElementById('connMode');
+            if (el) el.textContent = transport === 'relay' ? '🌐 Qua máy chủ chuyển tiếp' : (transport === 'p2p' ? '⚡ Kết nối trực tiếp' : '');
+        }
+
+        // ---------- Giữ kết nối máy chủ ghép phòng (PeerJS) ----------
+        // Điện thoại thường ngắt kết nối khi chuyển sang app khác để gửi mã → tự nối lại.
         function watchPeer(p) {
             p.on('disconnected', () => {
                 if (peer !== p || p.destroyed) return;
-                if (!connected) setHint('Mất kết nối máy chủ, đang kết nối lại...');
                 setTimeout(() => {
                     if (peer === p && !p.destroyed && p.disconnected) {
                         try { p.reconnect(); } catch (e) { console.warn(e); }
@@ -884,37 +972,34 @@
             }
         });
 
-        function hostHint() {
-            setHint('Gửi mã phòng hoặc link mời cho bạn bè. Giữ trang này mở; nếu bạn chuyển sang app khác, game sẽ tự kết nối lại khi quay lại.');
-        }
-
+        // ---------- Chủ phòng ----------
         async function createRoom(retry = 0) {
             hideError();
             roomId = generateId();
             isHost = true;
             mySymbol = 'X';
             connected = false;
+            transport = null;
+            relayPeerSid = null;
+
+            showScreen('waiting');
+            document.getElementById('displayRoomId').textContent = roomId;
+            document.getElementById('waitingSizeInfo').textContent = `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân${winLength >= 5 ? ' · chặn 2 đầu không tính' : ''}`;
+            document.getElementById('btnCopyLink').style.display = '';
+            setHint('Gửi mã phòng hoặc link mời cho bạn bè. Giữ trang này mở; nếu chuyển sang app khác, game sẽ tự kết nối lại khi quay lại.');
+
+            startRelay('host', hostRelayMsg);
 
             if (peer) peer.destroy();
+            if (typeof Peer === 'undefined') return;
             const cfg = await getPeerConfig();
             const p = new Peer('caro-' + roomId, cfg);
             peer = p;
             watchPeer(p);
 
-            p.on('open', () => {
-                if (peer !== p) return;
-                showScreen('waiting');
-                document.getElementById('displayRoomId').textContent = roomId;
-                document.getElementById('waitingSizeInfo').textContent =
-                    `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân`;
-                document.getElementById('btnCopyLink').style.display = '';
-                hostHint();
-            });
-
             p.on('connection', (c) => {
                 if (peer !== p) return;
-                // Phòng đã có người chơi: từ chối người thứ 3
-                if (conn && conn !== c && conn.open && connected) {
+                if (connected) { // đã có người chơi
                     c.on('open', () => { c.send({ type: 'full' }); setTimeout(() => c.close(), 500); });
                     return;
                 }
@@ -926,17 +1011,33 @@
             p.on('error', (err) => {
                 if (peer !== p) return;
                 console.error('Peer error:', err);
-                if (err.type === 'unavailable-id' && retry < 3) {
-                    createRoom(retry + 1); // trùng mã, tạo mã khác
-                } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
-                    if (!p.disconnected || p.destroyed) showError(friendlyError(err));
-                    else setHint('Mất kết nối máy chủ, đang kết nối lại...');
-                } else {
-                    showError(friendlyError(err));
-                }
+                if (err.type === 'unavailable-id' && retry < 3) createRoom(retry + 1); // trùng mã, tạo mã khác
+                // các lỗi khác: vẫn chơi được qua kênh chuyển tiếp nên không báo lỗi
             });
         }
 
+        function hostRelayMsg(m) {
+            if (m.type === 'hello') {
+                if (connected) {
+                    // Gửi lại kèm trạng thái ván cờ, phòng khi máy khách lỡ tin trước đó
+                    if (transport === 'relay' && m.from === relayPeerSid) relaySend('guest', { type: 'welcome', to: m.from, sync: gameSnapshot() });
+                    else relaySend('guest', { type: 'full', to: m.from });
+                    return;
+                }
+                if (conn) { try { conn.close(); } catch (e) {} conn = null; }
+                relayPeerSid = m.from;
+                onLinked('relay');
+                relaySend('guest', { type: 'welcome', to: m.from, sync: gameSnapshot() });
+                return;
+            }
+            if (transport !== 'relay' || m.from !== relayPeerSid) return;
+            lastRelaySeen = Date.now();
+            if (m.type === 'ping') return;
+            if (m.type === 'bye') { onUnlinked(); return; }
+            handleMessage(m);
+        }
+
+        // ---------- Người vào phòng ----------
         async function joinRoom() {
             hideError();
             const input = document.getElementById('roomInput').value.trim().toUpperCase();
@@ -949,21 +1050,34 @@
             isHost = false;
             mySymbol = 'O';
             connected = false;
+            transport = null;
+            relayPeerSid = null;
             connectAttempts = 0;
 
+            showScreen('waiting');
+            document.getElementById('displayRoomId').textContent = roomId;
+            document.getElementById('waitingSizeInfo').textContent = '';
+            document.getElementById('btnCopyLink').style.display = 'none';
+            setHint('Đang kết nối tới phòng...');
+
+            // Kênh chuyển tiếp: nghe trước, sau WEBRTC_WAIT mà chưa nối thẳng được thì gọi chủ phòng
+            startRelay('guest', guestRelayMsg);
+            helloStarter = clearTimer(helloStarter);
+            helloStarter = setTimeout(startHello, WEBRTC_WAIT);
+            joinDeadline = clearTimer(joinDeadline);
+            joinDeadline = setTimeout(() => {
+                if (!connected) failJoin(`Không vào được phòng ${roomId}. Kiểm tra lại mã phòng, và nhờ chủ phòng giữ trang game mở.`);
+            }, JOIN_DEADLINE);
+
             if (peer) peer.destroy();
+            if (typeof Peer === 'undefined') { startHello(); return; }
             const cfg = await getPeerConfig();
             const p = new Peer(cfg); // để máy chủ tự cấp ID
             peer = p;
             watchPeer(p);
-            document.getElementById('btnCopyLink').style.display = 'none';
 
             p.on('open', () => {
-                if (peer !== p) return;
-                if (connected || (conn && conn.open)) return; // mở lại sau khi kết nối lại máy chủ
-                showScreen('waiting');
-                document.getElementById('displayRoomId').textContent = roomId;
-                document.getElementById('waitingSizeInfo').textContent = '';
+                if (peer !== p || connected || (conn && conn.open)) return;
                 attemptConnect();
             });
 
@@ -971,23 +1085,67 @@
                 if (peer !== p) return;
                 console.error('Peer error:', err);
                 if (connected) return;
-                if (err.type === 'peer-unavailable') {
-                    // Chủ phòng có thể đang kết nối lại (vừa chuyển app), thử lại vài lần
-                    if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
-                    if (connectAttempts < MAX_CONNECT_ATTEMPTS) {
-                        setHint(`Chưa thấy phòng ${roomId}, đang thử lại...`);
-                        connectTimeout = setTimeout(attemptConnect, 2500);
-                    } else {
-                        failJoin(`Không tìm thấy phòng ${roomId}. Kiểm tra lại mã, hoặc nhờ chủ phòng mở lại trang game (đừng tắt màn hình).`);
-                    }
-                } else {
-                    failJoin(friendlyError(err));
+                if (err.type === 'peer-unavailable' && connectAttempts < MAX_CONNECT_ATTEMPTS) {
+                    // Chủ phòng có thể đang kết nối lại (vừa chuyển app), thử lại
+                    connectTimeout = clearTimer(connectTimeout);
+                    connectTimeout = setTimeout(attemptConnect, 2500);
                 }
+                // không nối thẳng được: dựa vào kênh chuyển tiếp
+                startHello();
             });
         }
 
+        function startHello() {
+            helloStarter = clearTimer(helloStarter);
+            if (connected || helloTimer || isHost || !roomId) return;
+            if (!relays.length) return;
+            setHint('Đang kết nối qua máy chủ chuyển tiếp...');
+            const hello = () => relaySend('host', { type: 'hello' });
+            hello();
+            helloTimer = setInterval(hello, 2500);
+        }
+
+        function guestRelayMsg(m) {
+            if (m.to && m.to !== mySid) return;
+            if (!connected && (m.type === 'welcome' || m.type === 'start')) {
+                if (conn) { try { conn.close(); } catch (e) {} conn = null; }
+                relayPeerSid = m.from;
+                onLinked('relay');
+                if (m.type === 'start') handleMessage(m);
+                else if (m.sync) applySync(m.sync);
+                return;
+            }
+            if (m.type === 'welcome' && m.sync && transport === 'relay' && m.from === relayPeerSid && !board.length) {
+                applySync(m.sync);
+                return;
+            }
+            if (m.type === 'full' && !connected) { failJoin('Phòng ' + roomId + ' đã đủ 2 người chơi.'); return; }
+            if (transport !== 'relay' || m.from !== relayPeerSid) return;
+            lastRelaySeen = Date.now();
+            if (m.type === 'ping' || m.type === 'welcome') return;
+            if (m.type === 'bye') { onUnlinked(); return; }
+            handleMessage(m);
+        }
+
+        function gameSnapshot() {
+            return { boardSize, winLength, board: board.slice(), currentTurn, gameActive, scores: Object.assign({}, scores) };
+        }
+
+        function applySync(st) {
+            boardSize = st.boardSize;
+            winLength = st.winLength;
+            startGame();
+            if (Array.isArray(st.board) && st.board.length === boardSize * boardSize) {
+                board = st.board.slice();
+                board.forEach((v, i) => { if (v) updateCell(i, v); });
+            }
+            currentTurn = st.currentTurn || 'X';
+            gameActive = st.gameActive !== false;
+            if (st.scores) { scores = st.scores; updateScores(); }
+            updateUI();
+        }
+
         function failJoin(msg) {
-            if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
             const keepCode = roomId;
             backToLobby();
             document.getElementById('roomInput').value = keepCode;
@@ -995,67 +1153,40 @@
         }
 
         function attemptConnect() {
-            if (!peer || peer.destroyed || connected) return;
+            if (!peer || peer.destroyed || connected || peer.disconnected) return;
+            if (connectAttempts >= MAX_CONNECT_ATTEMPTS) return;
             connectAttempts++;
-            setHint(`Đang kết nối tới phòng... (lần ${connectAttempts}/${MAX_CONNECT_ATTEMPTS})`);
 
             const c = peer.connect('caro-' + roomId, { reliable: true, serialization: 'json' });
-            if (!c) { failJoin('Không tạo được kết nối. Hãy tải lại trang và thử lại.'); return; }
+            if (!c) { startHello(); return; }
             conn = c;
             setupConnection(c);
 
-            if (connectTimeout) clearTimeout(connectTimeout);
+            connectTimeout = clearTimer(connectTimeout);
             connectTimeout = setTimeout(() => {
                 if (connected || conn !== c) return;
                 try { c.close(); } catch (e) {}
-                if (connectAttempts < MAX_CONNECT_ATTEMPTS) attemptConnect();
-                else failJoin('Đã tìm thấy phòng nhưng hai máy không kết nối được với nhau (mạng chặn kết nối trực tiếp). Thử đổi mạng, ví dụ cùng dùng wifi hoặc 4G.');
+                conn = null;
+                startHello();
+                attemptConnect();
             }, CONNECT_TIMEOUT);
         }
 
-        // ==================== CONNECTION ====================
+        // ==================== CONNECTION (nối thẳng) ====================
         function setupConnection(c) {
             c.on('open', () => {
                 if (conn !== c) return;
-                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
-                connectAttempts = 0;
-                connected = true;
-                hideError();
-                hideOverlay();
-                showScreen('game');
-                document.getElementById('gameRoomId').textContent = roomId;
-                if (isHost) {
-                    c.send({ type: 'start', symbol: 'X', boardSize: boardSize, winLength: winLength });
-                    startGame();
-                }
-                updateUI();
+                if (connected) { try { c.close(); } catch (e) {} return; } // đã chơi qua kênh chuyển tiếp
+                onLinked('p2p');
             });
-
-            c.on('data', (data) => { if (conn === c) handleMessage(data); });
-
-            c.on('iceStateChanged', (state) => {
-                if (conn === c && !connected && state === 'failed') {
-                    setHint('Không kết nối trực tiếp được, đang thử lại...');
-                }
-            });
-
-            c.on('close', () => {
+            c.on('data', (data) => {
                 if (conn !== c) return;
-                const wasConnected = connected;
-                connected = false;
-                if (wasConnected) {
-                    gameActive = false;
-                    updateStatus('Đối thủ đã rời phòng!', 'lose');
-                    showOverlay('🔌', 'Đối thủ đã rời', isHost
-                        ? 'Đối thủ đã ngắt kết nối. Bạn có thể chờ họ vào lại bằng cùng mã phòng.'
-                        : 'Chủ phòng đã ngắt kết nối!');
-                    if (isHost) { conn = null; }
-                }
+                // Tin có thể đến trước sự kiện 'open' → coi như đã kết nối
+                if (!connected) onLinked('p2p');
+                if (transport === 'p2p') handleMessage(data);
             });
-
-            c.on('error', (err) => {
-                console.error('Connection error:', err);
-            });
+            c.on('close', () => { if (conn === c && transport === 'p2p') onUnlinked(); });
+            c.on('error', (err) => console.error('Connection error:', err));
         }
 
         function handleMessage(data) {
@@ -1067,7 +1198,20 @@
                     showScreen('game');
                     startGame();
                     break;
+                case 'hello':
+                    break;
+                case 'syncreq':
+                    if (isHost) sendMsg({ type: 'sync', sync: gameSnapshot() });
+                    break;
+                case 'sync':
+                    if (!isHost && data.sync) applySync(data.sync);
+                    break;
                 case 'move':
+                    // Chưa có bàn cờ (lỡ tin bắt đầu ván) → xin chủ phòng gửi lại toàn bộ ván
+                    if (!cells.length || board.length !== boardSize * boardSize) {
+                        if (!isHost) sendMsg({ type: 'syncreq' });
+                        break;
+                    }
                     board[data.cell] = data.symbol;
                     updateCell(data.cell, data.symbol);
                     currentTurn = data.symbol === 'X' ? 'O' : 'X';
@@ -1093,7 +1237,7 @@
             updateUI();
             document.getElementById('gameRoomId').textContent = roomId;
             document.getElementById('gameSizeInfo').textContent =
-                `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân`;
+                `Bàn ${boardSize}×${boardSize} · Thắng ${winLength} quân${winLength >= 5 ? ' · chặn 2 đầu không tính' : ''}`;
             document.getElementById('playerXStatus').textContent = isHost ? '(Bạn)' : '';
             document.getElementById('playerOStatus').textContent = !isHost ? '(Bạn)' : '';
         }
@@ -1105,7 +1249,7 @@
             updateCell(index, mySymbol);
             currentTurn = mySymbol === 'X' ? 'O' : 'X';
 
-            conn.send({ type: 'move', cell: index, symbol: mySymbol });
+            sendMsg({ type: 'move', cell: index, symbol: mySymbol });
             checkResult();
             updateUI();
         }
@@ -1123,9 +1267,7 @@
         }
 
         function requestRestart() {
-            if (conn && conn.open) {
-                conn.send({ type: 'restart' });
-            }
+            if (connected) sendMsg({ type: 'restart' });
             resetBoard();
             updateUI();
         }
@@ -1153,8 +1295,10 @@
             if (gameActive) {
                 if (currentTurn === mySymbol) {
                     turnText.textContent = '🟢 Đến lượt bạn (' + mySymbol + ')';
+                    updateStatus('🟢 Đến lượt bạn đánh ' + mySymbol, 'your-turn');
                 } else {
                     turnText.textContent = '🔴 Đối thủ đang chơi...';
+                    updateStatus('⏳ Chờ đối thủ đánh...', 'enemy-turn');
                 }
             }
         }
@@ -1211,7 +1355,17 @@
         }
 
         function backToLobby() {
-            if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+            if (connected && transport === 'relay') sendMsg({ type: 'bye' });
+            connectTimeout = clearTimer(connectTimeout);
+            joinDeadline = clearTimer(joinDeadline);
+            helloStarter = clearTimer(helloStarter);
+            const stopping = relays;
+            relays = []; relayHandler = null;
+            setTimeout(() => stopping.forEach(c => { try { c.end(); } catch (e) {} }), 300);
+            relayHeartbeat = clearTimer(relayHeartbeat);
+            helloTimer = clearTimer(helloTimer);
+            transport = null;
+            relayPeerSid = null;
             connectAttempts = 0;
             if (conn) conn.close();
             if (peer) peer.destroy();
