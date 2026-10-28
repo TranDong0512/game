@@ -1,1381 +1,1193 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ Phiêu Lưu Vượt Ải</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0a2e;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', sans-serif;
-            overflow: hidden;
-        }
-        #gameWrapper {
-            position: relative;
-            width: 800px;
-            height: 500px;
-        }
-        canvas {
-            display: block;
-            border-radius: 12px;
-            box-shadow: 0 0 40px rgba(100, 100, 255, 0.3);
-        }
-        #ui {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            pointer-events: none;
-            z-index: 10;
-        }
-        .ui-item {
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            background: rgba(0,0,0,0.4);
-            padding: 5px 12px;
-            border-radius: 20px;
-            backdrop-filter: blur(5px);
-        }
-        #menu, #winScreen, #gameOverScreen, #levelIntro {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(10, 10, 46, 0.95);
-            z-index: 20;
-            border-radius: 12px;
-        }
-        .menu-title {
-            font-size: 48px;
-            font-weight: bold;
-            color: #ffd700;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            margin-bottom: 10px;
-        }
-        .menu-subtitle {
-            font-size: 18px;
-            color: #aaa;
-            margin-bottom: 30px;
-        }
-        .btn {
-            padding: 12px 40px;
-            font-size: 18px;
-            font-weight: bold;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            margin: 8px;
-            transition: all 0.3s;
-            pointer-events: all;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: #fff;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-        .btn-success {
-            background: linear-gradient(135deg, #11998e, #38ef7d);
-            color: #fff;
-            box-shadow: 0 4px 15px rgba(56, 239, 125, 0.4);
-        }
-        .btn-danger {
-            background: linear-gradient(135deg, #eb3349, #f45c43);
-            color: #fff;
-        }
-        .level-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .level-btn {
-            width: 50px; height: 50px;
-            border: 2px solid #555;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            pointer-events: all;
-        }
-        .level-btn.unlocked {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.2);
-        }
-        .level-btn.unlocked:hover {
-            background: rgba(102, 126, 234, 0.5);
-            transform: scale(1.1);
-        }
-        .level-btn.completed {
-            border-color: #38ef7d;
-            background: rgba(56, 239, 125, 0.2);
-        }
-        .level-btn.locked {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        .stats {
-            color: #ccc;
-            font-size: 16px;
-            margin: 5px 0;
-        }
-        .star-display {
-            font-size: 30px;
-            margin: 10px 0;
-        }
-        .controls-info {
-            color: #888;
-            font-size: 13px;
-            margin-top: 15px;
-            text-align: center;
-            line-height: 1.8;
-        }
-        .hidden { display: none !important; }
-        .level-intro-text {
-            font-size: 36px;
-            color: #ffd700;
-            font-weight: bold;
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        .level-desc {
-            color: #aaa;
-            margin: 10px 0 20px;
-            font-size: 16px;
-        }
-        #mobileControls {
-            position: absolute;
-            bottom: 10px;
-            left: 0; right: 0;
-            display: none;
-            justify-content: space-between;
-            padding: 0 15px;
-            z-index: 15;
-            pointer-events: none;
-        }
-        .mobile-btn {
-            width: 55px; height: 55px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.4);
-            color: #fff;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: all;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        .mobile-dpad { display: flex; gap: 8px; }
-        @media (max-width: 820px) {
-            #mobileControls { display: flex; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>⚔️ Phiêu Lưu Vượt Ải</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #07071c; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; }
+    #wrap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; }
+    #c { width: 100%; height: 100%; display: block; border-radius: 10px; background: #000; image-rendering: auto; }
+    .ov { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+          background: radial-gradient(ellipse at 50% 35%, rgba(40,30,90,.92), rgba(6,6,24,.96)); border-radius: 10px; padding: 16px; overflow-y: auto; }
+    .hidden { display: none !important; }
+    .title { font-size: 46px; font-weight: 900; color: #ffd84a; text-shadow: 0 4px 0 #a5620d, 0 8px 22px rgba(255,200,60,.4); text-align: center; }
+    .sub { color: #b9b9d6; font-size: 16px; text-align: center; }
+    .btn { padding: 12px 34px; font-size: 18px; font-weight: 800; border: none; border-radius: 30px; cursor: pointer; color: #fff;
+           background: linear-gradient(135deg, #6a7cff, #8b4dff); box-shadow: 0 5px 18px rgba(110,100,255,.4); transition: .15s; user-select: none; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn.green { background: linear-gradient(135deg, #13a37f, #36e27c); box-shadow: 0 5px 18px rgba(54,226,124,.35); }
+    .btn.red { background: linear-gradient(135deg, #e3334a, #ff6a3d); box-shadow: 0 5px 18px rgba(255,80,60,.35); }
+    .btn.ghost { background: rgba(255,255,255,.08); box-shadow: none; border: 2px solid rgba(255,255,255,.2); font-size: 15px; padding: 9px 24px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .levels { display: grid; grid-template-columns: repeat(5, 92px); gap: 10px; }
+    .lv { height: 82px; border-radius: 14px; border: 2px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06); cursor: pointer;
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: .15s; user-select: none; }
+    .lv:hover { transform: scale(1.06); border-color: #8b8bff; }
+    .lv .n { font-size: 24px; font-weight: 900; }
+    .lv .s { font-size: 13px; letter-spacing: 1px; }
+    .lv .t { font-size: 10px; color: #aab; max-width: 86px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lv.done { border-color: #36e27c; background: rgba(54,226,124,.12); }
+    .lv.locked { opacity: .35; cursor: not-allowed; transform: none; }
+    .help { color: #9a9ab8; font-size: 13px; text-align: center; line-height: 1.8; }
+    .k { display: inline-block; padding: 0 6px; border-radius: 4px; background: rgba(255,255,255,.15); color: #fff; font-weight: 700; font-size: 12px; }
+    .big { font-size: 40px; letter-spacing: 4px; }
+    .stat { color: #d5d5ef; font-size: 17px; }
+    #touch { position: absolute; inset: 0; pointer-events: none; display: none; }
+    #touch .tb { position: absolute; bottom: 5%; width: 13%; aspect-ratio: 1; border-radius: 50%; pointer-events: auto; touch-action: none; user-select: none;
+                 background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.35); display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    #touch .tb.on { background: rgba(255,255,255,.38); }
+    #pauseBtn { position: absolute; top: 2%; right: 1.2%; width: 4.5%; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(255,255,255,.35);
+                background: rgba(0,0,0,.35); color: #fff; font-size: 16px; cursor: pointer; display: none; }
+    @media (max-width: 760px) { .title { font-size: 30px; } .levels { grid-template-columns: repeat(5, 62px); } .lv { height: 64px; } .lv .t { display: none; } }
+</style>
 </head>
 <body>
-    <div id="gameWrapper">
-        <canvas id="game" width="800" height="500"></canvas>
+<div id="wrap">
+    <canvas id="c" width="960" height="540"></canvas>
+    <button id="pauseBtn" onclick="togglePause()">⏸</button>
+    <div id="touch">
+        <div class="tb" data-k="left" style="left:3%">◀</div>
+        <div class="tb" data-k="right" style="left:19%">▶</div>
+        <div class="tb" data-k="jump" style="right:4%;width:16%">⤒</div>
+    </div>
 
-        <div id="ui" class="hidden">
-            <div class="ui-item">🪙 <span id="coinCount">0</span></div>
-            <div class="ui-item">⭐ Màn <span id="levelNum">1</span></div>
-            <div class="ui-item">🦘 Nhảy: <span id="jumpCount">2</span></div>
-            <div class="ui-item">❤️ <span id="livesCount">3</span></div>
+    <div class="ov" id="sMenu">
+        <div class="title">⚔️ PHIÊU LƯU VƯỢT ẢI</div>
+        <div class="sub">10 màn chơi · nhảy đôi · thu thập xu · đánh bại Vua Slime</div>
+        <div class="row" style="margin-top:8px">
+            <button class="btn green" id="btnContinue" onclick="continueGame()">▶ Chơi tiếp</button>
+            <button class="btn" onclick="showLevels()">🗺️ Chọn màn</button>
         </div>
-
-        <div id="menu">
-            <div class="menu-title">⚔️ Phiêu Lưu Vượt Ải</div>
-            <div class="menu-subtitle">Chinh phục mọi thử thách!</div>
-            <button class="btn btn-primary" onclick="startGame()">🎮 Bắt Đầu Chơi</button>
-            <button class="btn btn-success" onclick="showLevelSelect()">📋 Chọn Màn</button>
-            <div class="controls-info">
-                ⬅️ ➡️ Di chuyển &nbsp;|&nbsp; ⬆️ / Space: Nhảy (nhấn 2 lần để nhảy đôi!)<br>
-                Thu thập 🪙 coins, né quái, đến 🚪 cửa để qua màn!
-            </div>
-        </div>
-
-        <div id="levelSelect" class="hidden">
-            <div class="menu-title" style="font-size:32px">📋 Chọn Màn Chơi</div>
-            <div class="level-grid" id="levelGrid"></div>
-            <button class="btn btn-danger" onclick="showMenu()">⬅️ Quay Lại</button>
-        </div>
-
-        <div id="levelIntro" class="hidden">
-            <div class="level-intro-text" id="introTitle">Màn 1</div>
-            <div class="level-desc" id="introDesc">Bắt đầu cuộc phiêu lưu!</div>
-        </div>
-
-        <div id="winScreen" class="hidden">
-            <div class="menu-title" style="font-size:36px">🎉 Hoàn Thành!</div>
-            <div class="star-display" id="starsDisplay">⭐⭐⭐</div>
-            <div class="stats">🪙 Coins: <span id="winCoins">0</span></div>
-            <button class="btn btn-primary" onclick="nextLevel()">➡️ Màn Tiếp</button>
-            <button class="btn btn-success" onclick="showLevelSelect()">📋 Chọn Màn</button>
-        </div>
-
-        <div id="gameOverScreen" class="hidden">
-            <div class="menu-title" style="font-size:36px; color:#f45c43">💀 Game Over</div>
-            <div class="stats">Đã thu thập: <span id="goCoins">0</span> 🪙</div>
-            <button class="btn btn-primary" onclick="retryLevel()">🔄 Chơi Lại</button>
-            <button class="btn btn-danger" onclick="showMenu()">🏠 Về Menu</button>
-        </div>
-
-        <div id="mobileControls">
-            <div class="mobile-dpad">
-                <div class="mobile-btn" id="btnLeft">◀</div>
-                <div class="mobile-btn" id="btnRight">▶</div>
-            </div>
-            <div class="mobile-btn" id="btnJump" style="width:70px;height:70px;font-size:24px;">▲</div>
+        <div class="help">
+            Di chuyển <span class="k">←</span><span class="k">→</span> / <span class="k">A</span><span class="k">D</span> ·
+            Nhảy <span class="k">↑</span> / <span class="k">W</span> / <span class="k">Space</span> (bấm thêm lần nữa trên không để nhảy đôi) ·
+            Tạm dừng <span class="k">Esc</span><br>
+            Giữ nút nhảy lâu để nhảy cao hơn · Nhảy lên đầu quái để tiêu diệt (trừ quái lửa 🔥) · Chạm cờ để lưu điểm hồi sinh
         </div>
     </div>
 
-    <script>
-        // ==================== GAME ENGINE ====================
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        const W = 800, H = 500;
+    <div class="ov hidden" id="sLevels">
+        <div class="title" style="font-size:34px">🗺️ CHỌN MÀN</div>
+        <div class="levels" id="levelGrid"></div>
+        <div class="sub" id="starTotal"></div>
+        <button class="btn ghost" onclick="showMenu()">⬅ Quay lại</button>
+    </div>
 
-        // Game state
-        let gameState = 'menu'; // menu, playing, paused, win, gameover
-        let currentLevel = 0;
-        let coins = 0;
-        let lives = 3;
-        let maxUnlockedLevel = 0;
-        let levelStars = [];
-        let animFrame = 0;
-        let particles = [];
-        let screenShake = 0;
-        let cameraX = 0;
-        let jumpKeyHeld = false;
+    <div class="ov hidden" id="sPause">
+        <div class="title" style="font-size:38px">⏸ TẠM DỪNG</div>
+        <div class="row">
+            <button class="btn green" onclick="togglePause()">▶ Chơi tiếp</button>
+            <button class="btn" onclick="restartLevel()">🔄 Chơi lại màn</button>
+            <button class="btn ghost" onclick="showLevels()">🗺️ Chọn màn</button>
+        </div>
+    </div>
 
-        // Load saved progress
-        try {
-            const saved = JSON.parse(localStorage.getItem('gameProgress'));
-            if (saved) {
-                maxUnlockedLevel = saved.maxLevel || 0;
-                levelStars = saved.stars || [];
-            }
-        } catch(e) {}
+    <div class="ov hidden" id="sWin">
+        <div class="title" style="font-size:38px" id="winTitle">🎉 QUA MÀN!</div>
+        <div class="big" id="winStars">⭐⭐⭐</div>
+        <div class="stat" id="winStat"></div>
+        <div class="row">
+            <button class="btn green" id="btnNext" onclick="nextLevel()">Màn tiếp ▶</button>
+            <button class="btn" onclick="restartLevel()">🔄 Chơi lại</button>
+            <button class="btn ghost" onclick="showLevels()">🗺️ Chọn màn</button>
+        </div>
+    </div>
 
-        function saveProgress() {
-            localStorage.setItem('gameProgress', JSON.stringify({
-                maxLevel: maxUnlockedLevel,
-                stars: levelStars
-            }));
-        }
+    <div class="ov hidden" id="sOver">
+        <div class="title" style="font-size:40px;color:#ff6a5a;text-shadow:0 4px 0 #7a1010">💀 HẾT MẠNG</div>
+        <div class="stat" id="overStat"></div>
+        <div class="row">
+            <button class="btn red" onclick="restartLevel()">🔄 Thử lại</button>
+            <button class="btn ghost" onclick="showLevels()">🗺️ Chọn màn</button>
+        </div>
+    </div>
+</div>
 
-        // ==================== AUDIO ====================
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        let audioCtx;
-        function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
-        function playSound(freq, duration, type='square', vol=0.1) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
-        }
-        function sfxJump() { playSound(400, 0.15); setTimeout(() => playSound(600, 0.1), 50); }
-        function sfxCoin() { playSound(800, 0.1, 'sine', 0.15); setTimeout(() => playSound(1200, 0.1, 'sine', 0.15), 80); }
-        function sfxHurt() { playSound(200, 0.3, 'sawtooth', 0.15); }
-        function sfxWin() { [0,100,200,300].forEach((d,i) => setTimeout(() => playSound(500+i*100, 0.2, 'sine', 0.12), d)); }
-        function sfxClick() { playSound(600, 0.05, 'sine', 0.08); }
+<script>
+// =====================================================================
+//  THIẾT LẬP
+// =====================================================================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 960, H = 540, TILE = 40;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const hash = (x, y) => { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
-        // ==================== INPUT ====================
-        const keys = {};
-        document.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
-        document.addEventListener('keyup', e => { keys[e.code] = false; });
+// Loại ô
+const T = { AIR: 0, GROUND: 1, BRICK: 2, STONE: 3, ICE: 4, WOOD: 5, SPIKE: 6, LAVA: 7, SAND: 8 };
+const isSolid = t => t === 1 || t === 2 || t === 3 || t === 4 || t === 8;
+const isOneWay = t => t === 5;
 
-        // Mobile controls
-        function setupMobile() {
-            const addTouch = (id, key) => {
-                const el = document.getElementById(id);
-                el.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; });
-                el.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; });
-            };
-            addTouch('btnLeft', 'ArrowLeft');
-            addTouch('btnRight', 'ArrowRight');
-            addTouch('btnJump', 'ArrowUp');
-        }
-        setupMobile();
+// Thông số vật lý (khung hình 60/giây)
+const PH = { ACC_G: 0.7, ACC_ICE: 0.16, ACC_AIR: 0.45, FR_G: 0.78, FR_ICE: 0.985, FR_AIR: 0.94, MAXV: 4.3, MAXV_ICE: 5.4,
+             GRAV: 0.55, JUMP: -10.6, DJUMP: -9.6, MAXFALL: 13, SPRING: -15.5, COYOTE: 7, BUFFER: 7, CUT: 0.9 };
+const MOVER_PERIOD = 240;
 
-        // ==================== LEVEL DATA ====================
-        const TILE = 40;
-        // Tile types: 0=air, 1=ground, 2=grass, 3=stone, 4=brick, 5=spike, 6=lava, 7=ice, 8=sand, 9=wood
-        const LEVELS = [
-            // Level 1: Introduction
-            {
-                name: "Khởi Đầu",
-                desc: "Làm quen với việc di chuyển và nhảy",
-                bg: ['#1a1a4e', '#2d2d7e'],
-                tiles: generateLevel1(),
-                enemies: [
-                    { type: 'slime', x: 400, y: 360, range: 80 },
-                    { type: 'slime', x: 640, y: 360, range: 60 },
-                ],
-                coins: [
-                    {x:280,y:340},{x:320,y:340},{x:360,y:340},
-                    {x:500,y:300},{x:540,y:300},
-                    {x:700,y:260},{x:740,y:260},
-                ],
-                door: {x: 760, y: 280},
-                playerStart: {x: 60, y: 360}
-            },
-            // Level 2: Platforms
-            {
-                name: "Bước Nhảy Vọt",
-                desc: "Nhảy qua các nền đất bay",
-                bg: ['#0d2137', '#1a3a5c'],
-                tiles: generateLevel2(),
-                enemies: [
-                    { type: 'bat', x: 350, y: 200, range: 60 },
-                    { type: 'slime', x: 600, y: 360, range: 60 },
-                    { type: 'slime', x: 700, y: 280, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:300},{x:240,y:300},
-                    {x:400,y:220},{x:440,y:220},{x:480,y:220},
-                    {x:620,y:260},{x:660,y:260},
-                    {x:760,y:180},
-                ],
-                door: {x: 760, y: 200},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 3: Spikes
-            {
-                name: "Con Đường Gai",
-                desc: "Tránh những chiếc gai nhọn!",
-                bg: ['#2d1b00', '#4a2e00'],
-                tiles: generateLevel3(),
-                enemies: [
-                    { type: 'slime', x: 300, y: 360, range: 60 },
-                    { type: 'bat', x: 500, y: 180, range: 80 },
-                    { type: 'slime', x: 650, y: 280, range: 50 },
-                ],
-                coins: [
-                    {x:200,y:320},{x:240,y:320},
-                    {x:400,y:280},{x:440,y:280},
-                    {x:550,y:200},{x:590,y:200},{x:630,y:200},
-                    {x:720,y:240},
-                ],
-                door: {x: 740, y: 200},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 4: Lava
-            {
-                name: "Nham Thạch",
-                desc: "Đừng rơi xuống dung nham!",
-                bg: ['#1a0000', '#3d0000'],
-                tiles: generateLevel4(),
-                enemies: [
-                    { type: 'fire', x: 350, y: 340, range: 50 },
-                    { type: 'bat', x: 500, y: 160, range: 70 },
-                    { type: 'fire', x: 650, y: 260, range: 40 },
-                    { type: 'slime', x: 700, y: 200, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:280},{x:240,y:280},{x:280,y:280},
-                    {x:450,y:200},{x:490,y:200},
-                    {x:600,y:160},{x:640,y:160},{x:680,y:160},
-                ],
-                door: {x: 740, y: 160},
-                playerStart: {x: 40, y: 280}
-            },
-            // Level 5: Ice
-            {
-                name: "Vương Quốc Băng",
-                desc: "Sàn băng trơn trượt, cẩn thận!",
-                bg: ['#0a1628', '#1a3050'],
-                tiles: generateLevel5(),
-                enemies: [
-                    { type: 'slime', x: 300, y: 360, range: 100 },
-                    { type: 'bat', x: 450, y: 180, range: 60 },
-                    { type: 'slime', x: 600, y: 280, range: 60 },
-                    { type: 'bat', x: 700, y: 200, range: 50 },
-                ],
-                coins: [
-                    {x:180,y:320},{x:220,y:320},{x:260,y:320},
-                    {x:400,y:240},{x:440,y:240},{x:480,y:240},
-                    {x:600,y:200},{x:640,y:200},
-                    {x:730,y:160},
-                ],
-                door: {x: 740, y: 160},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 6: Mixed
-            {
-                name: "Mê Cung",
-                desc: "Tìm đường đi qua mê cung!",
-                bg: ['#0a0a2e', '#1a1a4e'],
-                tiles: generateLevel6(),
-                enemies: [
-                    { type: 'slime', x: 250, y: 360, range: 50 },
-                    { type: 'bat', x: 400, y: 240, range: 60 },
-                    { type: 'fire', x: 550, y: 320, range: 40 },
-                    { type: 'slime', x: 650, y: 200, range: 50 },
-                    { type: 'bat', x: 700, y: 120, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:320},{x:240,y:320},
-                    {x:350,y:240},{x:390,y:240},{x:430,y:240},
-                    {x:550,y:160},{x:590,y:160},
-                    {x:700,y:120},{x:740,y:120},
-                ],
-                door: {x: 740, y: 80},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 7: Vertical
-            {
-                name: "Leo Núi",
-                desc: "Leo lên đỉnh núi cao nhất!",
-                bg: ['#1a0a2e', '#2e1a4e'],
-                tiles: generateLevel7(),
-                enemies: [
-                    { type: 'bat', x: 300, y: 300, range: 50 },
-                    { type: 'bat', x: 500, y: 200, range: 60 },
-                    { type: 'fire', x: 600, y: 280, range: 40 },
-                    { type: 'slime', x: 700, y: 200, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:320},{x:240,y:320},
-                    {x:350,y:240},{x:390,y:240},
-                    {x:500,y:160},{x:540,y:160},{x:580,y:160},
-                    {x:680,y:120},{x:720,y:120},
-                ],
-                door: {x: 740, y: 80},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 8: Speed
-            {
-                name: "Tốc Độ",
-                desc: "Chạy nhanh qua chướng ngại vật!",
-                bg: ['#001a0a', '#003d1a'],
-                tiles: generateLevel8(),
-                enemies: [
-                    { type: 'fire', x: 300, y: 360, range: 80 },
-                    { type: 'bat', x: 450, y: 200, range: 70 },
-                    { type: 'fire', x: 600, y: 280, range: 60 },
-                    { type: 'bat', x: 700, y: 160, range: 50 },
-                    { type: 'slime', x: 350, y: 280, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:300},{x:240,y:300},{x:280,y:300},
-                    {x:400,y:200},{x:440,y:200},{x:480,y:200},
-                    {x:600,y:160},{x:640,y:160},{x:680,y:160},
-                    {x:750,y:120},
-                ],
-                door: {x: 740, y: 80},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 9: Hard
-            {
-                name: "Thử Thách Cuối",
-                desc: "Ải cuối cùng, liệu bạn có thể vượt qua?",
-                bg: ['#1a0000', '#2e0a0a'],
-                tiles: generateLevel9(),
-                enemies: [
-                    { type: 'fire', x: 250, y: 340, range: 60 },
-                    { type: 'bat', x: 400, y: 180, range: 80 },
-                    { type: 'fire', x: 500, y: 280, range: 50 },
-                    { type: 'bat', x: 600, y: 200, range: 60 },
-                    { type: 'fire', x: 700, y: 240, range: 40 },
-                    { type: 'slime', x: 350, y: 200, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:300},{x:240,y:300},{x:280,y:300},
-                    {x:380,y:220},{x:420,y:220},{x:460,y:220},
-                    {x:560,y:140},{x:600,y:140},{x:640,y:140},
-                    {x:720,y:100},{x:760,y:100},
-                ],
-                door: {x: 740, y: 60},
-                playerStart: {x: 40, y: 360}
-            },
-            // Level 10: Boss
-            {
-                name: "Boss Cuối",
-                desc: "Đánh bại boss để trở thành nhà vô địch!",
-                bg: ['#0a001a', '#1a003d'],
-                tiles: generateLevel10(),
-                enemies: [
-                    { type: 'fire', x: 300, y: 340, range: 70 },
-                    { type: 'bat', x: 450, y: 160, range: 80 },
-                    { type: 'fire', x: 550, y: 260, range: 50 },
-                    { type: 'bat', x: 650, y: 180, range: 60 },
-                    { type: 'fire', x: 700, y: 300, range: 40 },
-                ],
-                coins: [
-                    {x:200,y:280},{x:240,y:280},{x:280,y:280},{x:320,y:280},
-                    {x:400,y:200},{x:440,y:200},{x:480,y:200},{x:520,y:200},
-                    {x:600,y:120},{x:640,y:120},{x:680,y:120},{x:720,y:120},
-                ],
-                door: {x: 740, y: 80},
-                playerStart: {x: 40, y: 360}
-            },
-        ];
+// =====================================================================
+//  CHỦ ĐỀ
+// =====================================================================
+const THEMES = {
+    meadow:  { sky: ['#4aa3ff', '#bfe6ff'], far: '#8fc1e8', near: '#5fae5a', top: '#58c95a', fill: '#8a5a32', dark: '#6e4423', deco: 'hills', sun: '#fff3b0' },
+    sky:     { sky: ['#69b8ff', '#e1f3ff'], far: '#ffffff', near: '#a8d8ff', top: '#62d06b', fill: '#9a6a3c', dark: '#7a5028', deco: 'clouds', sun: '#fff6c8' },
+    desert:  { sky: ['#ffb35c', '#ffe3a6'], far: '#e8a35e', near: '#d68b45', top: '#f2cf7c', fill: '#d9a654', dark: '#b88437', deco: 'dunes', sun: '#fff1b0' },
+    volcano: { sky: ['#2a0606', '#7a1a0a'], far: '#3c0d0d', near: '#2a0808', top: '#5a4040', fill: '#3d2a2a', dark: '#2a1c1c', deco: 'volcano', night: true },
+    ice:     { sky: ['#1b2e5a', '#6f9fd8'], far: '#9fc0e8', near: '#d8ecff', top: '#e8f6ff', fill: '#9cc9ef', dark: '#79acd9', deco: 'peaks', night: true },
+    castle:  { sky: ['#0d0b24', '#2a2150'], far: '#1c173d', near: '#151230', top: '#8a7d9a', fill: '#6d5f80', dark: '#4e4360', deco: 'castle', night: true },
+    mountain:{ sky: ['#3b3b8f', '#f0a07a'], far: '#5a4f9a', near: '#3f3a75', top: '#7fbf6a', fill: '#7a7f8c', dark: '#5c606c', deco: 'peaks', sun: '#ffd9a8' },
+    forest:  { sky: ['#0f3d2a', '#4f9d6a'], far: '#1d5a3c', near: '#123e29', top: '#3fbf55', fill: '#6b4a2a', dark: '#4f351c', deco: 'forest' },
+    hell:    { sky: ['#14020a', '#4d0a1a'], far: '#2a0812', near: '#1a050b', top: '#6b2a2a', fill: '#3a1414', dark: '#260b0b', deco: 'volcano', night: true },
+    boss:    { sky: ['#0a0018', '#3a0d4d'], far: '#22103a', near: '#170a28', top: '#9a8aa8', fill: '#5d4f70', dark: '#43385a', deco: 'castle', night: true }
+};
 
-        // Level generators
-        function generateLevel1() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<20;x++) { t[11][x]=1; t[12][x]=1; }
-            // platforms
-            for(let x=5;x<9;x++) t[9][x]=2;
-            for(let x=12;x<16;x++) t[7][x]=2;
-            for(let x=17;x<20;x++) t[8][x]=2;
-            return t;
-        }
-        function generateLevel2() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<5;x++) { t[11][x]=1; t[12][x]=1; }
-            for(let x=4;x<8;x++) t[8][x]=2;
-            for(let x=9;x<13;x++) t[6][x]=2;
-            for(let x=14;x<18;x++) t[8][x]=2;
-            for(let x=17;x<20;x++) { t[6][x]=2; t[11][x]=1; t[12][x]=1; }
-            return t;
-        }
-        function generateLevel3() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<20;x++) { t[11][x]=1; t[12][x]=1; }
-            for(let x=4;x<5;x++) t[10][x]=5;
-            for(let x=7;x<9;x++) t[10][x]=5;
-            for(let x=11;x<13;x++) t[10][x]=5;
-            for(let x=5;x<8;x++) t[8][x]=2;
-            for(let x=10;x<14;x++) t[6][x]=2;
-            for(let x=16;x<20;x++) t[6][x]=2;
-            return t;
-        }
-        function generateLevel4() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<4;x++) { t[9][x]=1; t[10][x]=1; }
-            for(let x=0;x<20;x++) { t[11][x]=6; t[12][x]=6; }
-            for(let x=4;x<7;x++) t[8][x]=3;
-            for(let x=8;x<11;x++) t[6][x]=3;
-            for(let x=12;x<15;x++) t[8][x]=3;
-            for(let x=16;x<20;x++) t[5][x]=3;
-            return t;
-        }
-        function generateLevel5() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<20;x++) { t[11][x]=7; t[12][x]=7; }
-            for(let x=4;x<8;x++) t[8][x]=7;
-            for(let x=10;x<14;x++) t[6][x]=7;
-            for(let x=16;x<20;x++) t[5][x]=7;
-            return t;
-        }
-        function generateLevel6() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<20;x++) { t[11][x]=4; t[12][x]=4; }
-            for(let x=3;x<7;x++) t[8][x]=4;
-            for(let x=0;x<3;x++) t[8][x]=4; // wall
-            for(let x=8;x<12;x++) t[6][x]=4;
-            for(let x=6;x<8;x++) t[6][x]=4; // wall connector
-            for(let x=13;x<17;x++) t[5][x]=4;
-            for(let x=17;x<20;x++) t[3][x]=4;
-            t[7][3]=0; t[7][4]=0; // gap
-            return t;
-        }
-        function generateLevel7() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<5;x++) { t[11][x]=1; t[12][x]=1; }
-            for(let x=3;x<7;x++) t[9][x]=2;
-            for(let x=7;x<10;x++) t[7][x]=2;
-            for(let x=10;x<14;x++) t[5][x]=2;
-            for(let x=14;x<18;x++) t[3][x]=2;
-            for(let x=17;x<20;x++) t[3][x]=2;
-            return t;
-        }
-        function generateLevel8() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<20;x++) { t[11][x]=1; t[12][x]=1; }
-            for(let x=3;x<5;x++) t[10][x]=5;
-            for(let x=6;x<8;x++) t[10][x]=5;
-            for(let x=4;x<7;x++) t[8][x]=2;
-            for(let x=9;x<12;x++) t[8][x]=2;
-            for(let x=10;x<13;x++) t[6][x]=2;
-            for(let x=14;x<17;x++) t[6][x]=2;
-            for(let x=17;x<20;x++) t[3][x]=2;
-            return t;
-        }
-        function generateLevel9() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<4;x++) { t[11][x]=1; t[12][x]=1; }
-            for(let x=0;x<20;x++) { t[11][x]=6; t[12][x]=6; }
-            t[11][0]=1; t[11][1]=1; t[11][2]=1; t[11][3]=1;
-            t[12][0]=1; t[12][1]=1; t[12][2]=1; t[12][3]=1;
-            for(let x=4;x<7;x++) t[9][x]=3;
-            for(let x=5;x<6;x++) t[8][x]=5;
-            for(let x=8;x<11;x++) t[7][x]=3;
-            for(let x=9;x<10;x++) t[6][x]=5;
-            for(let x=12;x<15;x++) t[5][x]=3;
-            for(let x=13;x<14;x++) t[4][x]=5;
-            for(let x=16;x<20;x++) t[3][x]=3;
-            return t;
-        }
-        function generateLevel10() {
-            const t = Array.from({length:13}, () => Array(20).fill(0));
-            for(let x=0;x<5;x++) { t[11][x]=1; t[12][x]=1; }
-            for(let x=0;x<20;x++) { t[11][x]=6; t[12][x]=6; }
-            t[11][0]=1;t[11][1]=1;t[11][2]=1;t[11][3]=1;t[11][4]=1;
-            t[12][0]=1;t[12][1]=1;t[12][2]=1;t[12][3]=1;t[12][4]=1;
-            for(let x=4;x<8;x++) t[8][x]=4;
-            for(let x=8;x<12;x++) t[6][x]=4;
-            for(let x=5;x<6;x++) t[7][x]=5;
-            for(let x=12;x<16;x++) t[5][x]=4;
-            for(let x=9;x<10;x++) t[5][x]=5;
-            for(let x=16;x<20;x++) t[3][x]=4;
-            for(let x=13;x<14;x++) t[4][x]=5;
-            return t;
-        }
+// =====================================================================
+//  XÂY MÀN CHƠI
+// =====================================================================
+function makeLevel(def) {
+    const w = def.w, h = def.h || 14;
+    const L = { name: def.name, desc: def.desc, theme: THEMES[def.theme], w, h, tiles: [], coins: [], enemies: [], movers: [], springs: [],
+                hearts: [], flags: [], door: null, start: null, boss: null };
+    for (let y = 0; y < h; y++) L.tiles.push(new Uint8Array(w));
+    const set = (x, y, t) => { if (x >= 0 && x < w && y >= 0 && y < h) L.tiles[y][x] = t; };
+    const G = h - 3;
+    const B = {
+        ground(x0, x1, top = G, t = T.GROUND) { for (let x = x0; x <= x1; x++) for (let y = top; y < h; y++) set(x, y, t); },
+        gap(x0, x1) { for (let x = x0; x <= x1; x++) for (let y = 0; y < h; y++) set(x, y, T.AIR); },
+        block(x, y, bw, bh, t = def.blockTile || T.STONE) { for (let i = 0; i < bw; i++) for (let j = 0; j < bh; j++) set(x + i, y + j, t); },
+        plat(x, y, len, t = T.WOOD) { for (let i = 0; i < len; i++) set(x + i, y, t); },
+        spikes(x0, x1, y = G - 1) { for (let x = x0; x <= x1; x++) set(x, y, T.SPIKE); },
+        lava(x0, x1, top = G + 1) { for (let x = x0; x <= x1; x++) for (let y = top; y < h; y++) set(x, y, T.LAVA); },
+        coin(x, y) { L.coins.push({ x: x * TILE + 20, y: y * TILE + 20 }); },
+        coins(x, y, n, dx = 1, dy = 0) { for (let i = 0; i < n; i++) B.coin(x + i * dx, y + i * dy); },
+        arc(x, y, n) { for (let i = 0; i < n; i++) { const k = i - (n - 1) / 2; L.coins.push({ x: (x + i) * TILE + 20, y: (y + k * k * 0.5 - (n * n) / 8 + 1) * TILE + 20 }); } },
+        slime(x, y, range = 3) { L.enemies.push({ type: 'slime', x: x * TILE + 4, y: (y + 1) * TILE - 24, w: 32, h: 24, x0: x * TILE + 4, range: range * TILE, dir: -1, speed: 1.1 }); },
+        fire(x, y, range = 3) { L.enemies.push({ type: 'fire', x: x * TILE + 6, y: (y + 1) * TILE - 30, w: 28, h: 30, x0: x * TILE + 6, range: range * TILE, dir: 1, speed: 1.4 }); },
+        bat(x, y, rx = 3, ry = 1) { L.enemies.push({ type: 'bat', cx: x * TILE + 4, cy: y * TILE + 10, rx: rx * TILE, ry: ry * TILE, x: x * TILE + 4, y: y * TILE + 10, w: 32, h: 20, ph: (x * 7) % 6 }); },
+        mover(x, y, len, dx, dy) { L.movers.push({ x0: x * TILE, y0: y * TILE, x1: (x + dx) * TILE, y1: (y + dy) * TILE, x: x * TILE, y: y * TILE, w: len * TILE, h: 16, dx: 0, dy: 0 }); },
+        spring(x, y) { L.springs.push({ x: x * TILE, y: y * TILE, anim: 0 }); },
+        heart(x, y) { L.hearts.push({ x: x * TILE + 20, y: y * TILE + 20, taken: false }); },
+        flag(x, y) { L.flags.push({ x: x * TILE + 8, y: (y + 1) * TILE, on: false }); },
+        door(x, y) { L.door = { x: x * TILE + 2, y: (y - 1) * TILE, w: 36, h: 80 }; },
+        start(x, y) { L.start = { x: x * TILE + 7, y: (y + 1) * TILE - 34 }; },
+        boss(x, y) { L.boss = { x: x * TILE, y: (y + 1) * TILE - 80, w: 104, h: 80, vx: 0, vy: 0, hp: 6, maxHp: 6, state: 'wait', timer: 60, inv: 0, ground: true, dead: false, facing: -1, cycle: 0 }; }
+    };
+    def.build(B, G);
+    return L;
+}
 
-        // ==================== PLAYER ====================
-        const player = {
-            x: 60, y: 360, w: 24, h: 30,
-            vx: 0, vy: 0,
-            speed: 4, jumpForce: -10,
-            grounded: false,
-            jumpsLeft: 2,
-            maxJumps: 2,
-            facing: 1,
-            frame: 0, frameTimer: 0,
-            invincible: 0,
-            onIce: false,
-            dead: false
-        };
+const LEVEL_DEFS = [
+    { name: 'Khởi Đầu', desc: 'Làm quen với di chuyển, nhảy và nhảy đôi', theme: 'meadow', w: 96, build(B) {
+        B.ground(0, 95); B.start(2, 10);
+        B.coins(6, 10, 4);
+        B.plat(13, 8, 4); B.coins(13, 7, 4);
+        B.slime(19, 10, 3);
+        B.gap(25, 27); B.arc(24, 8, 5);
+        B.block(32, 10, 2, 1, T.GROUND); B.block(34, 9, 2, 2, T.GROUND); B.block(36, 8, 2, 3, T.GROUND); B.coins(36, 7, 2);
+        B.flag(41, 10);
+        B.slime(45, 10, 3); B.slime(52, 10, 2);
+        B.plat(49, 8, 3); B.plat(54, 6, 3); B.coins(54, 5, 3);
+        B.spring(60, 10); B.plat(61, 6, 4); B.coins(62, 5, 3); B.heart(64, 5);
+        B.gap(67, 69); B.arc(66, 8, 5);
+        B.coins(72, 10, 5);
+        B.slime(78, 10, 4);
+        B.block(84, 10, 1, 1, T.GROUND);
+        B.door(91, 10);
+    } },
+    { name: 'Bước Nhảy Vọt', desc: 'Nhảy qua các nền đất bay trên vực sâu', theme: 'sky', w: 104, build(B) {
+        B.ground(0, 9); B.start(2, 10); B.coins(4, 10, 3);
+        B.plat(12, 9, 3); B.plat(17, 8, 3); B.plat(22, 9, 3);
+        B.coins(12, 8, 3); B.coins(17, 7, 3); B.coins(22, 8, 3);
+        B.ground(26, 37); B.flag(28, 10); B.bat(32, 7, 3, 1); B.coins(31, 10, 3);
+        B.mover(39, 9, 3, 6, 0); B.coins(42, 7, 3);
+        B.ground(50, 60); B.slime(55, 10, 3); B.coins(52, 10, 4);
+        B.plat(63, 8, 2); B.plat(67, 6, 2); B.plat(71, 8, 2);
+        B.coin(63, 7); B.coin(67, 5); B.coin(71, 7);
+        B.ground(75, 86); B.flag(76, 10); B.bat(81, 8, 3, 1); B.coins(79, 10, 4);
+        B.mover(88, 10, 2, 0, -4); B.coin(88, 4);
+        B.ground(92, 103, 7); B.coins(93, 6, 3); B.door(100, 6);
+    } },
+    { name: 'Con Đường Gai', desc: 'Tránh những chiếc gai nhọn trên sa mạc!', theme: 'desert', w: 104, blockTile: T.SAND, build(B) {
+        B.ground(0, 103, 11, T.SAND); B.start(2, 10);
+        B.spikes(8, 9); B.coins(8, 8, 2);
+        B.slime(14, 10, 3);
+        B.spikes(19, 21); B.plat(19, 8, 3); B.coins(19, 7, 3);
+        B.block(25, 9, 2, 2); B.spikes(27, 29); B.block(30, 9, 2, 2); B.arc(27, 7, 3);
+        B.flag(34, 10);
+        B.slime(38, 10, 2); B.spikes(42, 42); B.coin(42, 8); B.slime(46, 10, 2);
+        B.gap(50, 52); B.arc(49, 8, 5);
+        B.spikes(56, 63); B.plat(56, 8, 2); B.plat(60, 7, 2); B.coins(56, 7, 2); B.coins(60, 6, 2);
+        B.flag(66, 10);
+        B.block(70, 8, 2, 3); B.coins(70, 7, 2);
+        B.slime(76, 10, 3); B.bat(81, 7, 3, 1);
+        B.spikes(85, 87); B.coins(85, 8, 3);
+        B.slime(91, 10, 2); B.heart(94, 9);
+        B.door(99, 10);
+    } },
+    { name: 'Nham Thạch', desc: 'Đừng rơi xuống dung nham! Quái lửa không thể giẫm', theme: 'volcano', w: 104, blockTile: T.STONE, build(B) {
+        B.ground(0, 103, 11, T.STONE); B.start(2, 10); B.coins(5, 10, 3);
+        B.gap(11, 16); B.lava(11, 16, 12); B.plat(13, 9, 2); B.coins(13, 8, 2);
+        B.flag(19, 10); B.fire(24, 10, 3); B.coins(21, 8, 3);
+        B.gap(31, 40); B.lava(31, 40, 12); B.mover(32, 9, 3, 5, 0); B.coins(34, 7, 3);
+        B.fire(46, 10, 3); B.block(50, 9, 2, 2); B.coins(50, 8, 2);
+        B.gap(53, 58); B.lava(53, 58, 12); B.plat(55, 9, 2); B.coins(55, 8, 2);
+        B.flag(60, 10); B.fire(64, 10, 2); B.fire(69, 10, 2); B.coins(66, 8, 3);
+        B.gap(73, 82); B.lava(73, 82, 12); B.plat(74, 9, 2); B.plat(78, 7, 2); B.plat(81, 9, 1);
+        B.coin(74, 8); B.coin(78, 6); B.coin(81, 8);
+        B.heart(85, 10); B.fire(90, 10, 4); B.coins(88, 8, 4);
+        B.door(100, 10);
+    } },
+    { name: 'Vương Quốc Băng', desc: 'Sàn băng trơn trượt, phanh sớm nhé!', theme: 'ice', w: 100, blockTile: T.ICE, build(B) {
+        B.ground(0, 99, 11, T.ICE); B.start(2, 10);
+        B.coins(6, 10, 4);
+        B.gap(12, 14); B.arc(11, 8, 5);
+        B.slime(18, 10, 3);
+        B.block(22, 8, 3, 1); B.coins(22, 7, 3);
+        B.bat(28, 7, 3, 1);
+        B.gap(31, 34); B.arc(31, 8, 4);
+        B.flag(38, 10);
+        B.block(42, 10, 1, 1); B.block(43, 9, 1, 2); B.block(44, 8, 1, 3); B.gap(45, 47); B.block(48, 8, 2, 3); B.coins(48, 7, 2);
+        B.spikes(53, 54); B.coins(53, 8, 2);
+        B.slime(58, 10, 3); B.bat(62, 7, 3, 1);
+        B.gap(66, 68); B.arc(65, 8, 5);
+        B.flag(71, 10);
+        B.plat(74, 8, 3); B.plat(78, 6, 3); B.coins(74, 7, 3); B.coins(78, 5, 3); B.heart(80, 5);
+        B.bat(84, 6, 2, 2);
+        B.gap(87, 89); B.arc(86, 8, 5);
+        B.door(95, 10);
+    } },
+    { name: 'Mê Cung', desc: 'Leo qua tường cao, chui qua khe hẹp trong lâu đài', theme: 'castle', w: 72, blockTile: T.BRICK, build(B) {
+        B.ground(0, 71, 11, T.BRICK); B.block(0, 0, 72, 1, T.BRICK); B.start(2, 10);
+        B.plat(4, 8, 3); B.plat(6, 6, 2); B.block(9, 4, 1, 7); B.coins(4, 7, 3); B.coin(9, 3);
+        B.slime(12, 10, 2); B.coins(11, 10, 4);
+        B.block(17, 1, 1, 8); B.coins(16, 10, 3);
+        B.plat(20, 8, 3); B.plat(23, 6, 3); B.bat(22, 4, 2, 1); B.coins(20, 7, 3);
+        B.block(27, 3, 1, 8); B.coin(27, 2);
+        B.flag(30, 10);
+        B.spikes(33, 35); B.plat(33, 8, 3); B.coins(33, 7, 3);
+        B.block(41, 1, 1, 7); B.fire(44, 10, 2); B.coins(40, 10, 3);
+        B.block(48, 9, 2, 2); B.block(51, 7, 2, 4); B.block(54, 5, 2, 6); B.coins(48, 8, 2); B.coins(51, 6, 2); B.coins(54, 4, 2);
+        B.gap(57, 59); B.spikes(57, 59, 13);
+        B.heart(61, 10); B.slime(64, 10, 2);
+        B.door(68, 10);
+    } },
+    { name: 'Leo Núi', desc: 'Leo lên đỉnh núi cao nhất!', theme: 'mountain', w: 30, h: 36, blockTile: T.STONE, build(B) {
+        B.ground(0, 29, 33, T.STONE); B.block(0, 0, 1, 36); B.block(29, 0, 1, 36); B.start(3, 32);
+        B.coins(5, 32, 4);
+        B.plat(7, 30, 4); B.plat(13, 28, 4); B.plat(20, 26, 4); B.plat(24, 23, 4);
+        B.coins(7, 29, 3); B.coins(13, 27, 3); B.coins(20, 25, 3);
+        B.bat(15, 24, 3, 1);
+        B.plat(17, 21, 4); B.plat(10, 19, 4); B.plat(3, 17, 4);
+        B.coins(17, 20, 3); B.coins(10, 18, 3);
+        B.flag(4, 16);
+        B.plat(8, 14, 4); B.plat(15, 12, 4); B.plat(22, 10, 4); B.plat(25, 7, 3);
+        B.coins(8, 13, 3); B.coins(15, 11, 3); B.coins(22, 9, 3);
+        B.bat(12, 9, 3, 1);
+        B.plat(18, 5, 4); B.plat(11, 4, 3); B.coins(18, 4, 3);
+        B.block(2, 4, 6, 1); B.heart(12, 3);
+        B.door(4, 3);
+    } },
+    { name: 'Tốc Độ', desc: 'Chạy thật nhanh qua khu rừng, dùng lò xo bật cao', theme: 'forest', w: 124, build(B) {
+        B.ground(0, 123); B.start(2, 10);
+        B.coins(5, 10, 5); B.slime(12, 10, 3);
+        B.spring(17, 10); B.plat(18, 6, 4); B.coins(18, 5, 4);
+        B.gap(23, 25); B.arc(22, 8, 5);
+        B.slime(29, 10, 2); B.slime(34, 10, 2); B.bat(32, 7, 3, 1);
+        B.flag(38, 10);
+        B.gap(41, 48); B.mover(42, 9, 2, 4, 0); B.coins(43, 7, 3);
+        B.spring(51, 10); B.plat(52, 6, 3); B.coins(52, 5, 3); B.plat(56, 4, 2); B.heart(56, 3);
+        B.slime(58, 10, 3); B.fire(64, 10, 2);
+        B.gap(68, 70); B.arc(67, 8, 5);
+        B.flag(73, 10);
+        B.plat(76, 8, 3); B.plat(80, 6, 3); B.plat(84, 8, 3); B.coins(80, 5, 3);
+        B.slime(77, 10, 2); B.slime(85, 10, 2);
+        B.gap(89, 93); B.spring(88, 10); B.arc(89, 6, 5);
+        B.bat(98, 7, 3, 2); B.fire(102, 10, 3); B.slime(108, 10, 3);
+        B.coins(104, 8, 5);
+        B.door(119, 10);
+    } },
+    { name: 'Thử Thách Cuối', desc: 'Dung nham, gai và bục di động — cần thật khéo léo', theme: 'hell', w: 116, blockTile: T.STONE, build(B) {
+        B.ground(0, 115, 11, T.STONE); B.start(2, 10); B.coins(5, 10, 3);
+        B.spikes(9, 10); B.fire(14, 10, 2);
+        B.gap(18, 23); B.lava(18, 23, 12); B.plat(20, 8, 2); B.coins(20, 7, 2);
+        B.flag(26, 10);
+        B.block(29, 9, 1, 2); B.spikes(30, 32); B.block(33, 8, 1, 3); B.spikes(34, 36); B.block(37, 9, 1, 2);
+        B.coins(30, 7, 3); B.coins(34, 6, 3);
+        B.gap(40, 52); B.lava(40, 52, 12); B.mover(41, 9, 2, 4, 0); B.mover(47, 8, 2, 0, -3); B.plat(50, 6, 2);
+        B.coins(42, 7, 3); B.coin(47, 4); B.coins(50, 5, 2);
+        B.flag(55, 10); B.fire(59, 10, 3); B.bat(62, 7, 3, 1);
+        B.spikes(66, 71); B.plat(66, 8, 2); B.plat(70, 7, 2); B.coins(66, 7, 2); B.coins(70, 6, 2);
+        B.gap(75, 84); B.lava(75, 84, 12); B.plat(76, 9, 1); B.plat(79, 7, 1); B.plat(82, 9, 1);
+        B.coin(76, 8); B.coin(79, 6); B.coin(82, 8);
+        B.flag(87, 10); B.heart(89, 10);
+        B.fire(93, 10, 3); B.block(98, 8, 2, 3); B.spikes(100, 102); B.block(103, 8, 2, 3); B.coins(100, 6, 3);
+        B.bat(107, 7, 2, 1); B.door(112, 10);
+    } },
+    { name: 'Boss Cuối', desc: 'Nhảy lên đầu Vua Slime 6 lần để chiến thắng!', theme: 'boss', w: 46, blockTile: T.BRICK, build(B) {
+        B.ground(0, 45, 11, T.BRICK); B.block(0, 0, 46, 1, T.BRICK); B.block(0, 1, 1, 10, T.BRICK); B.block(45, 1, 1, 10, T.BRICK);
+        B.start(3, 10); B.coins(5, 10, 4); B.heart(10, 10); B.flag(12, 10);
+        B.plat(20, 7, 3); B.plat(35, 7, 3); B.plat(27, 5, 4);
+        B.boss(30, 10);
+        B.door(42, 10);
+    } }
+];
 
-        // ==================== PARTICLES ====================
-        function spawnParticles(x, y, color, count=5) {
-            for(let i=0;i<count;i++) {
-                particles.push({
-                    x, y,
-                    vx: (Math.random()-0.5)*4,
-                    vy: (Math.random()-0.5)*4 - 2,
-                    life: 30 + Math.random()*20,
-                    color,
-                    size: 2 + Math.random()*3
-                });
+// =====================================================================
+//  VẬT LÝ (dùng chung cho game và bộ kiểm tra màn chơi)
+// =====================================================================
+function tileAt(L, tx, ty) {
+    if (tx < 0 || tx >= L.w) return T.STONE;
+    if (ty < 0 || ty >= L.h) return T.AIR;
+    return L.tiles[ty][tx];
+}
+function moverPos(m, t) {
+    const s = (t % MOVER_PERIOD) / (MOVER_PERIOD / 2);
+    const f = s <= 1 ? s : 2 - s;
+    const e = f * f * (3 - 2 * f);
+    return [lerp(m.x0, m.x1, e), lerp(m.y0, m.y1, e)];
+}
+function updateMovers(L, t) {
+    for (const m of L.movers) {
+        const [x, y] = moverPos(m, t);
+        m.dx = x - m.x; m.dy = y - m.y; m.x = x; m.y = y;
+    }
+}
+function collideX(p, L) {
+    const x0 = Math.floor(p.x / TILE), x1 = Math.floor((p.x + p.w - 0.001) / TILE);
+    const y0 = Math.floor(p.y / TILE), y1 = Math.floor((p.y + p.h - 0.001) / TILE);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+        if (!isSolid(tileAt(L, tx, ty))) continue;
+        const left = (p.x + p.w / 2) < (tx * TILE + TILE / 2);
+        if (p.vx > 0 || (p.vx === 0 && left)) p.x = tx * TILE - p.w; else p.x = (tx + 1) * TILE;
+        p.vx = 0;
+        return;
+    }
+}
+function collideY(p, L, prevBottom) {
+    const x0 = Math.floor((p.x + 1) / TILE), x1 = Math.floor((p.x + p.w - 1.001) / TILE);
+    const y0 = Math.floor(p.y / TILE), y1 = Math.floor((p.y + p.h - 0.001) / TILE);
+    if (p.vy >= 0) {
+        for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+            const t = tileAt(L, tx, ty);
+            if (isSolid(t) || (isOneWay(t) && prevBottom <= ty * TILE + 0.5)) {
+                p.y = ty * TILE - p.h; p.vy = 0; p.ground = true; p.ice = t === T.ICE;
+                return true;
             }
         }
-
-        // ==================== GAME LOGIC ====================
-        function loadLevel(idx) {
-            currentLevel = idx;
-            const lvl = LEVELS[idx];
-            player.x = lvl.playerStart.x;
-            player.y = lvl.playerStart.y;
-            player.vx = 0;
-            player.vy = 0;
-            player.grounded = false;
-            player.dead = false;
-            player.invincible = 0;
-            player.jumpsLeft = player.maxJumps;
-            coins = 0;
-            particles = [];
-
-            // Reset enemies
-            currentEnemies = lvl.enemies.map(e => ({
-                ...e,
-                startX: e.x,
-                startY: e.y,
-                dir: 1,
-                frame: 0
-            }));
-
-            // Copy coins
-            currentCoins = lvl.coins.map(c => ({...c, collected: false, bob: Math.random()*Math.PI*2}));
-
-            updateUI();
+    } else {
+        for (let ty = y1; ty >= y0; ty--) for (let tx = x0; tx <= x1; tx++) {
+            if (isSolid(tileAt(L, tx, ty))) { p.y = (ty + 1) * TILE; p.vy = 0; return false; }
         }
+    }
+    return false;
+}
+function hazardHit(p, L) {
+    const x0 = Math.floor((p.x + 5) / TILE), x1 = Math.floor((p.x + p.w - 5) / TILE);
+    const y0 = Math.floor((p.y + 4) / TILE), y1 = Math.floor((p.y + p.h - 1) / TILE);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+        const t = tileAt(L, tx, ty);
+        if (t === T.SPIKE && p.y + p.h > ty * TILE + 18) return true;
+        if (t === T.LAVA && p.y + p.h > ty * TILE + 10) return true;
+    }
+    return false;
+}
+function newBody(x, y) {
+    return { x, y, w: 26, h: 34, vx: 0, vy: 0, ground: false, ice: false, jumps: 1, coyote: 0, buffer: 0, jumpHeld: false, plat: null, facing: 1 };
+}
+// Một bước vật lý. inp = { dir: -1|0|1, jump: bool (đang giữ) }
+function stepBody(p, inp, L) {
+    const pressed = inp.jump && !p.jumpHeld;
+    p.jumpHeld = inp.jump;
+    if (pressed) p.buffer = PH.BUFFER; else if (p.buffer > 0) p.buffer--;
+    if (p.plat) { p.x += p.plat.dx; p.y += p.plat.dy; }
+    const acc = p.ground ? (p.ice ? PH.ACC_ICE : PH.ACC_G) : PH.ACC_AIR;
+    if (inp.dir) { p.vx += inp.dir * acc; p.facing = inp.dir; }
+    else p.vx *= p.ground ? (p.ice ? PH.FR_ICE : PH.FR_G) : PH.FR_AIR;
+    const mv = p.ice ? PH.MAXV_ICE : PH.MAXV;
+    p.vx = clamp(p.vx, -mv, mv);
+    if (Math.abs(p.vx) < 0.05) p.vx = 0;
+    if (p.ground) { p.coyote = PH.COYOTE; p.jumps = 1; } else if (p.coyote > 0) p.coyote--;
+    let jumped = 0;
+    if (p.buffer > 0) {
+        if (p.coyote > 0) { p.vy = PH.JUMP; p.coyote = 0; p.buffer = 0; p.ground = false; p.plat = null; jumped = 1; }
+        else if (p.jumps > 0) { p.vy = PH.DJUMP; p.jumps--; p.buffer = 0; jumped = 2; }
+    }
+    // Thả nút nhảy sớm thì nhảy thấp (không áp dụng cho cú bật của lò xo)
+    if (p.vy >= 0) p.noCut = false;
+    if (!inp.jump && p.vy < -3 && !p.noCut) p.vy += PH.CUT;
+    p.vy = Math.min(p.vy + PH.GRAV, PH.MAXFALL);
 
-        let currentEnemies = [];
-        let currentCoins = [];
+    p.x += p.vx;
+    collideX(p, L);
 
-        function updateUI() {
-            document.getElementById('coinCount').textContent = coins;
-            document.getElementById('levelNum').textContent = currentLevel + 1;
-            document.getElementById('livesCount').textContent = lives;
-            document.getElementById('jumpCount').textContent = player.jumpsLeft;
+    const prevBottom = p.y + p.h;
+    const wasGround = p.ground;
+    p.y += p.vy;
+    p.ground = false; p.ice = false; p.plat = null;
+    let landed = collideY(p, L, prevBottom);
+    if (p.vy >= 0) for (const m of L.movers) {
+        if (p.x + p.w > m.x + 2 && p.x < m.x + m.w - 2 && prevBottom <= m.y + 1 + Math.max(0, m.dy) && p.y + p.h >= m.y) {
+            p.y = m.y - p.h; p.vy = 0; p.ground = true; p.plat = m; landed = true;
         }
-
-        function getTile(x, y) {
-            const lvl = LEVELS[currentLevel];
-            const tx = Math.floor(x / TILE);
-            const ty = Math.floor(y / TILE);
-            if (ty < 0 || ty >= lvl.tiles.length || tx < 0 || tx >= lvl.tiles[0].length) return 0;
-            return lvl.tiles[ty][tx];
+    }
+    let sprung = null;
+    for (const s of L.springs) {
+        const top = s.y + 22;
+        // đi bộ vào hoặc rơi xuống lò xo đều bật lên
+        if (p.vy >= 0 && p.x + p.w > s.x + 8 && p.x < s.x + TILE - 8 && prevBottom <= s.y + TILE + 1 && p.y + p.h >= top) {
+            p.y = top - p.h; p.vy = PH.SPRING; p.noCut = true; p.ground = false; p.plat = null; p.jumps = 1; sprung = s; landed = false;
         }
+    }
+    const dead = hazardHit(p, L) || p.y > L.h * TILE + 40;
+    return { jumped, landed: landed && !wasGround, sprung, dead };
+}
 
-        function isSolid(tile) {
-            return tile >= 1 && tile <= 4 || tile === 7 || tile === 8 || tile === 9;
+// =====================================================================
+//  TRẠNG THÁI TRÒ CHƠI
+// =====================================================================
+let L = null, levelIdx = 0, player = null, frame = 0;
+let state = 'menu';      // menu | play | pause | win | over | dying
+let lives = 3, coinsGot = 0, levelTime = 0, deaths = 0;
+let camX = 0, camY = 0, shake = 0;
+let checkpoint = null, dyingTimer = 0, inv = 0, hurtKnock = 0;
+let particles = [], floaters = [], projectiles = [];
+let bossIntro = 0, doorOpen = true;
+const keys = {}, touch = {};
+let progress = { maxLevel: 0, stars: [] };
+try { const s = JSON.parse(localStorage.getItem('gameProgress')); if (s) progress = { maxLevel: s.maxLevel || 0, stars: s.stars || [] }; } catch (e) {}
+function saveProgress() { try { localStorage.setItem('gameProgress', JSON.stringify(progress)); } catch (e) {} }
+
+function loadLevel(i) {
+    levelIdx = i;
+    L = makeLevel(LEVEL_DEFS[i]);
+    player = newBody(L.start.x, L.start.y);
+    checkpoint = { x: L.start.x, y: L.start.y };
+    lives = 3; coinsGot = 0; levelTime = 0; deaths = 0; frame = 0;
+    inv = 0; dyingTimer = 0;
+    particles = []; floaters = []; projectiles = [];
+    doorOpen = !L.boss; bossIntro = 0;
+    updateMovers(L, 0); L.movers.forEach(m => { m.dx = 0; m.dy = 0; });
+    camX = clamp(player.x - W * 0.35, 0, Math.max(0, L.w * TILE - W));
+    camY = clamp(player.y - H * 0.55, 0, Math.max(0, L.h * TILE - H));
+}
+
+// =====================================================================
+//  ÂM THANH
+// =====================================================================
+const Sfx = (() => {
+    let ac = null;
+    const init = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } else if (ac.state === 'suspended') ac.resume(); };
+    const tone = (f, d, type = 'square', v = 0.06, f2) => {
+        if (!ac) return;
+        const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+        o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d);
+    };
+    return {
+        init,
+        jump: () => tone(320, 0.15, 'square', 0.05, 640),
+        djump: () => tone(480, 0.15, 'triangle', 0.06, 960),
+        coin: () => { tone(988, 0.07, 'square', 0.04); setTimeout(() => tone(1319, 0.12, 'square', 0.04), 60); },
+        stomp: () => tone(220, 0.15, 'square', 0.07, 90),
+        hurt: () => tone(300, 0.35, 'sawtooth', 0.07, 80),
+        spring: () => tone(200, 0.25, 'triangle', 0.08, 900),
+        flag: () => [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.12, 'triangle', 0.06), i * 80)),
+        heart: () => [660, 880].forEach((f, i) => setTimeout(() => tone(f, 0.12, 'sine', 0.07), i * 90)),
+        win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.07), i * 110)),
+        boom: () => tone(120, 0.5, 'sawtooth', 0.08, 40),
+        over: () => [392, 330, 262, 196].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'sawtooth', 0.06), i * 160))
+    };
+})();
+
+// =====================================================================
+//  HIỆU ỨNG
+// =====================================================================
+function puff(x, y, col, n = 6, spd = 2.5, g = 0.1) {
+    for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, s = spd * (0.4 + Math.random());
+        particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 30 + Math.random() * 20, max: 50, col, r: 2 + Math.random() * 3, g });
+    }
+}
+function floater(x, y, text, col = '#fff') { floaters.push({ x, y, text, col, life: 50 }); }
+
+// =====================================================================
+//  CẬP NHẬT
+// =====================================================================
+function readInput() {
+    return {
+        dir: (keys.ArrowRight || keys.KeyD || touch.right ? 1 : 0) - (keys.ArrowLeft || keys.KeyA || touch.left ? 1 : 0),
+        jump: !!(keys.ArrowUp || keys.KeyW || keys.Space || touch.jump)
+    };
+}
+
+function killPlayer() {
+    if (state !== 'play') return;
+    lives--; deaths++;
+    Sfx.hurt(); shake = 12;
+    puff(player.x + 13, player.y + 17, '#ff5a5a', 16, 4);
+    state = 'dying'; dyingTimer = 50;
+}
+function hurtPlayer(fromX) {
+    if (inv > 0 || state !== 'play') return;
+    lives--;
+    Sfx.hurt(); shake = 8;
+    puff(player.x + 13, player.y + 17, '#ff5a5a', 10, 3);
+    if (lives <= 0) { lives = 0; deaths++; state = 'dying'; dyingTimer = 50; return; }
+    inv = 100;
+    player.vx = (player.x + 13 < fromX ? -1 : 1) * 5; player.vy = -6; player.ground = false; player.plat = null;
+    floater(player.x + 13, player.y - 10, '-1 ❤', '#ff7a7a');
+}
+function respawn() {
+    if (lives <= 0) { gameOver(); return; }
+    player = newBody(checkpoint.x, checkpoint.y);
+    inv = 90; state = 'play';
+    projectiles = [];
+    if (L.boss && !L.boss.dead) { const b = L.boss; b.state = 'wait'; b.timer = 90; b.x = Math.max(b.x, 26 * TILE); b.vx = 0; }
+}
+
+function update() {
+    frame++;
+    updateParticles();
+    if (state !== 'play' && state !== 'dying') return;
+    updateMovers(L, frame);
+    L.springs.forEach(s => { if (s.anim > 0) s.anim--; });
+
+    if (state === 'dying') {
+        if (--dyingTimer <= 0) respawn();
+        updateEnemies(); updateBoss();
+        return;
+    }
+    levelTime++;
+    if (inv > 0) inv--;
+
+    const wasGround = player.ground, vyBefore = player.vy;
+    const r = stepBody(player, readInput(), L);
+    if (r.jumped === 1) { Sfx.jump(); puff(player.x + 13, player.y + 34, 'rgba(255,255,255,.8)', 5, 1.5, 0); player.squash = -0.25; }
+    if (r.jumped === 2) { Sfx.djump(); puff(player.x + 13, player.y + 34, '#9fd8ff', 8, 2.5, 0); player.squash = -0.25; }
+    if (r.landed && vyBefore > 6) { puff(player.x + 13, player.y + 34, 'rgba(220,220,220,.7)', 6, 1.8, 0); player.squash = 0.25; }
+    if (r.sprung) { Sfx.spring(); r.sprung.anim = 14; player.squash = -0.3; }
+    if (player.ground && Math.abs(player.vx) > 3 && frame % 8 === 0) puff(player.x + 13, player.y + 34, 'rgba(200,200,200,.5)', 1, 0.8, -0.02);
+    if (r.dead) { killPlayer(); return; }
+
+    // Xu, tim, cờ, cửa
+    const cx = player.x + 13, cy = player.y + 17;
+    for (const c of L.coins) {
+        if (c.got) continue;
+        if (Math.abs(cx - c.x) < 24 && Math.abs(cy - c.y) < 28) {
+            c.got = true; coinsGot++; Sfx.coin(); puff(c.x, c.y, '#ffd84a', 6, 2);
         }
-
-        function isHazard(tile) {
-            return tile === 5 || tile === 6;
+    }
+    for (const h of L.hearts) {
+        if (h.taken) continue;
+        if (Math.abs(cx - h.x) < 24 && Math.abs(cy - h.y) < 28) {
+            h.taken = true; lives = Math.min(5, lives + 1); Sfx.heart(); puff(h.x, h.y, '#ff5a8a', 10, 2.5); floater(h.x, h.y - 20, '+1 ❤', '#ff8ab0');
         }
+    }
+    for (const f of L.flags) {
+        if (!f.on && cx > f.x - 10 && cx < f.x + 30 && cy > f.y - 90 && cy < f.y) {
+            L.flags.forEach(o => o.on = false);
+            f.on = true; checkpoint = { x: f.x - 2, y: f.y - 34 };
+            Sfx.flag(); floater(f.x + 10, f.y - 100, 'Đã lưu điểm!', '#7dffb0'); puff(f.x + 12, f.y - 80, '#7dffb0', 10, 2);
+        }
+    }
+    const d = L.door;
+    if (doorOpen && d && player.x + player.w > d.x + 6 && player.x < d.x + d.w - 6 && player.y + player.h > d.y + 20 && player.y < d.y + d.h) winLevel();
 
-        function updatePlayer() {
-            if (player.dead) return;
+    updateEnemies();
+    updateBoss();
+    updateProjectiles();
 
-            const accel = player.onIce ? 0.3 : 0.8;
-            const friction = player.onIce ? 0.95 : 0.7;
+    // Camera
+    const tx = clamp(player.x + 13 - W * 0.4 + player.facing * 60, 0, Math.max(0, L.w * TILE - W));
+    const ty = clamp(player.y + 17 - H * 0.55, 0, Math.max(0, L.h * TILE - H));
+    camX = lerp(camX, tx, 0.1); camY = lerp(camY, ty, 0.1);
+    if (shake > 0) shake = shake < 0.4 ? 0 : shake * 0.88;
+    if (player.squash) player.squash *= 0.8;
+}
 
-            // Horizontal movement
-            if (keys['ArrowLeft'] || keys['KeyA']) {
-                player.vx -= accel;
-                player.facing = -1;
+function touching(a, b, pad = 0) {
+    return a.x + a.w - pad > b.x && a.x + pad < b.x + b.w && a.y + a.h - pad > b.y && a.y + pad < b.y + b.h;
+}
+
+function updateEnemies() {
+    for (const e of L.enemies) {
+        if (e.dead) { e.dead++; continue; }
+        if (e.type === 'bat') {
+            const t = frame * 0.025 + e.ph;
+            e.x = e.cx + Math.sin(t) * e.rx; e.y = e.cy + Math.sin(t * 2) * e.ry * 0.6;
+            e.dir = Math.cos(t) > 0 ? 1 : -1;
+        } else {
+            const nx = e.x + e.dir * e.speed;
+            const frontX = e.dir > 0 ? nx + e.w : nx;
+            const footY = e.y + e.h + 4, midY = e.y + e.h / 2;
+            const wall = isSolid(tileAt(L, Math.floor(frontX / TILE), Math.floor(midY / TILE)));
+            const below = tileAt(L, Math.floor(frontX / TILE), Math.floor(footY / TILE));
+            const edge = !(isSolid(below) || isOneWay(below));
+            if (wall || edge || Math.abs(nx - e.x0) > e.range) e.dir = -e.dir; else e.x = nx;
+        }
+        if (state !== 'play') continue;
+        if (!touching(player, e, 3)) continue;
+        const stompable = e.type !== 'fire';
+        if (stompable && player.vy > 0 && player.y + player.h - player.vy <= e.y + 10) {
+            e.dead = 1; Sfx.stomp();
+            player.vy = player.jumpHeld ? -11.5 : -8; player.jumps = 1;
+            puff(e.x + e.w / 2, e.y + e.h / 2, e.type === 'bat' ? '#b48cff' : '#7dff7d', 12, 3);
+            floater(e.x + e.w / 2, e.y - 6, '+100', '#ffe27a');
+        } else hurtPlayer(e.x + e.w / 2);
+    }
+    L.enemies = L.enemies.filter(e => !e.dead || e.dead < 25);
+}
+
+// ---------- Boss: Vua Slime ----------
+function updateBoss() {
+    const b = L.boss;
+    if (!b) return;
+    if (b.dead) {
+        b.dead++;
+        if (b.dead < 90 && b.dead % 6 === 0) { puff(b.x + Math.random() * b.w, b.y + Math.random() * b.h, ['#7dff7d', '#ffd84a', '#ff7a5a'][b.dead % 3], 10, 4); shake = 6; Sfx.stomp(); }
+        if (b.dead === 90) { doorOpen = true; Sfx.win(); floater(L.door.x + 18, L.door.y - 20, 'Cửa đã mở!', '#7dffb0'); for (let i = 0; i < 8; i++) L.coins.push({ x: b.x + 52 + (i - 4) * 30, y: b.y + 40 }); }
+        return;
+    }
+    const px = player.x + 13;
+    if (b.state === 'wait') {
+        if (px > 16 * TILE && state === 'play') { b.timer--; if (bossIntro === 0) { bossIntro = 1; floater(b.x + 52, b.y - 30, 'VUA SLIME!', '#ff7a7a'); } }
+        if (b.timer <= 0) { b.state = 'idle'; b.timer = 40; }
+    } else if (b.state === 'idle') {
+        b.facing = px < b.x + b.w / 2 ? -1 : 1;
+        if (--b.timer <= 0) {
+            b.cycle++;
+            if (b.cycle % 3 === 0) { b.state = 'spit'; b.timer = 50; }
+            else {
+                b.state = 'jump';
+                const dist = clamp((px - (b.x + b.w / 2)) / 60, -5.5, 5.5);
+                b.vx = dist * (b.hp <= 3 ? 1.2 : 1); b.vy = -13 - (b.hp <= 3 ? 1.5 : 0); b.ground = false;
             }
-            if (keys['ArrowRight'] || keys['KeyD']) {
-                player.vx += accel;
-                player.facing = 1;
+        }
+    } else if (b.state === 'spit') {
+        if (b.timer === 30 || b.timer === 20 || b.timer === 10) {
+            const ang = Math.atan2(player.y - b.y, px - (b.x + b.w / 2));
+            projectiles.push({ x: b.x + b.w / 2, y: b.y + 20, vx: Math.cos(ang) * 4.5 + (b.timer - 20) * 0.08, vy: -5 - (b.timer / 10), r: 9 });
+            Sfx.jump();
+        }
+        if (--b.timer <= 0) { b.state = 'idle'; b.timer = b.hp <= 3 ? 30 : 50; }
+    }
+    if (b.state === 'jump') {
+        b.vy += 0.55; b.x += b.vx; b.y += b.vy;
+        if (b.x < TILE) { b.x = TILE; b.vx = -b.vx * 0.5; }
+        if (b.x + b.w > (L.w - 1) * TILE) { b.x = (L.w - 1) * TILE - b.w; b.vx = -b.vx * 0.5; }
+        const floor = 11 * TILE;
+        if (b.y + b.h >= floor) {
+            b.y = floor - b.h; b.vy = 0; b.vx = 0; b.state = 'idle'; b.timer = b.hp <= 3 ? 35 : 55;
+            shake = 10; Sfx.boom();
+            puff(b.x + b.w / 2, floor, '#9aff9a', 14, 4);
+            // Sóng xung kích hai bên
+            projectiles.push({ x: b.x - 4, y: floor - 12, vx: -4.5, vy: 0, r: 10, wave: true });
+            projectiles.push({ x: b.x + b.w + 4, y: floor - 12, vx: 4.5, vy: 0, r: 10, wave: true });
+            if (b.hp <= 3 && L.enemies.filter(e => e.type === 'slime').length < 2) {
+                L.enemies.push({ type: 'slime', x: b.x + b.w / 2 - 16, y: floor - 24, w: 32, h: 24, x0: b.x + b.w / 2 - 16, range: 6 * TILE, dir: b.facing, speed: 1.4 });
             }
+        }
+    }
+    if (b.inv > 0) b.inv--;
+    if (state !== 'play') return;
+    const box = { x: b.x + 8, y: b.y + 10, w: b.w - 16, h: b.h - 10 };
+    if (touching(player, box)) {
+        if (player.vy > 0 && player.y + player.h - player.vy <= box.y + 14 && b.inv <= 0) {
+            b.hp--; b.inv = 50; Sfx.stomp(); shake = 8;
+            player.vy = -12; player.jumps = 1;
+            puff(b.x + b.w / 2, b.y, '#ffffff', 12, 3);
+            floater(b.x + b.w / 2, b.y - 20, b.hp > 0 ? `${b.hp}/${b.maxHp}` : 'CHIẾN THẮNG!', '#ffe27a');
+            if (b.hp <= 0) { b.dead = 1; projectiles = []; L.enemies.forEach(e => e.dead = e.dead || 1); }
+        } else if (b.inv <= 0 || !(player.vy > 0)) hurtPlayer(b.x + b.w / 2);
+    }
+}
+function updateProjectiles() {
+    for (const p of projectiles) {
+        p.x += p.vx; p.y += p.vy;
+        if (!p.wave) p.vy += 0.25;
+        if (p.wave) p.life = (p.life || 0) + 1;
+        if (frame % 3 === 0) particles.push({ x: p.x, y: p.y, vx: 0, vy: -0.5, life: 14, max: 14, col: p.wave ? '#9aff9a' : '#ff9a3a', r: 3, g: 0 });
+        if (state === 'play' && Math.abs(player.x + 13 - p.x) < p.r + 10 && Math.abs(player.y + 17 - p.y) < p.r + 14) { hurtPlayer(p.x); p.dead = true; }
+        if (p.y > 11 * TILE - 4 && !p.wave) { p.dead = true; puff(p.x, p.y, '#ff9a3a', 6, 2); }
+        if (p.x < TILE || p.x > (L.w - 1) * TILE || (p.life || 0) > 120) p.dead = true;
+    }
+    projectiles = projectiles.filter(p => !p.dead);
+}
+function updateParticles() {
+    particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += p.g; p.life--; return p.life > 0; });
+    floaters = floaters.filter(f => { f.y -= 0.8; return --f.life > 0; });
+}
 
-            player.vx *= friction;
-            if (Math.abs(player.vx) < 0.1) player.vx = 0;
-            player.vx = Math.max(-player.speed, Math.min(player.speed, player.vx));
-
-            // Jump (double jump supported)
-            if (keys['ArrowUp'] || keys['Space'] || keys['KeyW']) {
-                if (!jumpKeyHeld && player.jumpsLeft > 0) {
-                    player.vy = player.jumpForce;
-                    player.grounded = false;
-                    player.jumpsLeft--;
-                    sfxJump();
-                    spawnParticles(player.x + player.w/2, player.y + player.h, player.jumpsLeft === 0 ? '#ff8844' : '#88ccff', 4);
+// =====================================================================
+//  VẼ
+// =====================================================================
+function drawBackground() {
+    const th = L.theme;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (th.night) {
+        for (let i = 0; i < 60; i++) {
+            const x = (i * 157.3 - camX * 0.05) % W, y = (i * 71.7) % (H * 0.6);
+            ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.5 * Math.abs(Math.sin(frame * 0.02 + i))})`;
+            ctx.fillRect((x + W) % W, y, 2, 2);
+        }
+    } else if (th.sun) {
+        const sx = W * 0.78 - camX * 0.02;
+        const sg = ctx.createRadialGradient(sx, 90, 10, sx, 90, 110);
+        sg.addColorStop(0, th.sun); sg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = sg; ctx.fillRect(sx - 110, -20, 220, 220);
+        ctx.fillStyle = th.sun; ctx.beginPath(); ctx.arc(sx, 90, 34, 0, 7); ctx.fill();
+    }
+    const yOff = -camY * 0.2;
+    const layer = (f, base, amp, col, freq, jag) => {
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, H);
+        for (let x = 0; x <= W + 16; x += 16) {
+            const wx = (x + camX * f) / 200;
+            let y = base + yOff - (Math.sin(wx * freq) * 0.5 + 0.5) * amp - Math.sin(wx * freq * 2.3 + 1) * amp * 0.25;
+            if (jag) y -= Math.abs(Math.sin(wx * freq * 4)) * amp * 0.4;
+            ctx.lineTo(x, y);
+        }
+        ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+    };
+    switch (th.deco) {
+        case 'hills': layer(0.15, 330, 110, th.far, 1.3, false); layer(0.35, 400, 80, th.near, 2.1, false); break;
+        case 'clouds':
+            for (let i = 0; i < 9; i++) {
+                const x = ((i * 260 - camX * (0.1 + (i % 3) * 0.08)) % (W + 300) + W + 300) % (W + 300) - 150, y = 70 + (i * 53) % 260 + yOff;
+                ctx.fillStyle = 'rgba(255,255,255,.85)';
+                [[0, 0, 34], [30, -12, 28], [58, 0, 30], [28, 10, 30]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(x + dx, y + dy, r, 0, 7); ctx.fill(); });
+            }
+            break;
+        case 'dunes': layer(0.12, 350, 90, th.far, 1.1, false); layer(0.3, 420, 70, th.near, 1.8, false); break;
+        case 'volcano':
+            layer(0.12, 330, 160, th.far, 1.0, true); layer(0.3, 420, 90, th.near, 1.9, true);
+            ctx.fillStyle = 'rgba(255,90,30,.12)'; ctx.fillRect(0, H * 0.6, W, H * 0.4);
+            break;
+        case 'peaks': layer(0.12, 340, 200, th.far, 1.4, true); layer(0.3, 430, 110, th.near, 2.2, true); break;
+        case 'castle': {
+            ctx.fillStyle = th.far;
+            for (let i = -1; i < 9; i++) {
+                const x = i * 140 - (camX * 0.15) % 140, h = 120 + (Math.abs(i * 37 + Math.floor(camX * 0.15 / 140) * 37) % 90);
+                ctx.fillRect(x, 400 - h + yOff, 70, h + 200);
+                for (let k = 0; k < 4; k++) ctx.fillRect(x + k * 20, 388 - h + yOff, 12, 14);
+                ctx.fillStyle = 'rgba(255,210,120,.5)'; ctx.fillRect(x + 28, 430 - h + yOff, 12, 18); ctx.fillStyle = th.far;
+            }
+            layer(0.35, 460, 30, th.near, 2.5, false);
+            break;
+        }
+        case 'forest':
+            for (let k = 0; k < 2; k++) {
+                const f = k ? 0.4 : 0.18, col = k ? th.near : th.far;
+                ctx.fillStyle = col;
+                for (let i = -1; i < 14; i++) {
+                    const x = i * 80 - (camX * f) % 80, h = 160 + ((i * 53 + Math.floor(camX * f / 80) * 53) % 80) + k * 40;
+                    const by = 470 + yOff;
+                    ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x + 40, by - h); ctx.lineTo(x + 80, by); ctx.fill();
                 }
-                jumpKeyHeld = true;
-            } else {
-                jumpKeyHeld = false;
             }
+            break;
+    }
+}
 
-            // Gravity
-            player.vy += 0.5;
-            player.vy = Math.min(player.vy, 12);
-
-            // Move X
-            player.x += player.vx;
-            // Check horizontal collision
-            const tx1 = getTile(player.x + 2, player.y + player.h/2);
-            const tx2 = getTile(player.x + player.w - 2, player.y + player.h/2);
-            if (isSolid(tx1) || isSolid(tx2)) {
-                if (player.vx > 0) player.x = Math.floor((player.x + player.w) / TILE) * TILE - player.w;
-                else if (player.vx < 0) player.x = Math.ceil(player.x / TILE) * TILE;
-                player.vx = 0;
-            }
-
-            // Move Y
-            player.y += player.vy;
-            player.grounded = false;
-            player.onIce = false;
-
-            // Check vertical collision
-            if (player.vy >= 0) {
-                const by1 = getTile(player.x + 4, player.y + player.h);
-                const by2 = getTile(player.x + player.w - 4, player.y + player.h);
-                if (isSolid(by1) || isSolid(by2)) {
-                    player.y = Math.floor((player.y + player.h) / TILE) * TILE - player.h;
-                    player.vy = 0;
-                    player.grounded = true;
-                    player.jumpsLeft = player.maxJumps;
-                    if (by1 === 7 || by2 === 7) player.onIce = true;
-                }
-            } else {
-                const ty1 = getTile(player.x + 4, player.y);
-                const ty2 = getTile(player.x + player.w - 4, player.y);
-                if (isSolid(ty1) || isSolid(ty2)) {
-                    player.y = Math.ceil(player.y / TILE) * TILE;
-                    player.vy = 0;
-                }
-            }
-
-            // Check hazards
-            const h1 = getTile(player.x + 4, player.y + player.h - 2);
-            const h2 = getTile(player.x + player.w - 4, player.y + player.h - 2);
-            if (isHazard(h1) || isHazard(h2)) {
-                hurtPlayer();
-            }
-
-            // Bounds
-            if (player.x < 0) player.x = 0;
-            if (player.x + player.w > W) player.x = W - player.w;
-
-            // Fall death
-            if (player.y > H + 50) {
-                hurtPlayer();
-                if (!player.dead) {
-                    player.x = LEVELS[currentLevel].playerStart.x;
-                    player.y = LEVELS[currentLevel].playerStart.y;
-                    player.vy = 0;
-                }
-            }
-
-            // Animation
-            player.frameTimer++;
-            if (player.frameTimer > 8) {
-                player.frame = (player.frame + 1) % 4;
-                player.frameTimer = 0;
-            }
-
-            // Invincibility
-            if (player.invincible > 0) player.invincible--;
-        }
-
-        function hurtPlayer() {
-            if (player.invincible > 0 || player.dead) return;
-            lives--;
-            player.invincible = 60;
-            screenShake = 10;
-            sfxHurt();
-            spawnParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 8);
-            updateUI();
-            if (lives <= 0) {
-                player.dead = true;
-                setTimeout(() => {
-                    gameState = 'gameover';
-                    document.getElementById('goCoins').textContent = coins;
-                    showScreen('gameOverScreen');
-                }, 500);
-            }
-        }
-
-        function updateEnemies() {
-            currentEnemies.forEach(e => {
-                e.frame += 0.05;
-                if (e.type === 'bat') {
-                    e.x = e.startX + Math.sin(e.frame) * e.range;
-                    e.y = e.startY + Math.cos(e.frame * 0.7) * 20;
-                } else {
-                    e.x += e.dir * 1.5;
-                    if (Math.abs(e.x - e.startX) > e.range) e.dir *= -1;
-                }
-
-                // Collision with player
-                if (player.invincible <= 0 && !player.dead) {
-                    const dx = (player.x + player.w/2) - e.x;
-                    const dy = (player.y + player.h/2) - e.y;
-                    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) {
-                        // Check if player is above (stomp)
-                        if (player.vy > 0 && player.y + player.h < e.y + 10) {
-                            player.vy = -8;
-                            e.x = -1000; // remove
-                            spawnParticles(e.x, e.y, '#ffaa00', 6);
-                            playSound(300, 0.1);
-                        } else {
-                            hurtPlayer();
-                        }
+function drawTiles() {
+    const th = L.theme;
+    const x0 = Math.max(0, Math.floor(camX / TILE)), x1 = Math.min(L.w - 1, Math.floor((camX + W) / TILE));
+    const y0 = Math.max(0, Math.floor(camY / TILE)), y1 = Math.min(L.h - 1, Math.floor((camY + H) / TILE));
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+        const t = L.tiles[ty][tx];
+        if (!t) continue;
+        const x = tx * TILE - camX, y = ty * TILE - camY;
+        const above = ty > 0 ? L.tiles[ty - 1][tx] : 0;
+        const open = !isSolid(above) && above !== T.LAVA;
+        const r = hash(tx, ty);
+        switch (t) {
+            case T.GROUND: case T.SAND: {
+                ctx.fillStyle = th.fill; ctx.fillRect(x, y, TILE, TILE);
+                ctx.fillStyle = th.dark;
+                for (let i = 0; i < 3; i++) ctx.fillRect(x + hash(tx + i, ty) * 34, y + hash(tx, ty + i) * 34, 4, 4);
+                if (open) {
+                    ctx.fillStyle = th.top; ctx.fillRect(x, y, TILE, 10);
+                    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x, y, TILE, 3);
+                    if (t === T.GROUND && th.deco !== 'volcano' && r < 0.35) {
+                        ctx.fillStyle = th.top;
+                        ctx.beginPath(); ctx.moveTo(x + 10, y); ctx.lineTo(x + 13, y - 7); ctx.lineTo(x + 16, y); ctx.fill();
+                        ctx.beginPath(); ctx.moveTo(x + 24, y); ctx.lineTo(x + 27, y - 5); ctx.lineTo(x + 30, y); ctx.fill();
+                        if (r < 0.12 && th.deco === 'hills') { ctx.fillStyle = r < 0.06 ? '#ff6b9a' : '#ffe14a'; ctx.beginPath(); ctx.arc(x + 20, y - 6, 3.5, 0, 7); ctx.fill(); }
                     }
                 }
-            });
-        }
-
-        function updateCoins() {
-            currentCoins.forEach(c => {
-                if (c.collected) return;
-                c.bob += 0.05;
-                const dx = (player.x + player.w/2) - c.x;
-                const dy = (player.y + player.h/2) - (c.y + Math.sin(c.bob)*3);
-                if (Math.abs(dx) < 18 && Math.abs(dy) < 18) {
-                    c.collected = true;
-                    coins++;
-                    sfxCoin();
-                    spawnParticles(c.x, c.y, '#ffd700', 6);
-                    updateUI();
-                }
-            });
-        }
-
-        function checkDoor() {
-            const door = LEVELS[currentLevel].door;
-            const dx = (player.x + player.w/2) - door.x;
-            const dy = (player.y + player.h/2) - door.y;
-            if (Math.abs(dx) < 25 && Math.abs(dy) < 30) {
-                winLevel();
+                break;
+            }
+            case T.BRICK: {
+                ctx.fillStyle = th.fill; ctx.fillRect(x, y, TILE, TILE);
+                ctx.strokeStyle = th.dark; ctx.lineWidth = 2;
+                ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
+                ctx.beginPath(); ctx.moveTo(x, y + 20); ctx.lineTo(x + TILE, y + 20); ctx.moveTo(x + 20, y); ctx.lineTo(x + 20, y + 20); ctx.moveTo(x + 10, y + 20); ctx.lineTo(x + 10, y + 40); ctx.moveTo(x + 30, y + 20); ctx.lineTo(x + 30, y + 40); ctx.stroke();
+                if (open) { ctx.fillStyle = th.top; ctx.fillRect(x, y, TILE, 5); }
+                break;
+            }
+            case T.STONE: {
+                ctx.fillStyle = th.fill; ctx.fillRect(x, y, TILE, TILE);
+                ctx.fillStyle = th.dark; ctx.fillRect(x, y + 34, TILE, 6); ctx.fillRect(x + 34, y, 6, TILE);
+                ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(x + 4, y + 4, 14, 8);
+                if (open) { ctx.fillStyle = th.top; ctx.fillRect(x, y, TILE, 7); }
+                break;
+            }
+            case T.ICE: {
+                ctx.fillStyle = th.fill; ctx.fillRect(x, y, TILE, TILE);
+                ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(x + 6, y + 30); ctx.lineTo(x + 18, y + 8); ctx.lineTo(x + 22, y + 8); ctx.lineTo(x + 10, y + 30); ctx.fill();
+                if (open) { ctx.fillStyle = th.top; ctx.fillRect(x, y, TILE, 8); }
+                break;
+            }
+            case T.WOOD: {
+                ctx.fillStyle = '#9a6a3a'; ctx.fillRect(x, y, TILE, 12);
+                ctx.fillStyle = '#c48b4f'; ctx.fillRect(x, y, TILE, 4);
+                ctx.fillStyle = '#6e4724'; ctx.fillRect(x + 4, y + 12, 4, 6); ctx.fillRect(x + 32, y + 12, 4, 6);
+                ctx.fillRect(x + 19, y + 2, 2, 9);
+                break;
+            }
+            case T.SPIKE: {
+                ctx.fillStyle = '#c9ced6';
+                for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + i * 10, y + TILE); ctx.lineTo(x + i * 10 + 5, y + 16); ctx.lineTo(x + i * 10 + 10, y + TILE); ctx.fill(); }
+                ctx.fillStyle = '#ffffff'; for (let i = 0; i < 4; i++) ctx.fillRect(x + i * 10 + 4, y + 18, 2, 4);
+                break;
+            }
+            case T.LAVA: {
+                const wave = open ? Math.sin(frame * 0.08 + tx) * 3 : 0;
+                const lg = ctx.createLinearGradient(0, y, 0, y + TILE);
+                lg.addColorStop(0, '#ffb02e'); lg.addColorStop(1, '#e8320c');
+                ctx.fillStyle = lg; ctx.fillRect(x, y + (open ? 8 + wave : 0), TILE, TILE - (open ? 8 + wave : 0));
+                if (open) { ctx.fillStyle = '#ffe27a'; ctx.fillRect(x, y + 8 + wave, TILE, 3); if (r < 0.1 && frame % 40 < 20) { ctx.beginPath(); ctx.arc(x + 20, y + 4 + wave, 3, 0, 7); ctx.fill(); } }
+                break;
             }
         }
+    }
+}
 
-        function winLevel() {
-            gameState = 'win';
-            sfxWin();
+function drawMovers() {
+    for (const m of L.movers) {
+        const x = m.x - camX, y = m.y - camY;
+        ctx.fillStyle = '#5b6b8c'; ctx.fillRect(x, y, m.w, m.h);
+        ctx.fillStyle = '#93a4c8'; ctx.fillRect(x, y, m.w, 4);
+        ctx.fillStyle = '#ffd84a'; for (let i = 8; i < m.w - 4; i += 20) ctx.fillRect(x + i, y + 8, 8, 4);
+    }
+    for (const s of L.springs) {
+        const x = s.x - camX, y = s.y - camY;
+        const comp = s.anim > 8 ? -8 : (s.anim > 0 ? 4 : 0);
+        ctx.strokeStyle = '#cfd6e0'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i <= 4; i++) ctx.lineTo(x + (i % 2 ? 12 : 28), y + 38 - i * (14 + comp) / 4);
+        ctx.stroke();
+        ctx.fillStyle = '#ff4d4d'; ctx.fillRect(x + 4, y + 22 - comp, 32, 6);
+        ctx.fillStyle = '#555'; ctx.fillRect(x + 6, y + 36, 28, 4);
+    }
+}
 
-            const totalCoins = LEVELS[currentLevel].coins.length;
-            const starCount = coins >= totalCoins ? 3 : coins >= totalCoins * 0.5 ? 2 : 1;
-
-            if (!levelStars[currentLevel] || levelStars[currentLevel] < starCount) {
-                levelStars[currentLevel] = starCount;
-            }
-            if (currentLevel + 1 > maxUnlockedLevel) {
-                maxUnlockedLevel = currentLevel + 1;
-            }
-            saveProgress();
-
-            document.getElementById('winCoins').textContent = coins;
-            document.getElementById('starsDisplay').textContent = '⭐'.repeat(starCount) + '☆'.repeat(3 - starCount);
-            showScreen('winScreen');
+function drawItems() {
+    for (const c of L.coins) {
+        if (c.got) continue;
+        const x = c.x - camX, y = c.y - camY + Math.sin(frame * 0.08 + c.x) * 3;
+        if (x < -20 || x > W + 20) continue;
+        const sx = Math.abs(Math.cos(frame * 0.06 + c.x * 0.01));
+        ctx.fillStyle = '#c98a0e'; ctx.beginPath(); ctx.ellipse(x, y, 10 * sx + 1, 11, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.ellipse(x, y, 8 * sx + 0.5, 9, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = '#fff6b8'; ctx.fillRect(x - 1, y - 5, 2 * sx + 0.5, 10);
+    }
+    for (const h of L.hearts) {
+        if (h.taken) continue;
+        const x = h.x - camX, y = h.y - camY + Math.sin(frame * 0.07) * 3, s = 1 + Math.sin(frame * 0.15) * 0.08;
+        drawHeart(x, y, 11 * s, '#ff4d7a');
+    }
+    for (const f of L.flags) {
+        const x = f.x - camX, y = f.y - camY;
+        ctx.fillStyle = '#ddd'; ctx.fillRect(x, y - 90, 4, 90);
+        const fy = f.on ? y - 88 : y - 30, wave = Math.sin(frame * 0.15) * 3;
+        ctx.fillStyle = f.on ? '#36e27c' : '#e33';
+        ctx.beginPath(); ctx.moveTo(x + 4, fy); ctx.lineTo(x + 30, fy + 9 + wave); ctx.lineTo(x + 4, fy + 20); ctx.fill();
+    }
+    const d = L.door;
+    if (d) {
+        const x = d.x - camX, y = d.y - camY;
+        ctx.fillStyle = '#4a2c14'; rr(x - 4, y - 4, d.w + 8, d.h + 4, 18); ctx.fill();
+        ctx.fillStyle = doorOpen ? '#8a5a2c' : '#3a3a44'; rr(x, y, d.w, d.h, 16); ctx.fill();
+        if (doorOpen) {
+            ctx.fillStyle = 'rgba(255,230,120,' + (0.25 + 0.15 * Math.sin(frame * 0.1)) + ')'; rr(x + 5, y + 5, d.w - 10, d.h - 5, 12); ctx.fill();
+            ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x + d.w - 9, y + 46, 3, 0, 7); ctx.fill();
+        } else {
+            ctx.fillStyle = '#777'; for (let i = 0; i < 3; i++) ctx.fillRect(x + 6 + i * 10, y + 4, 4, d.h - 4);
         }
+        txt(doorOpen ? '🚪 ĐÍCH' : '🔒', x + d.w / 2, y - 14, 13, '#fff', 'center');
+    }
+}
+function rr(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+function drawHeart(x, y, s, col) {
+    ctx.fillStyle = col; ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.9);
+    ctx.bezierCurveTo(x - s * 1.4, y - s * 0.2, x - s * 0.6, y - s * 1.2, x, y - s * 0.35);
+    ctx.bezierCurveTo(x + s * 0.6, y - s * 1.2, x + s * 1.4, y - s * 0.2, x, y + s * 0.9);
+    ctx.fill();
+}
 
-        function updateParticles() {
-            particles = particles.filter(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.1;
-                p.life--;
-                return p.life > 0;
-            });
+function drawEnemies() {
+    for (const e of L.enemies) {
+        const x = e.x - camX, y = e.y - camY;
+        if (x < -60 || x > W + 60) continue;
+        const sq = e.dead ? Math.max(0.1, 1 - e.dead / 10) : 1;
+        ctx.save(); ctx.translate(x + e.w / 2, y + e.h); ctx.scale(e.dead ? 1.3 : 1, sq);
+        ctx.globalAlpha = e.dead ? 1 - e.dead / 25 : 1;
+        if (e.type === 'slime') {
+            const b = Math.abs(Math.sin(frame * 0.15 + e.x0)) * 3;
+            ctx.fillStyle = '#3ecf5a'; ctx.beginPath(); ctx.ellipse(0, -12 - b / 2, 16 + b / 2, 12 + b / 2, 0, Math.PI, 0); ctx.lineTo(16, 0); ctx.lineTo(-16, 0); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(-6, -16 - b, 4, 3, -0.5, 0, 7); ctx.fill();
+            eyes(e.dir * 3, -12 - b / 2, e.dir);
+        } else if (e.type === 'fire') {
+            const fl = Math.sin(frame * 0.3 + e.x0) * 3;
+            ctx.fillStyle = '#ff5a1f'; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.quadraticCurveTo(-16, -18, -4, -30 - fl); ctx.quadraticCurveTo(0, -18, 6, -26 + fl); ctx.quadraticCurveTo(16, -14, 14, 0); ctx.fill();
+            ctx.fillStyle = '#ffcf3a'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(-8, -12, 0, -20 + fl); ctx.quadraticCurveTo(8, -12, 8, 0); ctx.fill();
+            eyes(e.dir * 2, -10, e.dir, '#3a0a00');
+        } else {
+            const flap = Math.sin(frame * 0.4 + e.ph) * 8;
+            ctx.fillStyle = '#6b3fa0';
+            ctx.beginPath(); ctx.moveTo(-6, -12); ctx.lineTo(-24, -14 - flap); ctx.lineTo(-18, -4); ctx.lineTo(-8, -6); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(6, -12); ctx.lineTo(24, -14 - flap); ctx.lineTo(18, -4); ctx.lineTo(8, -6); ctx.fill();
+            ctx.fillStyle = '#8a55c9'; ctx.beginPath(); ctx.arc(0, -10, 10, 0, 7); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(-2, 2); ctx.lineTo(0, -2); ctx.fill();
+            eyes(e.dir * 2, -12, e.dir, '#200', '#ffe14a');
         }
+        ctx.restore();
+    }
+    // Đạn của boss
+    for (const p of projectiles) {
+        const x = p.x - camX, y = p.y - camY;
+        ctx.fillStyle = p.wave ? '#6fe86f' : '#ff7a2a'; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 7); ctx.fill();
+        ctx.fillStyle = p.wave ? '#c8ffc8' : '#ffd84a'; ctx.beginPath(); ctx.arc(x, y, p.r * 0.5, 0, 7); ctx.fill();
+    }
+}
+function eyes(dx, y, dir, pupil = '#111', white = '#fff') {
+    ctx.fillStyle = white;
+    ctx.beginPath(); ctx.arc(dx - 5, y, 4, 0, 7); ctx.arc(dx + 5, y, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = pupil;
+    ctx.beginPath(); ctx.arc(dx - 5 + dir * 1.5, y, 2, 0, 7); ctx.arc(dx + 5 + dir * 1.5, y, 2, 0, 7); ctx.fill();
+}
 
-        // ==================== RENDERING ====================
-        function drawBackground() {
-            const lvl = LEVELS[currentLevel];
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, lvl.bg[0]);
-            grad.addColorStop(1, lvl.bg[1]);
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
+function drawBoss() {
+    const b = L.boss;
+    if (!b || (b.dead && b.dead > 90)) return;
+    const x = b.x - camX, y = b.y - camY;
+    const breathe = b.state === 'idle' ? Math.sin(frame * 0.12) * 4 : (b.state === 'jump' ? -6 : (b.state === 'spit' ? 6 : 0));
+    ctx.save();
+    ctx.translate(x + b.w / 2, y + b.h);
+    if (b.dead) { ctx.globalAlpha = 1 - b.dead / 90; ctx.scale(1 + b.dead / 60, 1 - b.dead / 100); }
+    const flash = b.inv > 0 && Math.floor(b.inv / 4) % 2 === 0;
+    ctx.fillStyle = flash ? '#ffffff' : (b.hp <= 3 ? '#ff7a3a' : '#2fbf4f');
+    ctx.beginPath(); ctx.ellipse(0, -40 - breathe / 2, 54 + breathe / 2, 42 + breathe / 2, 0, Math.PI, 0); ctx.lineTo(54, 0); ctx.lineTo(-54, 0); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.ellipse(-22, -60 - breathe, 12, 8, -0.5, 0, 7); ctx.fill();
+    // vương miện
+    ctx.fillStyle = '#ffd84a';
+    ctx.beginPath(); ctx.moveTo(-24, -78 - breathe); ctx.lineTo(-24, -98 - breathe); ctx.lineTo(-12, -88 - breathe); ctx.lineTo(0, -102 - breathe); ctx.lineTo(12, -88 - breathe); ctx.lineTo(24, -98 - breathe); ctx.lineTo(24, -78 - breathe); ctx.fill();
+    ctx.fillStyle = '#ff3a6a'; ctx.beginPath(); ctx.arc(0, -86 - breathe, 4, 0, 7); ctx.fill();
+    // mắt giận dữ
+    const ey = -44 - breathe / 2, dir = b.facing;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-18 + dir * 4, ey, 11, 0, 7); ctx.arc(18 + dir * 4, ey, 11, 0, 7); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-18 + dir * 8, ey + 2, 5, 0, 7); ctx.arc(18 + dir * 8, ey + 2, 5, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 4; ctx.beginPath();
+    ctx.moveTo(-32 + dir * 4, ey - 16); ctx.lineTo(-8 + dir * 4, ey - 10); ctx.moveTo(32 + dir * 4, ey - 16); ctx.lineTo(8 + dir * 4, ey - 10); ctx.stroke();
+    ctx.fillStyle = '#1a3a1a'; ctx.beginPath(); ctx.ellipse(dir * 4, -18 - breathe / 3, b.state === 'spit' ? 12 : 16, b.state === 'spit' ? 10 : 4, 0, 0, 7); ctx.fill();
+    ctx.restore();
+}
 
-            // Stars
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            for(let i=0;i<30;i++) {
-                const sx = (i*137 + animFrame*0.2) % W;
-                const sy = (i*97) % (H*0.6);
-                ctx.fillRect(sx, sy, 1.5, 1.5);
-            }
-        }
+function drawPlayer() {
+    if (state === 'dying') return;
+    if (inv > 0 && Math.floor(inv / 5) % 2 === 0) return;
+    const p = player, x = p.x - camX + 13, y = p.y - camY + 34;
+    const sq = p.squash || 0;
+    const sx = 1 + sq * 0.6, sy = 1 - sq * 0.6;
+    const run = p.ground && Math.abs(p.vx) > 0.5;
+    const t = frame * 0.35;
+    ctx.save(); ctx.translate(x, y); ctx.scale(p.facing * sx, sy);
+    // chân
+    ctx.fillStyle = '#3a2a6a';
+    const l1 = run ? Math.sin(t) * 5 : 0, l2 = run ? -Math.sin(t) * 5 : 0;
+    if (!p.ground) { ctx.fillRect(-9, -9, 7, 7); ctx.fillRect(3, -11, 7, 7); }
+    else { ctx.fillRect(-9 + l1, -7, 7, 7); ctx.fillRect(3 + l2, -7, 7, 7); }
+    // thân
+    ctx.fillStyle = '#ff5a4d'; rr(-12, -30, 24, 24, 8); ctx.fill();
+    ctx.fillStyle = '#ffd1b0'; rr(-10, -30, 20, 14, 6); ctx.fill();
+    // khăn quàng bay
+    ctx.fillStyle = '#ffd84a';
+    ctx.fillRect(-12, -17, 24, 4);
+    const tail = Math.sin(frame * 0.3) * 3 + (Math.abs(p.vx) > 1 ? 4 : 0);
+    ctx.beginPath(); ctx.moveTo(-12, -17); ctx.lineTo(-22, -16 + tail); ctx.lineTo(-20, -11 + tail); ctx.lineTo(-12, -13); ctx.fill();
+    // mũ
+    ctx.fillStyle = '#ff5a4d'; rr(-12, -36, 24, 9, 4); ctx.fill(); ctx.fillRect(2, -30, 14, 4);
+    // mắt
+    ctx.fillStyle = '#222';
+    const blink = frame % 180 < 6;
+    if (blink) ctx.fillRect(1, -24, 8, 2); else { ctx.fillRect(2, -26, 3, 5); ctx.fillRect(7, -26, 3, 5); }
+    ctx.restore();
+}
 
-        function drawTiles() {
-            const lvl = LEVELS[currentLevel];
-            for(let y=0;y<lvl.tiles.length;y++) {
-                for(let x=0;x<lvl.tiles[y].length;x++) {
-                    const t = lvl.tiles[y][x];
-                    if (t === 0) continue;
-                    const px = x * TILE;
-                    const py = y * TILE;
+function txt(t, x, y, size, col, align = 'left', weight = 800) {
+    ctx.font = `${weight} ${size}px 'Segoe UI', sans-serif`;
+    ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.lineWidth = Math.max(3, size / 5); ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineJoin = 'round';
+    ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y);
+    ctx.textBaseline = 'alphabetic';
+}
 
-                    switch(t) {
-                        case 1: // ground
-                            ctx.fillStyle = '#5a4a3a';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.fillStyle = '#4a3a2a';
-                            ctx.fillRect(px, py, TILE, 3);
-                            break;
-                        case 2: // grass
-                            ctx.fillStyle = '#4a8a3a';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.fillStyle = '#5aaa4a';
-                            ctx.fillRect(px, py, TILE, 6);
-                            ctx.fillStyle = '#3a7a2a';
-                            for(let i=0;i<4;i++) ctx.fillRect(px+i*10+2, py-3, 2, 6);
-                            break;
-                        case 3: // stone
-                            ctx.fillStyle = '#6a6a6a';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.strokeStyle = '#5a5a5a';
-                            ctx.strokeRect(px+2, py+2, TILE-4, TILE-4);
-                            ctx.fillStyle = '#7a7a7a';
-                            ctx.fillRect(px+4, py+4, 8, 4);
-                            break;
-                        case 4: // brick
-                            ctx.fillStyle = '#8a5a3a';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.strokeStyle = '#6a4a2a';
-                            ctx.lineWidth = 1;
-                            ctx.strokeRect(px, py, TILE/2, TILE/2);
-                            ctx.strokeRect(px+TILE/2, py+TILE/2, TILE/2, TILE/2);
-                            ctx.strokeRect(px+TILE/2, py, TILE/2, TILE/2);
-                            ctx.strokeRect(px, py+TILE/2, TILE/2, TILE/2);
-                            break;
-                        case 5: // spike
-                            ctx.fillStyle = '#cc3333';
-                            for(let i=0;i<3;i++) {
-                                ctx.beginPath();
-                                ctx.moveTo(px+i*14+2, py+TILE);
-                                ctx.lineTo(px+i*14+7, py+8);
-                                ctx.lineTo(px+i*14+12, py+TILE);
-                                ctx.fill();
-                            }
-                            break;
-                        case 6: // lava
-                            ctx.fillStyle = '#ff4400';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.fillStyle = '#ff6600';
-                            for(let i=0;i<3;i++) {
-                                const lx = px + i*14 + Math.sin(animFrame*0.1+i)*3;
-                                ctx.fillRect(lx, py+2, 10, 6);
-                            }
-                            ctx.fillStyle = '#ffaa00';
-                            ctx.fillRect(px+5, py+4, 6, 3);
-                            break;
-                        case 7: // ice
-                            ctx.fillStyle = '#88ccee';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                            ctx.fillRect(px+2, py+2, 10, 3);
-                            ctx.fillRect(px+20, py+10, 8, 2);
-                            break;
-                        case 8: // sand
-                            ctx.fillStyle = '#c4a44a';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.fillStyle = '#b4943a';
-                            for(let i=0;i<3;i++) ctx.fillRect(px+i*14, py+TILE-4, 10, 4);
-                            break;
-                        case 9: // wood
-                            ctx.fillStyle = '#8a6a3a';
-                            ctx.fillRect(px, py, TILE, TILE);
-                            ctx.strokeStyle = '#6a5a2a';
-                            ctx.lineWidth = 1;
-                            ctx.beginPath();
-                            ctx.moveTo(px, py+10); ctx.lineTo(px+TILE, py+10);
-                            ctx.moveTo(px, py+25); ctx.lineTo(px+TILE, py+25);
-                            ctx.stroke();
-                            break;
-                    }
-                }
-            }
-        }
+function drawHUD() {
+    ctx.fillStyle = 'rgba(0,0,0,.4)'; rr(12, 10, 300, 40, 20); ctx.fill();
+    for (let i = 0; i < Math.max(3, lives); i++) drawHeart(34 + i * 26, 30, 9, i < lives ? '#ff4d7a' : 'rgba(255,255,255,.2)');
+    const total = L.coins.length;
+    txt(`🪙 ${coinsGot}/${total}`, 34 + Math.max(3, lives) * 26 + 6, 31, 18, '#ffd84a');
+    txt(`Màn ${levelIdx + 1} · ${L.name}`, W / 2, 30, 18, '#ffffff', 'center');
+    const s = Math.floor(levelTime / 60);
+    txt(`⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, W - 70, 30, 17, '#ffffff', 'right');
+    if (L.boss && !L.boss.dead && bossIntro) {
+        const b = L.boss, bw = 360, bx = W / 2 - bw / 2;
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(bx - 6, 56, bw + 12, 26, 13); ctx.fill();
+        ctx.fillStyle = '#4a0f0f'; rr(bx, 62, bw, 14, 7); ctx.fill();
+        ctx.fillStyle = '#ff3a4a'; rr(bx, 62, bw * b.hp / b.maxHp, 14, 7); ctx.fill();
+        txt('👑 VUA SLIME', W / 2, 69, 12, '#fff', 'center');
+    }
+    if (levelTime < 240 && state === 'play') {
+        ctx.globalAlpha = clamp((240 - levelTime) / 60, 0, 1);
+        txt(L.desc, W / 2, 96, 17, '#fff8c8', 'center', 700);
+        ctx.globalAlpha = 1;
+    }
+}
 
-        function drawPlayer() {
-            if (player.dead) return;
-            if (player.invincible > 0 && Math.floor(animFrame/3) % 2) return;
+function drawParticles() {
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x - camX, p.y - camY, p.r, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (const f of floaters) { ctx.globalAlpha = Math.min(1, f.life / 20); txt(f.text, f.x - camX, f.y - camY, 16, f.col, 'center'); }
+    ctx.globalAlpha = 1;
+}
 
-            const x = player.x;
-            const y = player.y;
-            const f = player.facing;
+function render() {
+    if (!L) loadLevel(0);
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    drawBackground();
+    drawTiles();
+    drawMovers();
+    drawItems();
+    drawEnemies();
+    drawBoss();
+    drawPlayer();
+    drawParticles();
+    ctx.restore();
+    if (state !== 'menu') drawHUD();
+    if (state === 'dying') { ctx.fillStyle = `rgba(120,0,0,${0.25 * (dyingTimer / 50)})`; ctx.fillRect(0, 0, W, H); }
+}
 
-            ctx.save();
-            ctx.translate(x + player.w/2, y + player.h/2);
-            ctx.scale(f, 1);
+// =====================================================================
+//  MÀN HÌNH / ĐIỀU HƯỚNG
+// =====================================================================
+const $ = id => document.getElementById(id);
+const SCREENS = ['sMenu', 'sLevels', 'sPause', 'sWin', 'sOver'];
+function show(id) { SCREENS.forEach(s => $(s).classList.toggle('hidden', s !== id)); $('pauseBtn').style.display = id ? 'none' : 'block'; showTouch(!id); }
+function showTouch(on) { const t = window.matchMedia && matchMedia('(pointer: coarse)').matches; $('touch').style.display = on && t ? 'block' : 'none'; }
+function showMenu() {
+    state = 'menu';
+    $('btnContinue').textContent = progress.maxLevel > 0 ? `▶ Chơi tiếp (màn ${Math.min(progress.maxLevel, LEVEL_DEFS.length - 1) + 1})` : '▶ Bắt đầu';
+    show('sMenu');
+}
+function showLevels() {
+    state = 'menu';
+    const g = $('levelGrid'); g.innerHTML = '';
+    let total = 0;
+    LEVEL_DEFS.forEach((d, i) => {
+        const st = progress.stars[i] || 0; total += st;
+        const open = i <= progress.maxLevel;
+        const el = document.createElement('div');
+        el.className = 'lv' + (st ? ' done' : '') + (open ? '' : ' locked');
+        el.innerHTML = `<div class="n">${open ? i + 1 : '🔒'}</div><div class="s">${open ? '⭐'.repeat(st) + '☆'.repeat(3 - st) : ''}</div><div class="t">${d.name}</div>`;
+        if (open) el.onclick = () => startLevel(i);
+        g.appendChild(el);
+    });
+    $('starTotal').textContent = `Tổng số sao: ${total}/${LEVEL_DEFS.length * 3}`;
+    show('sLevels');
+}
+function continueGame() { startLevel(Math.min(progress.maxLevel, LEVEL_DEFS.length - 1)); }
+function startLevel(i) {
+    Sfx.init();
+    loadLevel(i);
+    state = 'play';
+    show(null);
+    for (const k in keys) keys[k] = false;
+}
+function restartLevel() { startLevel(levelIdx); }
+function nextLevel() { if (levelIdx + 1 < LEVEL_DEFS.length) startLevel(levelIdx + 1); else showLevels(); }
+function togglePause() {
+    if (state === 'play') { state = 'pause'; show('sPause'); }
+    else if (state === 'pause') { state = 'play'; show(null); }
+}
+function winLevel() {
+    state = 'win'; Sfx.win();
+    const total = L.coins.length;
+    const stars = coinsGot >= total ? 3 : (coinsGot >= total * 0.5 ? 2 : 1);
+    progress.stars[levelIdx] = Math.max(progress.stars[levelIdx] || 0, stars);
+    progress.maxLevel = Math.max(progress.maxLevel, Math.min(levelIdx + 1, LEVEL_DEFS.length - 1));
+    saveProgress();
+    const s = Math.floor(levelTime / 60);
+    const last = levelIdx === LEVEL_DEFS.length - 1;
+    $('winTitle').textContent = last ? '🏆 BẠN ĐÃ PHÁ ĐẢO!' : '🎉 QUA MÀN!';
+    $('winStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    $('winStat').textContent = `🪙 ${coinsGot}/${total} xu · ⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} · 💀 ${deaths} lần ngã` + (stars < 3 ? ' · Nhặt đủ xu để được 3 sao' : '');
+    $('btnNext').textContent = last ? '🗺️ Xem các màn' : 'Màn tiếp ▶';
+    show('sWin');
+}
+function gameOver() {
+    state = 'over'; Sfx.over();
+    $('overStat').textContent = `Màn ${levelIdx + 1}: ${L.name} · 🪙 ${coinsGot}/${L.coins.length} xu`;
+    show('sOver');
+}
 
-            // Body
-            ctx.fillStyle = '#4488ff';
-            ctx.fillRect(-10, -8, 20, 20);
+// =====================================================================
+//  ĐIỀU KHIỂN
+// =====================================================================
+const GAME_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
+document.addEventListener('keydown', e => {
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
+    keys[e.code] = true;
+    if ((e.code === 'Escape' || e.code === 'KeyP') && !e.repeat) togglePause();
+    if (e.code === 'Enter' && state === 'win') nextLevel();
+    if (e.code === 'Enter' && state === 'over') restartLevel();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'play') togglePause(); });
+document.querySelectorAll('#touch .tb').forEach(b => {
+    const k = b.dataset.k;
+    const on = e => { e.preventDefault(); touch[k] = true; b.classList.add('on'); Sfx.init(); };
+    const off = e => { e.preventDefault(); touch[k] = false; b.classList.remove('on'); };
+    b.addEventListener('touchstart', on, { passive: false });
+    b.addEventListener('touchend', off, { passive: false });
+    b.addEventListener('touchcancel', off, { passive: false });
+});
 
-            // Head
-            ctx.fillStyle = '#ffcc88';
-            ctx.fillRect(-8, -15, 16, 12);
-
-            // Eyes
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(-4, -12, 5, 5);
-            ctx.fillRect(2, -12, 5, 5);
-            ctx.fillStyle = '#222';
-            ctx.fillRect(-2, -11, 3, 3);
-            ctx.fillRect(4, -11, 3, 3);
-
-            // Hair
-            ctx.fillStyle = '#553322';
-            ctx.fillRect(-8, -17, 16, 4);
-            ctx.fillRect(-10, -15, 3, 6);
-
-            // Legs (animated)
-            const legOff = player.grounded ? Math.sin(player.frame * 1.5) * 4 : 2;
-            ctx.fillStyle = '#3366cc';
-            ctx.fillRect(-8, 12, 6, 6 + legOff);
-            ctx.fillRect(2, 12, 6, 6 - legOff);
-
-            // Shoes
-            ctx.fillStyle = '#aa4400';
-            ctx.fillRect(-9, 17 + legOff, 7, 3);
-            ctx.fillRect(1, 17 - legOff, 7, 3);
-
-            ctx.restore();
-        }
-
-        function drawEnemies() {
-            currentEnemies.forEach(e => {
-                if (e.x < -500) return;
-                ctx.save();
-                ctx.translate(e.x, e.y);
-
-                if (e.type === 'slime') {
-                    const squish = Math.sin(e.frame * 3) * 2;
-                    ctx.fillStyle = '#44cc44';
-                    ctx.beginPath();
-                    ctx.ellipse(0, 4, 12 + squish, 10 - squish, 0, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.fillStyle = '#228822';
-                    ctx.beginPath();
-                    ctx.ellipse(0, 6, 10 + squish, 7 - squish, 0, 0, Math.PI*2);
-                    ctx.fill();
-                    // Eyes
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(-6, -4, 4, 4);
-                    ctx.fillRect(2, -4, 4, 4);
-                    ctx.fillStyle = '#111';
-                    ctx.fillRect(-5, -3, 2, 2);
-                    ctx.fillRect(3, -3, 2, 2);
-                } else if (e.type === 'bat') {
-                    const wingAng = Math.sin(e.frame * 5) * 0.5;
-                    ctx.fillStyle = '#8844aa';
-                    // Body
-                    ctx.fillRect(-4, -4, 8, 8);
-                    // Wings
-                    ctx.save();
-                    ctx.rotate(wingAng);
-                    ctx.fillRect(-18, -6, 14, 6);
-                    ctx.restore();
-                    ctx.save();
-                    ctx.rotate(-wingAng);
-                    ctx.fillRect(4, -6, 14, 6);
-                    ctx.restore();
-                    // Eyes
-                    ctx.fillStyle = '#ff4444';
-                    ctx.fillRect(-3, -2, 2, 2);
-                    ctx.fillRect(1, -2, 2, 2);
-                } else if (e.type === 'fire') {
-                    const flicker = Math.sin(e.frame * 4) * 3;
-                    ctx.fillStyle = '#ff4400';
-                    ctx.fillRect(-8, -4, 16, 12);
-                    ctx.fillStyle = '#ff8800';
-                    ctx.fillRect(-6, -8 + flicker, 12, 8);
-                    ctx.fillStyle = '#ffcc00';
-                    ctx.fillRect(-3, -12 + flicker*1.5, 6, 6);
-                    // Eyes
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(-4, 0, 3, 3);
-                    ctx.fillRect(1, 0, 3, 3);
-                }
-
-                ctx.restore();
-            });
-        }
-
-        function drawCoins() {
-            currentCoins.forEach(c => {
-                if (c.collected) return;
-                const by = Math.sin(c.bob) * 3;
-                ctx.save();
-                ctx.translate(c.x, c.y + by);
-
-                // Glow
-                ctx.fillStyle = 'rgba(255,215,0,0.2)';
-                ctx.beginPath();
-                ctx.arc(0, 0, 12, 0, Math.PI*2);
-                ctx.fill();
-
-                // Coin
-                ctx.fillStyle = '#ffd700';
-                ctx.beginPath();
-                ctx.arc(0, 0, 8, 0, Math.PI*2);
-                ctx.fill();
-                ctx.fillStyle = '#ffaa00';
-                ctx.beginPath();
-                ctx.arc(0, 0, 5, 0, Math.PI*2);
-                ctx.fill();
-                ctx.fillStyle = '#ffd700';
-                ctx.font = 'bold 10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('$', 0, 4);
-
-                ctx.restore();
-            });
-        }
-
-        function drawDoor() {
-            const door = LEVELS[currentLevel].door;
-            ctx.save();
-            ctx.translate(door.x, door.y);
-
-            // Glow
-            ctx.fillStyle = `rgba(100,255,100,${0.1 + Math.sin(animFrame*0.05)*0.05})`;
-            ctx.beginPath();
-            ctx.arc(0, 0, 25, 0, Math.PI*2);
-            ctx.fill();
-
-            // Door frame
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-14, -20, 28, 40);
-            ctx.fillStyle = '#A0522D';
-            ctx.fillRect(-12, -18, 24, 36);
-
-            // Door details
-            ctx.fillStyle = '#6B3410';
-            ctx.fillRect(-10, -16, 20, 4);
-            ctx.fillRect(-10, -4, 20, 4);
-            ctx.fillRect(-10, 8, 20, 4);
-
-            // Handle
-            ctx.fillStyle = '#ffd700';
-            ctx.beginPath();
-            ctx.arc(6, 0, 3, 0, Math.PI*2);
-            ctx.fill();
-
-            // Arrow indicator
-            const arrowY = -30 + Math.sin(animFrame*0.08)*5;
-            ctx.fillStyle = '#38ef7d';
-            ctx.beginPath();
-            ctx.moveTo(0, arrowY);
-            ctx.lineTo(-8, arrowY-10);
-            ctx.lineTo(8, arrowY-10);
-            ctx.fill();
-
-            ctx.restore();
-        }
-
-        function drawParticles() {
-            particles.forEach(p => {
-                ctx.globalAlpha = p.life / 50;
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-            });
-            ctx.globalAlpha = 1;
-        }
-
-        function drawHUD() {
-            // Progress bar at bottom
-            const progress = (currentLevel) / (LEVELS.length - 1);
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(10, H-8, W-20, 4);
-            ctx.fillStyle = '#38ef7d';
-            ctx.fillRect(10, H-8, (W-20)*progress, 4);
-        }
-
-        // ==================== SCREENS ====================
-        function hideAllScreens() {
-            ['menu','levelSelect','levelIntro','winScreen','gameOverScreen'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-        }
-
-        function showScreen(id) {
-            hideAllScreens();
-            document.getElementById(id).classList.remove('hidden');
-        }
-
-        function showMenu() {
-            gameState = 'menu';
-            hideAllScreens();
-            document.getElementById('menu').classList.remove('hidden');
-            document.getElementById('ui').classList.add('hidden');
-        }
-
-        function showLevelSelect() {
-            hideAllScreens();
-            const grid = document.getElementById('levelGrid');
-            grid.innerHTML = '';
-            LEVELS.forEach((lvl, i) => {
-                const btn = document.createElement('button');
-                btn.className = 'level-btn';
-                btn.textContent = i + 1;
-                if (i <= maxUnlockedLevel) {
-                    btn.classList.add('unlocked');
-                    if (levelStars[i]) btn.classList.add('completed');
-                    btn.onclick = () => { sfxClick(); startLevel(i); };
-                    if (levelStars[i]) {
-                        btn.title = '⭐'.repeat(levelStars[i]);
-                    }
-                } else {
-                    btn.classList.add('locked');
-                    btn.textContent = '🔒';
-                }
-                grid.appendChild(btn);
-            });
-            document.getElementById('levelSelect').classList.remove('hidden');
-        }
-
-        function startGame() {
-            initAudio();
-            sfxClick();
-            lives = 3;
-            startLevel(0);
-        }
-
-        function startLevel(idx) {
-            initAudio();
-            hideAllScreens();
-            document.getElementById('introTitle').textContent = `Màn ${idx+1}: ${LEVELS[idx].name}`;
-            document.getElementById('introDesc').textContent = LEVELS[idx].desc;
-            document.getElementById('levelIntro').classList.remove('hidden');
-
-            setTimeout(() => {
-                hideAllScreens();
-                document.getElementById('ui').classList.remove('hidden');
-                loadLevel(idx);
-                gameState = 'playing';
-            }, 1500);
-        }
-
-        function nextLevel() {
-            sfxClick();
-            if (currentLevel + 1 < LEVELS.length) {
-                startLevel(currentLevel + 1);
-            } else {
-                showMenu();
-            }
-        }
-
-        function retryLevel() {
-            sfxClick();
-            lives = 3;
-            startLevel(currentLevel);
-        }
-
-        // ==================== GAME LOOP ====================
-        function update() {
-            if (gameState !== 'playing') return;
-            updatePlayer();
-            updateEnemies();
-            updateCoins();
-            updateParticles();
-            document.getElementById('jumpCount').textContent = player.jumpsLeft;
-            checkDoor();
-            if (screenShake > 0) screenShake--;
-        }
-
-        function draw() {
-            ctx.save();
-
-            // Screen shake
-            if (screenShake > 0) {
-                ctx.translate(
-                    (Math.random()-0.5)*screenShake,
-                    (Math.random()-0.5)*screenShake
-                );
-            }
-
-            drawBackground();
-            drawTiles();
-            drawCoins();
-            drawDoor();
-            drawEnemies();
-            drawPlayer();
-            drawParticles();
-            drawHUD();
-
-            ctx.restore();
-        }
-
-        function gameLoop() {
-            animFrame++;
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Start
-        gameLoop();
-    </script>
+// =====================================================================
+//  VÒNG LẶP (cố định 60 lần/giây)
+// =====================================================================
+let lastT = 0, acc = 0;
+function loop(ts) {
+    if (!lastT) lastT = ts;
+    acc += Math.min(250, ts - lastT); lastT = ts;
+    let n = 0;
+    while (acc >= 1000 / 60 && n < 5) { try { update(); } catch (e) { console.error(e); } acc -= 1000 / 60; n++; }
+    if (n >= 5) acc = 0;
+    try { render(); } catch (e) { console.error(e); }
+    requestAnimationFrame(loop);
+}
+loadLevel(Math.min(progress.maxLevel, LEVEL_DEFS.length - 1));
+showMenu();
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
