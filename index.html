@@ -6,7 +6,7 @@
     <title>TikTok Link Resolver</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #fff; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; padding: 16px 0; }
         .container { background: #16213e; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
         h1 { text-align: center; margin-bottom: 1.5rem; font-size: 1.4rem; }
         input { width: 100%; padding: 12px 16px; border: 2px solid #0f3460; border-radius: 8px; background: #0a0a1a; color: #fff; font-size: 1rem; outline: none; transition: border-color 0.2s; }
@@ -19,6 +19,12 @@
         .result a { color: #4fc3f7; }
         .result pre { white-space: pre-wrap; color: #a0d2db; }
         .error { color: #e94560; }
+        .game-link { display: flex; align-items: center; gap: 12px; width: 90%; max-width: 500px; padding: 14px 18px; border-radius: 12px; text-decoration: none; color: #fff;
+                     background: linear-gradient(135deg, #6a4cff, #b44cff); box-shadow: 0 8px 24px rgba(106,76,255,.35); transition: transform .15s; }
+        .game-link:hover { transform: translateY(-2px); }
+        .game-link .ic { font-size: 2rem; }
+        .game-link b { display: block; font-size: 1.1rem; }
+        .game-link small { opacity: .85; }
     </style>
 </head>
 <body>
@@ -28,6 +34,10 @@
         <button id="btn" onclick="resolve()">Resolve</button>
         <div class="result" id="result"></div>
     </div>
+    <a class="game-link" href="idle-rpg.html">
+        <span class="ic">⚔️</span>
+        <span><b>Huyền Thoại Cày Cấp</b><small>Game nhập vai cày cấp tự động — bấm để chơi</small></span>
+    </a>
     <script src="app.js"></script>
 </body>
 </html>
